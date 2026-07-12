@@ -1,0 +1,19 @@
+src/init/templates/library/skills/pending/SKILL.md
+  s_08e7c0b5f56d7d::t_80bcb2b28e1b41 45-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "989328d1d9702e410abac38af0f3ce40b3d8f18f",
+  "prompts": {},
+  "sessions": {
+    "s_08e7c0b5f56d7d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2277e9f6-d740-458b-9786-0021ce6a3a63",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
