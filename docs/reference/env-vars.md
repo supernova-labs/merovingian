@@ -36,7 +36,7 @@ Read in `src/provider/surreal.ts` (`mintIdentityJwt`).
 
 | Var | Default | Controls |
 | --- | --- | --- |
-| `MEROVINGIAN_JWT_SECRET` | `merovingian-dev-secret-change-me` (the `DEV_JWT_SECRET` constant) | HS256 secret used to sign the scoped identity JWT. **Must match** the `KEY` in `surreal/data.surql`'s `DEFINE ACCESS identity`. In production the service holds this; never commit it. |
+| `MEROVINGIAN_JWT_SECRET` | `merovingian-dev-secret-change-me` (the `DEV_JWT_SECRET` constant, dev/test only) | HS256 secret used to sign the scoped identity JWT, and to bind the `KEY` of `surreal/auth.surql`'s `DEFINE ACCESS identity` at provision time. Signing and provisioning **must use the same value** or the DB rejects the token. A real `deploy apply` **requires** this (it refuses to provision a tenant with the public dev key); `reset` (dev/test) may fall back to the default. In production the service holds it; never commit it. |
 
 ## Graph authoring commands
 

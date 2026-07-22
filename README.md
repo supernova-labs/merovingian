@@ -42,6 +42,14 @@ You need a reachable SurrealDB (v3) — every command except `init` talks to it:
 docker run --rm -d -p 8020:8000 surrealdb/surrealdb:v3 start --user root --pass root
 ```
 
+Your tenant signs scoped identity tokens with a private key. Generate one, and keep it in your
+environment — the same key provisions the database and mints tokens (and later lives only on the
+build/auth service). Persist it so every session shares it:
+
+```bash
+export MEROVINGIAN_JWT_SECRET=$(openssl rand -hex 32)   # then add this line to ~/.zshrc (or ~/.bashrc)
+```
+
 Then the whole happy path — scaffold, converge, log in, project:
 
 ```bash
@@ -53,6 +61,14 @@ merovingian login acme ada
 mkdir ../ada-workspace && cd ../ada-workspace
 merovingian build acme          # project ada's scoped workspace into this folder
 ```
+
+> **Just want to look first?** `bunx @supernova-labs/merovingian build acme --backend stub` projects
+> the bundled example tenant into the current folder — no database, no secret, no config. The steps
+> above are for standing up your own tenant on a real SurrealDB.
+
+`MEROVINGIAN_JWT_SECRET` has no default: `deploy apply` refuses to key a real tenant to a guessable
+value (see [going-to-production](docs/guides/going-to-production.md) for the service that holds it in
+a team setup).
 
 Open the workspace in Claude Code and the projection is live: `CLAUDE.md` (the scoped index),
 `.claude/skills` + `.claude/agents` (the person's slice of the tenant library), `.mcp.json`

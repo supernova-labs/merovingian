@@ -7,9 +7,45 @@ import { Surreal, RecordId } from "surrealdb";
 import { registeredSurrealUrl } from "../transport.ts";
 import type { DefinitionProvider, Definition, DecisionDef, Purpose, Bucket, User, ToolDef, SkillRef, AgentRef, AssignmentRow, Role } from "./types.ts";
 
-/** Dev signing secret — must match KEY in data.surql's DEFINE ACCESS identity.
- *  Production: the build/auth service holds this (env), never committed. */
-const DEV_JWT_SECRET = "merovingian-dev-secret-change-me";
+/** The PUBLIC dev signing key — matches auth.surql's DEFINE ACCESS when a tenant is
+ *  provisioned in dev/test. It is committed and world-readable ON PURPOSE: a token
+ *  signed with it is only ever accepted by a dev/test DB (the compose :8020, fixtures
+ *  only). A real tenant is provisioned with a PRIVATE secret (MEROVINGIAN_JWT_SECRET)
+ *  and rejects dev-key tokens by construction. Never let this reach a real tenant's KEY. */
+export const DEV_JWT_SECRET = "merovingian-dev-secret-change-me";
+
+/** The JWT signing secret from the env, treating empty/unset alike as "no secret" — so a
+ *  blank MEROVINGIAN_JWT_SECRET can't silently diverge minting (`?? DEV`) from provisioning
+ *  (`if truthy`) and leave a tenant that rejects its own tokens. The one source both use. */
+export function envJwtSecret(): string | undefined {
+  return process.env.MEROVINGIAN_JWT_SECRET || undefined;
+}
+
+/** The secret a tenant's identity DEFINE ACCESS is provisioned to trust (auth.surql).
+ *  Prod: MEROVINGIAN_JWT_SECRET (private, held only by the build/auth service). The
+ *  public dev key is used ONLY when explicitly allowed — dev/test provisioning via
+ *  `reset`. A real `deploy apply` with no secret THROWS rather than silently minting a
+ *  tenant whose identities anyone reading this repo could forge — and it refuses the
+ *  public dev key even if set explicitly (that would defeat the whole separation). */
+export function provisioningSecret(allowDevKey: boolean): string {
+  const s = envJwtSecret();
+  if (s) {
+    if (s === DEV_JWT_SECRET && !allowDevKey) {
+      throw new Error(
+        "MEROVINGIAN_JWT_SECRET is the PUBLIC dev key — a real tenant needs a PRIVATE secret.\n" +
+          "  Generate one with `openssl rand -hex 32`. (The dev key exists for this repo's own test suite.)",
+      );
+    }
+    return s;
+  }
+  if (allowDevKey) return DEV_JWT_SECRET;
+  throw new Error(
+    "MEROVINGIAN_JWT_SECRET is required to provision identity access on a real tenant.\n" +
+      "  Generate a private secret (e.g. `openssl rand -hex 32`) and set it in the env — a gitignored\n" +
+      "  .env in the tenant repo works; it is shared only with the build/auth service that mints tokens.\n" +
+      "  (Dev/test uses `reset`, which permits the public dev key — never a real tenant.)",
+  );
+}
 
 export interface SurrealConfig {
   url: string;
@@ -68,7 +104,7 @@ function b64url(s: string): string {
  * gate (proving you ARE that user) is the deferred HTTP slice; here anyone can
  * mint anyone. The enforcement that follows is fully real.
  */
-export function mintIdentityJwt(cfg: SurrealConfig, userId: string, secret = process.env.MEROVINGIAN_JWT_SECRET ?? DEV_JWT_SECRET): string {
+export function mintIdentityJwt(cfg: SurrealConfig, userId: string, secret = envJwtSecret() ?? DEV_JWT_SECRET): string {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "HS256", typ: "JWT" };
   const payload = { iss: "merovingian-build-auth", ns: cfg.ns, db: cfg.db, ac: "identity", id: `user:${userId}`, iat: now, exp: now + 3600 };
