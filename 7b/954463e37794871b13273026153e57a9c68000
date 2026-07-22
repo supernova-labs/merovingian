@@ -1,0 +1,22 @@
+package.json
+  s_08e7c0b5f56d7d::t_17de28c9f808d5 3,37
+.github/workflows/publish.yml
+  s_08e7c0b5f56d7d::t_8b315978c7eed1 64-65
+  s_08e7c0b5f56d7d::t_a1d95ef41b7c56 72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "7b954463e37794871b13273026153e57a9c68000",
+  "prompts": {},
+  "sessions": {
+    "s_08e7c0b5f56d7d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2277e9f6-d740-458b-9786-0021ce6a3a63",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
