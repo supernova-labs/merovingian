@@ -61,14 +61,15 @@ jobs:
           FILES=$(tar -tzf "$TARBALL" | sed 's|^package/||' | grep -v '/$')
           missing=""
           for r in package.json bin/merovingian.ts surreal/schema.surql surreal/data.surql \
-                   src/init/templates/library/skills/journal/SKILL.md src/server/console.html; do
+                   src/init/templates/library/skills/journal/SKILL.md src/server/console.html \
+                   fixtures/example/graph.yaml; do
             echo "$FILES" | grep -qx "$r" || missing="$missing $r"
           done
           if [ -n "$missing" ]; then
             echo "::error::missing from tarball:$missing"
             exit 1
           fi
-          forbidden=$(echo "$FILES" | grep -E '^(docs/|fixtures/|test/|plugin/|\.claude)' || true)
+          forbidden=$(echo "$FILES" | grep -E '^(docs/|test/|plugin/|\.claude|\.github/)' || true)
           if [ -n "$forbidden" ]; then
             echo "::error::unexpected files in tarball: $forbidden"
             exit 1

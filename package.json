@@ -1,6 +1,6 @@
 {
   "name": "@supernova-labs/merovingian",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Merovingian OS — the Source: a declarative engine that projects a tenant's purpose-graph into scoped, per-identity Claude Code workspaces, and reconciles the graph with `deploy`.",
   "license": "MIT",
   "author": "Luis Novo <lfnovo@gmail.com>",
@@ -34,6 +34,7 @@
     "bin/",
     "src/",
     "surreal/",
+    "fixtures/example/",
     "README.md",
     "LICENSE"
   ],
