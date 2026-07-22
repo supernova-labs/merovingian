@@ -35,8 +35,16 @@ bun run db:up      # docker compose up -d
 ```
 
 This starts SurrealDB v3 on `ws://localhost:8020/rpc` with `root/root`, namespace `merovingian`
-(see `docker-compose.yml`). Those are also the CLI's connection defaults, so no env vars are needed
-locally. Stop it later with `bun run db:down`.
+(see `docker-compose.yml`). Those are also the CLI's connection defaults, so no connection env vars
+are needed locally. Stop it later with `bun run db:down`.
+
+One secret is required, though: the key your tenant's identity access is provisioned with and that
+tokens are signed with. `deploy apply` (next step) refuses to key a tenant to a guessable default, so
+set a private one for this session (persist it in your shell profile to keep the db usable later):
+
+```bash
+export MEROVINGIAN_JWT_SECRET=$(openssl rand -hex 32)
+```
 
 ## 2. Project the graph into the database (`deploy apply`)
 
