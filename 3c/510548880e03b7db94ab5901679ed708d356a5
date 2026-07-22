@@ -1,0 +1,32 @@
+test/preload.ts
+  s_208d3200a73d1e::t_6662675dbfa6e5 5-8,10-14
+src/graph/apply.ts
+  s_208d3200a73d1e::t_73cbb92feafc66 245-247
+  s_208d3200a73d1e::t_ea0f90c204fd6b 157-168,171,173
+src/provider/surreal.ts
+  s_208d3200a73d1e::t_92719906aab9e6 107
+  s_208d3200a73d1e::t_cd9fb482b42b58 17-23,28-29,31-40,44-45
+test/auth-gate.test.ts
+  s_208d3200a73d1e::t_c096f2dc0500fa 11,18-19
+  s_208d3200a73d1e::t_071e28af3cbd8f 71-84
+  s_208d3200a73d1e::t_2dcdfe9218d161 103-124
+src/server/service.ts
+  s_208d3200a73d1e::t_ac4a1dde15ad85 8
+  s_208d3200a73d1e::t_644881528e7554 95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "3c510548880e03b7db94ab5901679ed708d356a5",
+  "prompts": {},
+  "sessions": {
+    "s_208d3200a73d1e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1f4896b-2430-4652-b964-f3f355b52786",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
