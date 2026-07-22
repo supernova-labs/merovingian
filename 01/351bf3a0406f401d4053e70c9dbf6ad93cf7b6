@@ -1,0 +1,22 @@
+docs/guides/getting-started.md
+  s_208d3200a73d1e::t_a02ac79cc703a6 38-47
+README.md
+  s_208d3200a73d1e::t_0317b920ea26ca 45-52,65-71
+  s_208d3200a73d1e::t_95c79d8404f0d4 72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "01351bf3a0406f401d4053e70c9dbf6ad93cf7b6",
+  "prompts": {},
+  "sessions": {
+    "s_208d3200a73d1e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1f4896b-2430-4652-b964-f3f355b52786",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
