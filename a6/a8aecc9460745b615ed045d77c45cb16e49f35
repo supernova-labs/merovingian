@@ -1,0 +1,21 @@
+docs/guides/releasing.md
+  s_08e7c0b5f56d7d::t_a8e5143f7de663 1-45
+.gitignore
+  s_08e7c0b5f56d7d::t_c30482037bcf54 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "a6a8aecc9460745b615ed045d77c45cb16e49f35",
+  "prompts": {},
+  "sessions": {
+    "s_08e7c0b5f56d7d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2277e9f6-d740-458b-9786-0021ce6a3a63",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
