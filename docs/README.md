@@ -26,6 +26,7 @@ The docs are organized by what you're trying to do (a [Diátaxis](https://diatax
 | [authoring-the-graph](./guides/authoring-the-graph.md) | The change loop (plan → apply), rename semantics, the invariants. |
 | [connection-and-secrets](./guides/connection-and-secrets.md) | Point the CLI at a database, the JWT secret, how company API keys resolve. |
 | [going-to-production](./guides/going-to-production.md) | From the offline stub → a real Surreal backend; the service; multi-tenant. |
+| [releasing](./guides/releasing.md) | Tag-driven npm releases (trusted publishing) · the plugin's independent version line · the both-manifests rule. |
 
 ## Reference — look up an exact contract
 
