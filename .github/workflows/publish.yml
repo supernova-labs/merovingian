@@ -23,10 +23,11 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
+      # NO registry-url here: it writes an .npmrc expecting NODE_AUTH_TOKEN, which
+      # blocks the npm CLI's OIDC (trusted publishing) detection.
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: "https://registry.npmjs.org"
 
       # Trusted publishing (OIDC) requires npm >= 11.5.1; Node 22 ships npm 10.x.
       - name: Upgrade npm for trusted publishing
