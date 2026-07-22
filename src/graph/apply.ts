@@ -15,7 +15,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { RecordId, Table, type Surreal } from "surrealdb";
-import { SurrealProvider } from "../provider/surreal.ts";
+import { SurrealProvider, provisioningSecret } from "../provider/surreal.ts";
 import type { Definition, User } from "../provider/types.ts";
 import { domainSchema } from "./domain.ts";
 import { structuralRecords, compact } from "./records.ts";
@@ -31,6 +31,7 @@ import {
 
 const SCHEMA_PATH = join(import.meta.dir, "../../surreal/schema.surql");
 const DATA_SCHEMA_PATH = join(import.meta.dir, "../../surreal/data.surql");
+const AUTH_SCHEMA_PATH = join(import.meta.dir, "../../surreal/auth.surql");
 
 export class GraphValidationError extends Error {
   constructor(public errors: string[]) {
@@ -142,15 +143,25 @@ export async function referrerCheck(db: Surreal, kind: string, id: string): Prom
 
 // ─── mutations ─────────────────────────────────────────────────────────────
 
-/** Engine runtime schema (identity access + inbox) — idempotent OVERWRITE, safe to
- *  re-apply standalone (the inbox drain does, before stamping: SCHEMAFULL silently
- *  drops writes to a field an older db hasn't defined yet). */
+/** Engine runtime TABLE schema (inbox + decision domain/log) — idempotent OVERWRITE,
+ *  safe to re-apply standalone (the inbox drain does, before stamping: SCHEMAFULL
+ *  silently drops writes to a field an older db hasn't defined yet). Carries NO secret:
+ *  the identity DEFINE ACCESS lives in auth.surql (ensureAuthSchema), so the drain can
+ *  never re-key it. */
 export async function ensureDataSchema(db: Surreal): Promise<void> {
   await db.query(await readFile(DATA_SCHEMA_PATH, "utf8"));
 }
 
-async function ensureSchema(db: Surreal): Promise<void> {
+/** The identity DEFINE ACCESS — provisioned ONLY on the apply/reset path (never the
+ *  drain). Binds the trusted signing KEY from provisioningSecret: a real tenant gets
+ *  the private MEROVINGIAN_JWT_SECRET; dev/test (allowDevKey, via reset) the public key. */
+async function ensureAuthSchema(db: Surreal, allowDevKey: boolean): Promise<void> {
+  await db.query(await readFile(AUTH_SCHEMA_PATH, "utf8"), { jwt_secret: provisioningSecret(allowDevKey) });
+}
+
+async function ensureSchema(db: Surreal, allowDevKey: boolean): Promise<void> {
   await db.query(await readFile(SCHEMA_PATH, "utf8"));
+  await ensureAuthSchema(db, allowDevKey);
   await ensureDataSchema(db);
 }
 
@@ -222,7 +233,9 @@ export async function applyGraph(db: Surreal, definition: Definition, users: Rec
   const errors = validateGraph(definition, users);
   if (errors.length) throw new GraphValidationError(errors);
 
-  await ensureSchema(db);
+  // reset is the dev/test provisioning path (never a live tenant) — it alone may fall
+  // back to the public dev key. deploy apply (reset:false) requires MEROVINGIAN_JWT_SECRET.
+  await ensureSchema(db, opts.reset ?? false);
   await ensureDomainSchema(db, definition);
   const desired = desiredState(definition, users);
 

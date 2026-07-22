@@ -1,0 +1,3 @@
+[test]
+# Sets the dev JWT signing secret before any test bootstraps a db — see test/preload.ts.
+preload = ["./test/preload.ts"]

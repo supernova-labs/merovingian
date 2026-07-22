@@ -194,10 +194,13 @@ Then `connectWithToken` authenticates and runs the query as that identity. No lo
 sits in a file, so **expiry stops mattering** and the emitted workspace carries no reusable
 credential — only a *token source*.
 
-> Note (prototype honesty): today anyone can mint any identity locally; the gh-auth gate that proves
-> you *are* that user is the deferred HTTP slice. But **the enforcement that follows a valid token
-> is fully real** — the PERMISSIONS above are what actually gate the data. See `src/provider/surreal.ts`
-> and `src/server/service.ts`.
+> Note (auth gate): a token is only accepted by a DB whose `DEFINE ACCESS identity` was provisioned
+> with the SAME signing key. A **real tenant** is keyed to a private `MEROVINGIAN_JWT_SECRET` (held
+> only by the build/auth service, which mints only after gh-auth), so a locally dev-minted token —
+> signed with the public dev key — is **rejected by construction**. Dev/test DBs are keyed to the
+> public dev key on purpose (fixtures only, no real data). The gh-auth gate that proves you *are*
+> that user is the service's job; the two keys never matching is what keeps dev-mint out of prod.
+> See `src/provider/surreal.ts`, `src/server/service.ts`, and `surreal/auth.surql`.
 
 ## In one line
 

@@ -78,9 +78,12 @@ engine mints that JWT (`mintIdentityJwt`) signed with HS256:
 export MEROVINGIAN_JWT_SECRET=<the-signing-secret>
 ```
 
-- Default is the `DEV_JWT_SECRET` constant `merovingian-dev-secret-change-me` — dev only.
-- It **must match** the `KEY` in `surreal/data.surql`'s `DEFINE ACCESS identity`, or the DB rejects
-  the token.
+- Default is the `DEV_JWT_SECRET` constant `merovingian-dev-secret-change-me` — dev only, and
+  world-readable on purpose (a token signed with it is only ever accepted by a dev/test DB).
+- It **must match** the `KEY` in `surreal/auth.surql`'s `DEFINE ACCESS identity`, or the DB rejects
+  the token. `auth.surql` binds that `KEY` from this env at provision time (`deploy apply`/`reset`);
+  a real `deploy apply` with no `MEROVINGIAN_JWT_SECRET` set **refuses to run** rather than key the
+  tenant to the public dev secret.
 - In production only the build/auth **service** holds this; user machines never see it (they hold a
   `gh` token and receive short-lived scoped tokens). See
   [going-to-production](going-to-production.md).

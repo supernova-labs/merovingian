@@ -61,10 +61,16 @@ Run it:
 ```bash
 export SURREAL_URL=wss://surreal.example.com/rpc
 export SURREAL_PASS=<root-password>
-export MEROVINGIAN_JWT_SECRET=<signing-secret>   # must match surreal/data.surql DEFINE ACCESS identity
-export PORT=8787                                  # default
-bun bin/merovingian-service.ts                    # (or: bun run service)
+export MEROVINGIAN_JWT_SECRET=$(openssl rand -hex 32)  # private; must match the tenant's auth.surql DEFINE ACCESS
+export PORT=8787                                        # default
+bun bin/merovingian-service.ts                          # (or: bun run service)
 ```
+
+The **same** `MEROVINGIAN_JWT_SECRET` must be set when you provision the tenant (`deploy apply`) — it
+binds the `KEY` in `surreal/auth.surql`'s `DEFINE ACCESS identity`. A real `deploy apply` with no
+secret set refuses to run (it won't key a tenant to the public dev secret). Generate it once, keep it
+private, share it only between the provisioning step and the service. Rotating it = re-run `deploy
+apply` with the new value (re-applies the `DEFINE ACCESS`), then restart the service with the same value.
 
 Endpoints, all `Authorization: Bearer <gh-token>`:
 

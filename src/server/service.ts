@@ -88,6 +88,17 @@ export interface StartOpts {
 
 /** Start the HTTP service (Bun.serve). Returns the server (call .stop()). */
 export function startService(opts: StartOpts = {}): { port: number; stop: () => void } {
+  // The service is the real front door: it signs identity tokens after gh-auth. With
+  // no MEROVINGIAN_JWT_SECRET it signs with the PUBLIC dev key — which a real tenant
+  // (provisioned with a private secret) rejects, so it fails closed, not open. Warn
+  // loudly rather than throw so dev/test can run zero-config against the dev DB.
+  if (!process.env.MEROVINGIAN_JWT_SECRET) {
+    console.warn(
+      "⚠ build/auth service: MEROVINGIAN_JWT_SECRET unset — signing with the PUBLIC dev key.\n" +
+        "  Tokens will only work against a dev/test DB; a real tenant will reject them. Set the\n" +
+        "  secret (same one the tenant's identity access was provisioned with) for real use.",
+    );
+  }
   const handler = makeHandler(opts.deps ?? { resolveGithubLogin: githubLoginFromToken });
   const port = opts.port ?? Number(process.env.PORT ?? 8787);
   const server = Bun.serve({ port, fetch: handler });

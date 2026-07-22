@@ -7,9 +7,29 @@ import { Surreal, RecordId } from "surrealdb";
 import { registeredSurrealUrl } from "../transport.ts";
 import type { DefinitionProvider, Definition, DecisionDef, Purpose, Bucket, User, ToolDef, SkillRef, AgentRef, AssignmentRow, Role } from "./types.ts";
 
-/** Dev signing secret — must match KEY in data.surql's DEFINE ACCESS identity.
- *  Production: the build/auth service holds this (env), never committed. */
-const DEV_JWT_SECRET = "merovingian-dev-secret-change-me";
+/** The PUBLIC dev signing key — matches auth.surql's DEFINE ACCESS when a tenant is
+ *  provisioned in dev/test. It is committed and world-readable ON PURPOSE: a token
+ *  signed with it is only ever accepted by a dev/test DB (the compose :8020, fixtures
+ *  only). A real tenant is provisioned with a PRIVATE secret (MEROVINGIAN_JWT_SECRET)
+ *  and rejects dev-key tokens by construction. Never let this reach a real tenant's KEY. */
+export const DEV_JWT_SECRET = "merovingian-dev-secret-change-me";
+
+/** The secret a tenant's identity DEFINE ACCESS is provisioned to trust (auth.surql).
+ *  Prod: MEROVINGIAN_JWT_SECRET (private, held only by the build/auth service). The
+ *  public dev key is used ONLY when explicitly allowed — dev/test provisioning via
+ *  `reset`. A real `deploy apply` with no secret THROWS rather than silently minting a
+ *  tenant whose identities anyone reading this repo could forge. */
+export function provisioningSecret(allowDevKey: boolean): string {
+  const s = process.env.MEROVINGIAN_JWT_SECRET;
+  if (s) return s;
+  if (allowDevKey) return DEV_JWT_SECRET;
+  throw new Error(
+    "MEROVINGIAN_JWT_SECRET is required to provision identity access on a real tenant.\n" +
+      "  Generate a private secret (e.g. `openssl rand -hex 32`) and set it in the env; it is\n" +
+      "  shared only with the build/auth service that mints identity tokens.\n" +
+      "  (Dev/test uses `reset`, which permits the public dev key — never a real tenant.)",
+  );
+}
 
 export interface SurrealConfig {
   url: string;

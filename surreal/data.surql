@@ -1,19 +1,12 @@
--- ENGINE-ONLY runtime schema: the JWT identity access + the learning inbox.
--- Applied as root (system user — BYPASSES permissions). JWT/record identities are
--- SUBORDINATE to the permissions below: this is where the backend actually blocks.
+-- ENGINE-ONLY runtime table schema: the learning inbox + decision domain/log.
+-- Applied as root (system user — BYPASSES permissions). The identity access that
+-- $auth resolves against lives in auth.surql (kept separate so the drain, which
+-- re-applies THIS file, never touches the security-critical DEFINE ACCESS). The
+-- record identities are SUBORDINATE to the permissions below: this is where the
+-- backend actually blocks.
 --
 -- Domain tables (a tenant's business data) do NOT live here — they are GENERATED
 -- from the graph's surreal buckets at apply time (ADR 0011, src/graph/domain.ts).
-
--- Identidade scoped via JWT: o serviço de build/auth (depois do gh-auth) assina um
--- JWT com claim id = user:<x>; o Surreal verifica a assinatura e $auth vira aquele
--- user. Segredo é DEV/local — em produção vem do serviço (env), nunca commitado.
--- TYPE RECORD WITH JWT: aceita um JWT assinado externamente (pelo serviço) e,
--- pelo claim `id`, resolve $auth = aquele user record. (TYPE JWT puro só setaria
--- $token, sem identidade de record.)
-DEFINE ACCESS OVERWRITE identity ON DATABASE TYPE RECORD
-  WITH JWT ALGORITHM HS256 KEY "merovingian-dev-secret-change-me"
-  DURATION FOR TOKEN 1h, FOR SESSION 1h;
 
 -- The learning inbox (ambient): append-only content, scoped resolution (ADR 0014).
 -- The authenticated identity appends; `user` is stamped server-side — unforgeable.
