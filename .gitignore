@@ -1,0 +1,11 @@
+node_modules/
+.DS_Store
+*.log
+*.tmp
+.merovingian/
+
+# bun.lock IS committed (reproducible installs for contributors/CI)
+
+# private working notes — kept local, out of the public repo (por ora)
+docs/ROADMAP.md
+docs/foundation/visao-v2.md

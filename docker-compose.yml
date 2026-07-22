@@ -1,0 +1,35 @@
+# Local SurrealDB 3.x for merovingian development.
+#   bun run db:up    -> start
+#   bun run db:down  -> stop
+# Connection defaults (also the CLI's env defaults):
+#   ws://localhost:8020/rpc  root/root  ns=merovingian
+# `name` is pinned: the compose project (and thus the data volume) must not
+# depend on the checkout directory's name.
+name: merovingian
+services:
+  surrealdb:
+    image: surrealdb/surrealdb:v3.0.1
+    container_name: merovingian-surreal
+    user: root
+    command:
+      - start
+      - --user
+      - root
+      - --pass
+      - root
+      - --bind
+      - 0.0.0.0:8000
+      - rocksdb:/data/db
+    ports:
+      - "8020:8000"
+    volumes:
+      - merovingian-surreal-data:/data
+    healthcheck:
+      test: ["CMD", "/surreal", "is-ready", "--endpoint", "http://localhost:8000"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  merovingian-surreal-data:

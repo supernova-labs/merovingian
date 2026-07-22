@@ -1,0 +1,66 @@
+{
+  "name": "@supernova-labs/merovingian",
+  "version": "0.1.0",
+  "description": "Merovingian OS — the Source: a declarative engine that projects a tenant's purpose-graph into scoped, per-identity Claude Code workspaces, and reconciles the graph with `deploy`.",
+  "license": "MIT",
+  "author": "Luis Novo <lfnovo@gmail.com>",
+  "homepage": "https://github.com/supernova-labs/merovingian#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/supernova-labs/merovingian.git"
+  },
+  "bugs": {
+    "url": "https://github.com/supernova-labs/merovingian/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "merovingian",
+    "bun",
+    "surrealdb",
+    "mcp",
+    "governance",
+    "purpose-graph",
+    "cli",
+    "agents"
+  ],
+  "type": "module",
+  "engines": {
+    "bun": ">=1.3.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "surreal/",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "merovingian": "bin/merovingian.ts"
+  },
+  "scripts": {
+    "merovingian": "bun bin/merovingian.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "reset": "bun bin/merovingian.ts reset --graph fixtures/example/graph.yaml",
+    "service": "bun bin/merovingian-service.ts",
+    "console": "bun bin/merovingian-console.ts",
+    "seed:acme": "bun fixtures/example/seed.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "bun-types": "^1.3.9",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "surrealdb": "^2.0.4",
+    "yaml": "^2.9.0",
+    "zod": "3.25.76"
+  }
+}

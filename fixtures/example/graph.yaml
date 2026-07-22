@@ -1,0 +1,160 @@
+# The `acme` example tenant — a small, generic, synthetic graph used ONLY by the
+# Source's tests and the offline stub backend. It carries NO real tenant data; it's
+# a runnable, minimal illustration of the model (a fictional consultancy).
+#
+# Real tenants live in their own repo (a graph.yaml the CLI reads from cwd / --graph).
+
+namespace: acme
+
+# ambient: system skills, no agent, always on. (governance is NOT ambient — it's
+# repo tooling installed by `merovingian init`, not a graph skill. See ADR 0010.)
+ambient:
+  skills: [journal, friction, pending]
+
+# marketplaces: EXTERNAL channels only (optional). Local content lives in library/.
+marketplaces:
+  guild: acme-labs/guild                       # used by the external skill + agent below
+  partner-plugins: acme-labs/partner-plugins   # registered but unused (declared only when a plugin needs it)
+
+# tool registry: one company-key tool, one keyless, one remote (kind mirrors the
+# .mcp.json types — stdio is the default; http/sse take only a url, member auth is
+# Claude Code's per-user OAuth).
+tools:
+  search:
+    command: uvx
+    args: [search-mcp]
+    env: { SEARCH_API_KEY: "${SEARCH_API_KEY}" }
+    keySource: company
+  docs:
+    command: uvx
+    args: [docs-mcp]
+    env: {}
+    keySource: none
+  tracker:
+    kind: sse
+    url: https://mcp.example.dev/sse
+
+# skill catalog: EXTERNAL refs only — always explicit plugin@marketplace. Everything
+# else (journal, friction, route, write, edit) resolves from library/skills/<name>/
+# by convention — the hybrid model (ADR 0012).
+skills:
+  audit: compliance@guild
+
+# purposes: the tree. `agent` inline = plugin carrying the persona. `parent: null` = root.
+purposes:
+  - id: acme
+    parent: null
+    reason: "shell — everyone lands here; routes to the purposes"
+    agent: core
+    decides: []
+    owns: []
+    reads: []
+    skills: [route]
+    tools: []
+
+  - id: growth
+    parent: acme
+    reason: "attract, position and convert"
+    decides: [gtm]
+    owns: [kb-company]
+    reads: []
+    skills: []
+    tools: []
+
+  - id: content
+    parent: growth
+    reason: "position as an authority"
+    agent: content
+    decides: [editorial]
+    owns: [kb-content]
+    reads: [kb-company, kb-method]
+    skills: [write, edit]
+    tools: [search, docs]
+
+  - id: sales
+    parent: growth
+    reason: "convert relationships into deals"
+    agent: sales-advisor@guild
+    decides: [pricing]
+    owns: [proposals]
+    reads: []
+    skills: []
+    tools: []
+
+  - id: services
+    parent: acme
+    reason: "deliver value and keep clients successful"
+    decides: [allocation]
+    owns: []
+    reads: []
+    skills: []
+    tools: []
+
+  - id: success
+    parent: services
+    reason: "client relationship and success"
+    agent: success
+    decides: [expectations]
+    owns: [clients]
+    reads: []
+    skills: []
+    tools: []
+
+  - id: delivery
+    parent: services
+    reason: "deliver the scope"
+    agent: delivery
+    decides: [scope]
+    owns: [kb-projects]
+    reads: [clients, kb-method]
+    skills: []
+    tools: [tracker]
+
+  - id: method
+    parent: acme
+    reason: "make the method explicit and alive"
+    agent: method
+    decides: [the-method]
+    owns: [kb-method]
+    reads: []
+    skills: []
+    tools: []
+
+  - id: infra
+    parent: acme
+    reason: "operate the tenant — workspace, db, governance"
+    agent: infra
+    decides: [architecture]
+    owns: [kb-infra]
+    reads: []
+    skills: [audit]
+    tools: []
+
+# buckets: okf-repo (prose) or surreal (structured/sensitive).
+buckets:
+  - { id: kb-company, backend: okf-repo, repo: acme-labs/kb-company, owner: growth, sens: low }
+  - { id: kb-content, backend: okf-repo, repo: acme-labs/kb-content, owner: content, sens: low }
+  - { id: kb-method, backend: okf-repo, repo: acme-labs/kb-method, owner: method, sens: low }
+  - { id: kb-projects, backend: okf-repo, repo: acme-labs/kb-projects, owner: delivery, sens: medium }
+  - { id: kb-infra, backend: okf-repo, repo: acme-labs/kb-infra, owner: infra, sens: low }
+  - { id: clients, backend: surreal, tables: [client, contact], owner: success, rowScope: account, sens: high }
+  - { id: proposals, backend: surreal, tables: [proposal], owner: sales, sens: high }
+
+# users + assignments. role owner (accountable) vs member; access is role-blind (ADR 0008).
+users:
+  - id: ada
+    name: Ada
+    github: ada-gh
+    assignments:
+      - { purpose: acme, role: owner }
+      - { purpose: content, role: owner }
+  - id: ben
+    name: Ben
+    github: ben-gh
+    assignments:
+      - { purpose: content, role: member }
+  - id: cleo
+    name: Cleo
+    github: cleo-gh
+    assignments:
+      - { purpose: delivery, scope: north, role: member }

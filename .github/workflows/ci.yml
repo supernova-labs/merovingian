@@ -1,0 +1,33 @@
+# CI — two proofs:
+#   offline: the contributor path — typecheck + suite with NO database
+#            (surreal-backed test files skip by design; the stub assertions run).
+#   full:    the whole suite against a real SurrealDB, using the repo's own
+#            docker-compose.yml. `--wait` fails the job if the container never
+#            turns healthy — no silent skips.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
+
+  full:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: docker compose up -d --wait
+      - run: bun test
+      - if: always()
+        run: docker compose down -v

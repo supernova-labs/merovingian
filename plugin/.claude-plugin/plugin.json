@@ -1,0 +1,18 @@
+{
+  "name": "governance",
+  "version": "0.4.1",
+  "description": "Architect agent + operations skills for governing a Merovingian tenant — plan/apply deploys, scaffold tenants, evolve the purpose-graph, drain the learning inbox and the decision log, promote jurisprudence.",
+  "author": {
+    "name": "Luis Novo"
+  },
+  "homepage": "https://github.com/supernova-labs/merovingian",
+  "repository": "https://github.com/supernova-labs/merovingian",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "merovingian",
+    "governance",
+    "agent",
+    "ai"
+  ]
+}

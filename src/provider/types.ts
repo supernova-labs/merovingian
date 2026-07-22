@@ -1,0 +1,179 @@
+// The definition model + the provider abstraction.
+//
+// In Phase 0 the only implementation is the StubProvider (fixture in memory).
+// In Phase 2 a SurrealProvider implements the same interface against the real
+// graph. The golden tests assert against the Manifest shape, so they survive
+// the swap: same projection, different source.
+
+/** A node in the global purpose tree (translated from propositos.yaml). */
+export interface Purpose {
+  id: string;
+  parent: string | null;
+  reason: string;
+  decides: string[];
+  /** bucket ids this purpose may modify */
+  owns: string[];
+  /** bucket ids this purpose may consume */
+  reads: string[];
+  skills: string[];
+  tools: string[];
+}
+
+export type Backend = "okf-repo" | "surreal" | "platform";
+
+/** A unit of knowledge. Single owner, single permission, recombinable. */
+export interface Bucket {
+  id: string;
+  backend: Backend;
+  /** okf-repo: the git repo name under the central store */
+  repo?: string;
+  /** surreal: the tables this bucket maps to */
+  tables?: string[];
+  owner: string;
+  /** surreal row-scoping FIELD — rows are gated by this column (e.g. "account");
+   *  absent = unscoped (whole bucket). The PERMISSIONS generator (ADR 0011) will consume it. */
+  rowScope?: string;
+  sens: "low" | "medium" | "high";
+}
+
+/** The ambient capabilities every instance inherits. */
+export interface Ambient {
+  skills: string[];
+}
+
+/** A tool (pipe) in the registry: how to run it + where its credential comes from.
+ *  `env` uses ${VAR} refs (v1-style). company refs resolve server-side. */
+/** How a tool is served — mirrors the .mcp.json server types 1:1. `stdio` = a local
+ *  command; `http`/`sse` = a remote MCP endpoint (per-member OAuth is Claude Code's
+ *  job, no secret in the graph). No third kind: a capability with no endpoint and no
+ *  command stays OUT of the registry until one exists (curation, not modeling). */
+export type ToolKind = "stdio" | "http" | "sse";
+export interface ToolDef {
+  kind: ToolKind;
+  /** stdio only */
+  command?: string;
+  args: string[];
+  env: Record<string, string>;
+  /** company = shared key, resolved into settings.local.json env · none = no secret */
+  keySource: "company" | "none";
+  /** http/sse only */
+  url?: string;
+}
+
+/** External content: a plugin in a marketplace (always authored `plugin@marketplace`). */
+export interface PluginRef {
+  source: "plugin";
+  plugin: string;
+  /** marketplace name (a key into Definition.marketplaces) */
+  marketplace: string;
+}
+
+/** First-party content: carried in the tenant library (ADR 0012). Deploy ships the
+ *  files into the db; build materializes them into the workspace. */
+export interface LibrarySkillRef {
+  source: "library";
+  /** relative path (e.g. "SKILL.md" — always present) -> file content */
+  files: Record<string, string>;
+}
+
+/** How a skill is delivered: an external plugin or the tenant library. */
+export type SkillRef = PluginRef | LibrarySkillRef;
+
+/** A library agent: a single markdown persona. `content` is undefined only while
+ *  unresolved (no library/agents/<name>.md) — validateGraph rejects that; a valid
+ *  Definition always carries content, and it is what deploy persists. */
+export interface LibraryAgentRef {
+  source: "library";
+  name: string;
+  content?: string;
+}
+
+/** How a purpose's agent (persona) is delivered. */
+export type AgentRef = PluginRef | LibraryAgentRef;
+
+/** A ratified decision record (ADR 0013): authored in the tenant repo's decisions/
+ *  folder, shipped by deploy, served tenant-wide. accepted = immutable (supersede). */
+export type DecisionStatus = "proposed" | "accepted" | "superseded";
+export interface DecisionDef {
+  /** the decision domain (a purpose's `decides:` entry) — the folder it lives in */
+  domain: string;
+  status: DecisionStatus;
+  title: string;
+  /** the markdown body after the frontmatter, verbatim */
+  content: string;
+  /** id of the record this one replaces (e.g. "pricing/0001-old-floor") */
+  supersedes?: string;
+  /** ISO timestamp (frontmatter `date:`) */
+  at?: string;
+}
+
+/** The whole definition for one namespace (tenant). */
+export interface Definition {
+  namespace: string;
+  ambient: Ambient;
+  purposes: Purpose[];
+  buckets: Bucket[];
+  /** the tool registry: tool name -> how to run it (only catalogued tools) */
+  toolCatalog: Record<string, ToolDef>;
+  /** the "meat": skill name -> external plugin ref OR library content. Names authored
+   *  in the yaml catalog are external; names resolved by convention come from library/. */
+  skillCatalog: Record<string, SkillRef>;
+  /** each purpose's AGENT (persona). A visible purpose enables its agent even with
+   *  zero skills — so the persona always loads. */
+  agentByPurpose: Record<string, AgentRef>;
+  /** marketplace name -> github repo (owner/name) — EXTERNAL channels only; may be
+   *  empty. Distinct used ones become extraKnownMarketplaces. */
+  marketplaces: Record<string, string>;
+  /** ratified decision records (ADR 0013): "<domain>/<slug>" -> the record. Absent
+   *  (synthetic defs in tests) reads as empty. */
+  decisionCatalog?: Record<string, DecisionDef>;
+}
+
+/** The role a human plays in a purpose. Two independent axes: ACCESS is the same
+ *  for both (you belong ⇒ you get the workspace); the ROLE only gates ACCOUNTABILITY
+ *  (owner governs/migrates/decides). Accountability is singular: one owner per
+ *  purpose (holacracy/RACI). See ADR 0008 (owner-vs-member). */
+export type Role = "owner" | "member";
+
+/** One human's membership in one purpose. A user holds a SET of these — they can
+ *  belong to several purposes, each with its own role and (optional) scope. */
+export interface Assignment {
+  /** the purpose this person belongs to */
+  purpose: string;
+  /** the instance the purpose is held over, e.g. "nord" (optional) */
+  scope?: string;
+  /** owner (accountable) vs member (works there). Access is identical either way. */
+  role: Role;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  /** GitHub login — the identity anchor (v1). Maps a gh user to this record. */
+  github?: string;
+  /** every purpose this human belongs to. Access = union of their subtrees. */
+  assignments: Assignment[];
+}
+
+/** One human → one purpose edge, flattened. The god-view (console) lists every
+ *  one of these at once — unlike resolveUser, which answers for a single id. */
+export interface AssignmentRow {
+  user: { id: string; name: string; github?: string };
+  purpose: string;
+  scope?: string;
+  role: Role;
+}
+
+/**
+ * The provider: given a namespace it exposes the definition, and it can
+ * resolve a user id to their assignment. It lives BEHIND the build service —
+ * the CLI never holds a provider directly. Async because a real backend
+ * (Surreal) is async; the stub just resolves immediately.
+ */
+export interface DefinitionProvider {
+  namespace: string;
+  getDefinition(): Promise<Definition>;
+  resolveUser(userId: string): Promise<User>;
+  /** every human→purpose assignment (the god-view; powers the Architect console) */
+  listAssignments(): Promise<AssignmentRow[]>;
+}

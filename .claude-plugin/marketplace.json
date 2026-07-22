@@ -1,0 +1,19 @@
+{
+  "name": "merovingian",
+  "description": "Merovingian OS — Claude Code plugins for operating a tenant's purpose-graph (governance).",
+  "homepage": "https://github.com/supernova-labs/merovingian",
+  "owner": {
+    "name": "Luis Novo"
+  },
+  "plugins": [
+    {
+      "name": "governance",
+      "source": "./plugin",
+      "description": "The architect agent + operations skills for governing a Merovingian tenant — read the graph, plan/apply deploys, scaffold new tenants, drain the learning inbox and the decision log, promote jurisprudence.",
+      "version": "0.4.1",
+      "author": {
+        "name": "Luis Novo"
+      }
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+# npm publish on version tags (v*) via TRUSTED PUBLISHING (OIDC) — no npm token
+# anywhere. The package's trusted publisher on npmjs.com must point at this repo
+# and this workflow filename (publish.yml). Provenance is emitted automatically.
+# The offline suite is the gate — the full surreal-backed matrix already runs on
+# every push via ci.yml; only what merged green gets tagged.
+
+name: publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # create the GitHub Release
+  id-token: write # OIDC trusted publishing + provenance attestation
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+
+      # Trusted publishing (OIDC) requires npm >= 11.5.1; Node 22 ships npm 10.x.
+      - name: Upgrade npm for trusted publishing
+        run: npm install -g npm@latest
+
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
+
+      - name: Verify tag matches package.json version (and not already published)
+        run: |
+          set -euo pipefail
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::package.json version ($PKG_VERSION) does not match tag ($TAG_VERSION)"
+            exit 1
+          fi
+          PUBLISHED=$(npm view "$PKG_NAME@$PKG_VERSION" version 2>/dev/null || true)
+          if [ -n "$PUBLISHED" ]; then
+            echo "::error::$PKG_NAME@$PKG_VERSION is already on npm"
+            exit 1
+          fi
+
+      # The tarball must carry everything the CLI needs at runtime — and nothing else.
+      - name: Verify package contents
+        run: |
+          set -euo pipefail
+          npm pack --silent >/dev/null
+          TARBALL=$(ls -t ./*.tgz | head -1)
+          FILES=$(tar -tzf "$TARBALL" | sed 's|^package/||' | grep -v '/$')
+          missing=""
+          for r in package.json bin/merovingian.ts surreal/schema.surql surreal/data.surql \
+                   src/init/templates/library/skills/journal/SKILL.md src/server/console.html; do
+            echo "$FILES" | grep -qx "$r" || missing="$missing $r"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::missing from tarball:$missing"
+            exit 1
+          fi
+          forbidden=$(echo "$FILES" | grep -E '^(docs/|fixtures/|test/|plugin/|\.claude)' || true)
+          if [ -n "$forbidden" ]; then
+            echo "::error::unexpected files in tarball: $forbidden"
+            exit 1
+          fi
+          rm -f "$TARBALL"
+
+      # OIDC — no NODE_AUTH_TOKEN. Provenance is automatic under trusted publishing.
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes

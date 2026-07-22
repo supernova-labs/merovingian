@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Architect Console — Merovingian</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0f1a; --panel: #0c121e; --ink: #EAEDF4;
+    --violet: #A78BFA; --cyan: #22D3EE;
+    --dim: #7e8799; --faint: #535b6c;
+    --line: rgba(255,255,255,.07); --line-soft: rgba(255,255,255,.045);
+    --warn: #e0a44a; --gap: #e5534b;
+    /* semantic aliases (used across the app) */
+    --accent: var(--violet); --ok: var(--cyan);
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--mono); font-size: 13px; line-height: 1.6;
+         background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
+  ::selection { background: rgba(167,139,250,.28); color: var(--ink); }
+  /* atmosphere — masked grid + a single violet bloom */
+  .bg-grid { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-size: clamp(120px,16vw,200px) 100%;
+    mask-image: linear-gradient(to bottom, #000 0%, transparent 60%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 60%); }
+  .bloom { position: fixed; top: -12%; right: -6%; width: 42vw; height: 42vw; z-index: 0; pointer-events: none;
+    background: radial-gradient(circle, rgba(167,139,250,.10), transparent 60%); }
+
+  header { position: relative; z-index: 10; display: flex; align-items: center; gap: 18px;
+           padding: 12px 20px; border-bottom: 1px solid var(--line);
+           background: linear-gradient(to bottom, rgba(12,18,30,.82), rgba(12,18,30,.45)); backdrop-filter: blur(10px); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 13px; letter-spacing: .02em; }
+  .brand .ast { width: 18px; height: 18px; }
+  .brand .dim { color: var(--dim); font-weight: 400; }
+  header .meta { color: var(--dim); font-size: 11px; letter-spacing: .04em; }
+  header .gaps { margin-left: auto; color: var(--warn); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  main { position: relative; z-index: 3; display: block; height: calc(100vh - 47px); }
+  .view { position: absolute; inset: 0; }
+  #treeview { display: grid; grid-template-columns: 320px 1fr; }
+  #graphview[hidden], #treeview[hidden] { display: none; }
+  #tree { overflow: auto; border-right: 1px solid var(--line); padding: 10px 0; }
+  #detail { overflow: auto; padding: 20px 26px; }
+  #graph { position: absolute; inset: 0; }
+
+  .node { cursor: pointer; padding: 2px 8px 2px 0; white-space: nowrap; border-radius: 2px; }
+  .node:hover { background: rgba(255,255,255,.035); }
+  .node.sel { background: rgba(167,139,250,.16); color: #fff; }
+  .node .gapdot { color: var(--gap); margin-left: 6px; }
+  .node .who { color: var(--faint); font-size: 11px; margin-left: 6px; }
+  .twig { color: var(--faint); }
+  .empty { color: var(--dim); padding: 40px 26px; }
+
+  h2 { margin: 0 0 2px; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+  .reason { color: var(--dim); margin: 0 0 20px; max-width: 70ch; font-size: 13px; }
+  section { margin: 0 0 20px; }
+  section h3 { font-size: 10.5px; text-transform: uppercase; letter-spacing: .2em;
+               color: var(--faint); font-weight: 500; margin: 0 0 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: rgba(255,255,255,.03); border: 1px solid var(--line); border-radius: 2px;
+          padding: 3px 10px; font-size: 12px; }
+  .chip.plugin { color: var(--violet); border-color: rgba(167,139,250,.3); }
+  .chip.gap { border-color: rgba(229,83,75,.45); color: var(--gap); }
+  .chip a { color: inherit; text-decoration: none; }
+  .chip a:hover { text-decoration: underline; }
+  .bkt { font-size: 12px; padding: 5px 0; border-bottom: 1px solid var(--line-soft); }
+  .bkt .tag { color: var(--faint); }
+  .bkt .own { color: var(--cyan); } .bkt .read { color: var(--violet); }
+  .bkt .sens-high { color: var(--gap); } .bkt .sens-medium { color: var(--warn); }
+  .human { padding: 4px 0; }
+  .human .scope { color: var(--warn); margin-left: 6px; font-size: 12px; }
+  .human .role { margin-left: 6px; font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }
+  .human .role.owner { color: var(--cyan); } .human .role.member { color: var(--dim); }
+  .human.weak { color: var(--dim); }
+  .human .grav { color: var(--faint); font-size: 11px; margin-left: 6px; font-style: italic; }
+  .grav { color: var(--faint); font-size: 12px; font-style: italic; }
+  a.plink.dim { color: #6f7a90; }
+  .chip.weakchip { border-style: dashed; opacity: .8; }
+  .none { color: var(--faint); font-style: italic; }
+  .gapline { color: var(--gap); }
+  a.plink { color: var(--violet); text-decoration: none; cursor: pointer; }
+  a.plink:hover { text-decoration: underline; }
+
+  /* tabs */
+  header .tabs { display: flex; gap: 6px; }
+  .tab { background: transparent; border: 1px solid var(--line); color: var(--dim);
+         border-radius: 2px; padding: 3px 13px; font-family: var(--mono); font-size: 11px;
+         letter-spacing: .04em; cursor: pointer; transition: border-color .2s, color .2s; }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--ink); border-color: var(--violet); }
+
+  /* inbox view */
+  #inboxview { overflow: auto; }
+  .inboxwrap { max-width: 860px; margin: 0 auto; padding: 18px 26px 60px; }
+  .inboxbar { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; }
+  .inboxbar .count { color: var(--dim); font-size: 11px; margin-left: auto; letter-spacing: .04em; }
+  .entry { border: 1px solid var(--line); border-radius: 3px; background: rgba(255,255,255,.018);
+           padding: 12px 16px; margin: 0 0 10px; }
+  .entry.drained { opacity: .55; }
+  .entry .head { display: flex; align-items: baseline; gap: 10px; margin: 0 0 6px; font-size: 11px; }
+  .entry .kind { text-transform: uppercase; letter-spacing: .12em; font-weight: 600; }
+  .entry .kind.journal { color: var(--cyan); }
+  .entry .kind.friction { color: var(--warn); }
+  .entry .who { color: var(--ink); }
+  .entry .origin { color: var(--violet); }
+  .entry .scope { color: var(--cyan); }
+  .entry .scope.rootq { color: var(--dim); }
+  .inboxscopes { color: var(--dim); font-size: 11px; letter-spacing: .04em; margin: 0 0 12px; }
+  .inboxscopes b { color: var(--warn); font-weight: 600; }
+  .entry .when { color: var(--faint); }
+  .entry .stamp { color: var(--faint); font-style: italic; margin-left: auto; }
+  .entry .stamp.live { color: var(--gap); font-style: normal; }
+  .entry .text { white-space: pre-wrap; font-size: 12.5px; color: var(--ink); }
+  .entry .text.clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .entry .more { display: inline-block; margin-top: 6px; font-size: 11px; color: var(--violet); cursor: pointer; user-select: none; }
+  .entry .more:hover { text-decoration: underline; }
+
+  /* people control (graph view) */
+  .peoplectl { position: absolute; left: 14px; top: 14px; font-size: 11px;
+               background: rgba(12,18,30,.88); border: 1px solid var(--line); border-radius: 3px;
+               padding: 10px 12px; line-height: 1.9; letter-spacing: .03em; backdrop-filter: blur(8px); }
+  .peoplectl h4 { margin: 0 0 4px; font-size: 10px; text-transform: uppercase; letter-spacing: .18em;
+                  color: var(--faint); font-weight: 500; }
+  .peoplectl label { display: flex; align-items: center; gap: 7px; cursor: pointer; color: var(--dim); }
+  .peoplectl label:hover { color: var(--ink); }
+  .peoplectl label.on { color: var(--ink); }
+  .peoplectl label.master { border-bottom: 1px solid var(--line-soft); padding-bottom: 4px; margin-bottom: 4px; }
+  .peoplectl input { accent-color: var(--violet); margin: 0; }
+
+  .floatcard { position: absolute; top: 14px; right: 14px; width: 372px;
+               max-height: calc(100% - 28px); overflow: auto; padding: 16px 20px;
+               background: rgba(12,18,30,.92); border: 1px solid var(--line);
+               border-radius: 3px; backdrop-filter: blur(8px); }
+  .legend { position: absolute; left: 14px; bottom: 14px; font-size: 10.5px; color: var(--dim);
+            background: rgba(12,18,30,.8); border: 1px solid var(--line); border-radius: 3px;
+            padding: 9px 11px; line-height: 1.8; letter-spacing: .03em; }
+  .legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+  .legend .sq { display: inline-block; width: 9px; height: 9px; margin-right: 5px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bloom"></div>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="ast" x1="6" y1="6" x2="94" y2="94" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#A78BFA"/><stop offset="1" stop-color="#22D3EE"/></linearGradient>
+</defs></svg>
+<header>
+  <span class="brand">
+    <svg class="ast" viewBox="0 0 100 100"><path d="M50 50 L50 12 M50 50 L73.33 26.67 M50 50 L86 50 M50 50 L72.63 72.63 M50 50 L50 87 M50 50 L25.96 74.04 M50 50 L15 50 M50 50 L26.67 26.67" fill="none" stroke="url(#ast)" stroke-width="11" stroke-linecap="round"/></svg>
+    Architect Console <span class="dim">· merovingian</span>
+  </span>
+  <span class="tabs">
+    <button id="tab-tree" class="tab active">Tree</button>
+    <button id="tab-graph" class="tab">Graph</button>
+    <button id="tab-inbox" class="tab">Inbox</button>
+  </span>
+  <span class="meta" id="meta">loading…</span>
+  <span class="gaps" id="gapsum"></span>
+</header>
+<main>
+  <div id="treeview" class="view">
+    <div id="tree"></div>
+    <div id="detail"><div class="empty">Select a purpose on the left.</div></div>
+  </div>
+  <div id="graphview" class="view" hidden>
+    <div id="graph"></div>
+    <div id="gdetail" class="floatcard"><div class="empty">Click a node.</div></div>
+    <div id="peoplectl" class="peoplectl" hidden></div>
+    <div class="legend">
+      <div><span class="dot" style="background:#A78BFA"></span>purpose &nbsp; <span class="dot" style="background:#e5534b"></span>has gap</div>
+      <div><span class="sq" style="background:#22D3EE"></span>owner &nbsp; <span class="sq" style="background:#7e8799"></span>member</div>
+    </div>
+  </div>
+  <div id="inboxview" class="view" hidden>
+    <div class="inboxwrap">
+      <div class="inboxbar">
+        <button id="if-all" class="tab active">all</button>
+        <button id="if-journal" class="tab">journal</button>
+        <button id="if-friction" class="tab">friction</button>
+        <button id="if-undrained" class="tab">undrained only</button>
+        <span class="count" id="inboxcount"></span>
+      </div>
+      <div id="inboxscopes" class="inboxscopes"></div>
+      <div id="inboxlist"><div class="empty">loading…</div></div>
+    </div>
+  </div>
+</main>
+<script>
+let G = null;            // { definition, assignments }
+let P = new Map();       // id -> purpose
+let children = new Map(); // parentId -> [purpose]
+let assignByPurpose = new Map(); // purposeId -> [assignment]
+let assignByUser = new Map();    // userId -> { user, rows: [assignment] }
+let userSpread = new Map();       // userId -> count of assignments
+let selected = null;             // selected purpose id
+let selectedPerson = null;       // selected user id
+let view = "tree";                // "tree" | "graph" | "inbox"
+let fg = null;                    // force-graph instance (lazy)
+let INBOX = null;                 // /inbox payload entries (lazy)
+let inboxKind = "all";            // "all" | "journal" | "friction"
+let inboxUndrained = false;       // filter: undrained only
+let showPeople = true;            // graph view: people layer on/off
+const hiddenPeople = new Set();   // graph view: individually hidden user ids
+
+const activeDetail = () => document.getElementById(view === "graph" ? "gdetail" : "detail");
+
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+
+// ---- ownership gravity (derived) ----
+// The explicit owner of a purpose (an owner-role edge on it), or null.
+function explicitOwner(pid) { return (assignByPurpose.get(pid) || []).find(a => a.role === "owner") || null; }
+// Effective owner: explicit owner, else walk UP until an ancestor has one.
+// Member edges DON'T stop the gravity — only an explicit owner does (ADR 0008).
+function effectiveOwner(pid) {
+  let cur = pid;
+  while (cur) {
+    const own = explicitOwner(cur);
+    if (own) return { user: own.user, via: cur, scope: own.scope, inherited: cur !== pid };
+    const p = P.get(cur);
+    cur = p && p.parent && P.has(p.parent) ? p.parent : null;
+  }
+  return null;
+}
+// Descendants a person covers BY GRAVITY: those whose effective owner is them
+// but who have no explicit owner of their own.
+function gravitationalCoverage(uid) {
+  const out = [];
+  for (const p of G.definition.purposes) {
+    if (explicitOwner(p.id)) continue;
+    const eff = effectiveOwner(p.id);
+    if (eff && eff.user.id === uid) out.push(p.id);
+  }
+  return out.sort();
+}
+
+async function load() {
+  const res = await fetch("/graph");
+  G = await res.json();
+  if (!res.ok) { document.getElementById("detail").innerHTML = '<div class="empty">Error: ' + (G.error || res.status) + '</div>'; return; }
+  const d = G.definition;
+  P = new Map(d.purposes.map(p => [p.id, p]));
+  children = new Map();
+  for (const p of d.purposes) {
+    if (p.parent && P.has(p.parent)) { (children.get(p.parent) || children.set(p.parent, []).get(p.parent)).push(p); }
+  }
+  assignByPurpose = new Map();
+  assignByUser = new Map();
+  userSpread = new Map();
+  for (const a of G.assignments) {
+    (assignByPurpose.get(a.purpose) || assignByPurpose.set(a.purpose, []).get(a.purpose)).push(a);
+    if (!assignByUser.has(a.user.id)) assignByUser.set(a.user.id, { user: a.user, rows: [] });
+    assignByUser.get(a.user.id).rows.push(a);
+    userSpread.set(a.user.id, (userSpread.get(a.user.id) || 0) + 1);
+  }
+  document.getElementById("meta").textContent =
+    d.namespace + " · " + d.purposes.length + " purposes · " + G.assignments.length + " assignments";
+  renderGapSummary();
+  renderTree();
+}
+
+// ---- gap detection (pure, over the payload) ----
+function purposeGaps(p) {
+  const d = G.definition, gaps = [];
+  if (!d.agentByPurpose[p.id]) gaps.push("no agent");
+  for (const s of p.skills || []) if (!d.skillCatalog[s]) gaps.push("unresolved skill: " + s);
+  if (!effectiveOwner(p.id)) gaps.push("no effective owner (neither it nor any ancestor has one)");
+  // ADR 0008: an owner can't be scoped — a scoped slice must become a sub-purpose.
+  for (const a of assignByPurpose.get(p.id) || []) {
+    if (a.role === "owner" && a.scope) gaps.push("scoped owner: " + a.user.name + " @ " + a.scope + " (should be a sub-purpose)");
+  }
+  return gaps;
+}
+function globalGaps() {
+  const d = G.definition, out = [];
+  for (const p of d.purposes) for (const g of purposeGaps(p)) out.push(p.id + ": " + g);
+  for (const b of d.buckets) if (!P.has(b.owner)) out.push("orphan bucket: " + b.id + " (owner " + b.owner + ")");
+  for (const a of G.assignments) if (!P.has(a.purpose)) out.push("human in nonexistent purpose: " + a.user.name + " → " + a.purpose);
+  for (const [uid, n] of userSpread) if (n > 1) out.push("spread human: " + uid + " (" + n + " purposes)");
+  return out;
+}
+function renderGapSummary() {
+  const g = globalGaps();
+  document.getElementById("gapsum").textContent = g.length ? (g.length + " gaps") : "no gaps";
+}
+
+// ---- tree ----
+function renderTree() {
+  const root = document.getElementById("tree");
+  root.innerHTML = "";
+  const roots = G.definition.purposes.filter(p => !p.parent || !P.has(p.parent))
+                  .sort((a, b) => a.id.localeCompare(b.id));
+  for (const r of roots) root.appendChild(treeNode(r, 0));
+}
+function treeNode(p, depth) {
+  const wrap = el("div");
+  const node = el("div", "node");
+  node.style.paddingLeft = (8 + depth * 14) + "px";
+  node.dataset.id = p.id;
+  const kids = (children.get(p.id) || []);
+  node.appendChild(el("span", "twig", kids.length ? "▸ " : "· "));
+  node.appendChild(document.createTextNode(p.id));
+  const who = assignByPurpose.get(p.id) || [];
+  if (who.length) {
+    const names = who.map(a => a.user.name.split(" ")[0] + (a.role === "owner" ? "♦" : "")).join(", ");
+    node.appendChild(el("span", "who", "· " + names));
+  }
+  if (purposeGaps(p).length) node.appendChild(el("span", "gapdot", "●"));
+  node.onclick = () => select(p.id);
+  wrap.appendChild(node);
+  for (const c of kids.sort((a, b) => a.id.localeCompare(b.id))) wrap.appendChild(treeNode(c, depth + 1));
+  return wrap;
+}
+
+// ---- detail ----
+function select(id) {
+  selected = id; selectedPerson = null;
+  for (const n of document.querySelectorAll(".node")) n.classList.toggle("sel", n.dataset.id === id);
+  renderDetail(P.get(id));
+}
+function selectPerson(uid) {
+  selectedPerson = uid; selected = null;
+  for (const n of document.querySelectorAll(".node")) n.classList.remove("sel");
+  renderPerson(uid);
+}
+function pluginChip(ref) {
+  if (!ref) return null;
+  if (ref.source === "library") return (ref.name ? ref.name + " " : "") + "(library)";
+  return ref.plugin + "@" + ref.marketplace;
+}
+function renderDetail(p) {
+  if (!p) return;
+  const d = G.definition, box = activeDetail();
+  box.innerHTML = "";
+  box.appendChild(el("h2", null, p.id));
+  box.appendChild(el("p", "reason", p.reason || ""));
+
+  // lineage
+  const lin = el("section");
+  lin.appendChild(el("h3", null, "lineage"));
+  const linbody = el("div");
+  if (p.parent && P.has(p.parent)) { linbody.appendChild(document.createTextNode("parent: ")); linbody.appendChild(plink(p.parent)); linbody.appendChild(el("br")); }
+  else linbody.appendChild(el("span", "none", "root (no parent)"));
+  const kids = (children.get(p.id) || []);
+  if (kids.length) {
+    linbody.appendChild(document.createTextNode("children: "));
+    kids.sort((a,b)=>a.id.localeCompare(b.id)).forEach((c, i) => { if (i) linbody.appendChild(document.createTextNode(", ")); linbody.appendChild(plink(c.id)); });
+  }
+  lin.appendChild(linbody);
+  box.appendChild(lin);
+
+  // agent
+  const ag = el("section");
+  ag.appendChild(el("h3", null, "agent"));
+  const adef = d.agentByPurpose[p.id];
+  if (adef) ag.appendChild(chip(pluginChip(adef), "chip plugin"));
+  else ag.appendChild(chip("no agent", "chip gap"));
+  box.appendChild(ag);
+
+  // skills
+  box.appendChild(chipSection("skills", (p.skills || []), s => {
+    const def = d.skillCatalog[s];
+    return def ? { text: s + " → " + pluginChip(def), cls: "chip plugin" } : { text: s + " · unresolved", cls: "chip gap" };
+  }));
+
+  // tools
+  box.appendChild(chipSection("tools", (p.tools || []), t => ({ text: t, cls: "chip" })));
+
+  // buckets
+  const bsec = el("section");
+  bsec.appendChild(el("h3", null, "buckets"));
+  const owns = new Set(p.owns || []), reads = new Set(p.reads || []);
+  const ids = [...new Set([...(p.owns||[]), ...(p.reads||[])])].sort();
+  if (!ids.length) bsec.appendChild(el("span", "none", "none"));
+  for (const bid of ids) {
+    const b = d.buckets.find(x => x.id === bid);
+    const row = el("div", "bkt");
+    row.appendChild(el("span", owns.has(bid) ? "own" : "read", owns.has(bid) ? "owns " : "reads "));
+    row.appendChild(document.createTextNode(bid + " "));
+    if (b) {
+      const loc = b.backend === "okf-repo" ? b.repo : (b.backend === "surreal" ? (b.tables||[]).join(",") : b.backend);
+      row.appendChild(el("span", "tag", "[" + b.backend + (loc ? ": " + loc : "") + "] "));
+      row.appendChild(el("span", "sens-" + b.sens, b.sens));
+      if (b.rowScope) row.appendChild(el("span", "tag", " · row-scope: " + b.rowScope));
+    } else { row.appendChild(el("span", "gapline", "(definition missing)")); }
+    bsec.appendChild(row);
+  }
+  box.appendChild(bsec);
+
+  // humans
+  const hsec = el("section");
+  hsec.appendChild(el("h3", null, "humans"));
+  const who = assignByPurpose.get(p.id) || [];
+  // owner first, then members; name is clickable → person view
+  for (const a of [...who].sort((x, y) => (x.role === "owner" ? -1 : 1) - (y.role === "owner" ? -1 : 1))) {
+    const row = el("div", "human");
+    const link = el("a", "plink", a.user.name + (a.user.github ? " (@" + a.user.github + ")" : ""));
+    link.onclick = () => selectPerson(a.user.id);
+    row.appendChild(link);
+    row.appendChild(el("span", "role " + a.role, a.role));
+    if (a.scope) row.appendChild(el("span", "scope", "scope: " + a.scope));
+    if ((userSpread.get(a.user.id) || 0) > 1) row.appendChild(el("span", "scope", "· in " + userSpread.get(a.user.id) + " purposes"));
+    hsec.appendChild(row);
+  }
+  // no explicit owner → show the effective (gravitational) owner, weaker
+  if (!explicitOwner(p.id)) {
+    const eff = effectiveOwner(p.id);
+    const row = el("div", "human weak");
+    if (eff) {
+      const link = el("a", "plink dim", eff.user.name);
+      link.onclick = () => selectPerson(eff.user.id);
+      row.appendChild(document.createTextNode("effective owner: "));
+      row.appendChild(link);
+      row.appendChild(el("span", "grav", "by gravity · via " + eff.via));
+    } else {
+      row.appendChild(el("span", "gapline", "no effective owner (neither it nor any ancestor has one)"));
+    }
+    hsec.appendChild(row);
+  }
+  box.appendChild(hsec);
+
+  // local gaps
+  const g = purposeGaps(p);
+  if (g.length) {
+    const gs = el("section");
+    gs.appendChild(el("h3", null, "gaps"));
+    for (const line of g) gs.appendChild(el("div", "gapline", "● " + line));
+    box.appendChild(gs);
+  }
+}
+
+// ---- person view ----
+function renderPerson(uid) {
+  const box = activeDetail();
+  box.innerHTML = "";
+  const entry = assignByUser.get(uid);
+  if (!entry) { box.appendChild(el("div", "empty", "unknown person")); return; }
+  const u = entry.user;
+  box.appendChild(el("h2", null, u.name));
+  box.appendChild(el("p", "reason", u.github ? "@" + u.github : ""));
+
+  const owns = entry.rows.filter(r => r.role === "owner");
+  const members = entry.rows.filter(r => r.role === "member");
+
+  // owns (explicit)
+  const osec = el("section");
+  osec.appendChild(el("h3", null, "owns"));
+  if (!owns.length) osec.appendChild(el("span", "none", "none"));
+  for (const r of owns) {
+    const row = el("div", "human");
+    row.appendChild(plink(r.purpose));
+    if (r.scope) row.appendChild(el("span", "scope", "scope: " + r.scope));
+    osec.appendChild(row);
+  }
+  box.appendChild(osec);
+
+  // member of (explicit)
+  const msec = el("section");
+  msec.appendChild(el("h3", null, "member of"));
+  if (!members.length) msec.appendChild(el("span", "none", "none"));
+  for (const r of members) {
+    const row = el("div", "human");
+    row.appendChild(plink(r.purpose));
+    if (r.scope) row.appendChild(el("span", "scope", "scope: " + r.scope));
+    msec.appendChild(row);
+  }
+  box.appendChild(msec);
+
+  // covered by gravity (descendants with no explicit owner of their own)
+  const grav = gravitationalCoverage(uid);
+  const gsec = el("section");
+  gsec.appendChild(el("h3", null, "covers by gravity"));
+  if (!grav.length) gsec.appendChild(el("span", "none", "none"));
+  else {
+    const note = el("p", "grav", "purposes with no owner of their own that fall under you (via a purpose you own):");
+    note.style.margin = "0 0 6px";
+    gsec.appendChild(note);
+    const row = el("div", "chips");
+    for (const pid of grav) {
+      const c = el("span", "chip weakchip");
+      const a = el("a", "plink dim", pid); a.onclick = () => select(pid);
+      c.appendChild(a);
+      row.appendChild(c);
+    }
+    gsec.appendChild(row);
+  }
+  box.appendChild(gsec);
+}
+
+function chipSection(title, items, mapper) {
+  const s = el("section");
+  s.appendChild(el("h3", null, title));
+  if (!items.length) { s.appendChild(el("span", "none", "none")); return s; }
+  const row = el("div", "chips");
+  for (const it of items) { const m = mapper(it); row.appendChild(chip(m.text, m.cls)); }
+  s.appendChild(row);
+  return s;
+}
+function chip(text, cls) { return el("span", cls || "chip", text); }
+function plink(id) { const a = el("a", "plink", id); a.onclick = () => select(id); return a; }
+
+// ---- view switching (Tree | Graph | Inbox) ----
+function setView(v) {
+  view = v;
+  for (const t of ["tree", "graph", "inbox"]) {
+    document.getElementById("tab-" + t).classList.toggle("active", v === t);
+    document.getElementById(t + "view").hidden = v !== t;
+  }
+  if (v === "graph") { ensureGraph(); renderPeopleCtl(); }
+  if (v === "inbox") ensureInbox();
+  // re-render the current selection into the now-active panel
+  if (v !== "inbox") {
+    if (selected) renderDetail(P.get(selected));
+    else if (selectedPerson) renderPerson(selectedPerson);
+  }
+}
+document.getElementById("tab-tree").onclick = () => setView("tree");
+document.getElementById("tab-graph").onclick = () => setView("graph");
+document.getElementById("tab-inbox").onclick = () => setView("inbox");
+
+// ---- inbox view (journals + frictions, god-view) ----
+async function ensureInbox() {
+  if (INBOX) { renderInbox(); return; }
+  const res = await fetch("/inbox");
+  const body = await res.json();
+  if (!res.ok) { document.getElementById("inboxlist").innerHTML = '<div class="empty">Error: ' + (body.error || res.status) + "</div>"; return; }
+  INBOX = body.entries;
+  renderInbox();
+}
+function setInboxKind(k) {
+  inboxKind = k;
+  for (const t of ["all", "journal", "friction"]) document.getElementById("if-" + t).classList.toggle("active", k === t);
+  renderInbox();
+}
+document.getElementById("if-all").onclick = () => setInboxKind("all");
+document.getElementById("if-journal").onclick = () => setInboxKind("journal");
+document.getElementById("if-friction").onclick = () => setInboxKind("friction");
+document.getElementById("if-undrained").onclick = () => {
+  inboxUndrained = !inboxUndrained;
+  document.getElementById("if-undrained").classList.toggle("active", inboxUndrained);
+  renderInbox();
+};
+function renderInbox() {
+  const list = document.getElementById("inboxlist");
+  list.innerHTML = "";
+  const shown = (INBOX || []).filter(e =>
+    (inboxKind === "all" || e.kind === inboxKind) && (!inboxUndrained || !e.drained));
+  const undrained = (INBOX || []).filter(e => !e.drained).length;
+  document.getElementById("inboxcount").textContent =
+    shown.length + " shown · " + (INBOX || []).length + " total · " + undrained + " undrained";
+  // pending-by-scope: the drain's "N frictions await local governance" warning, as a panel
+  const byScope = new Map();
+  for (const e of (INBOX || [])) if (!e.drained && e.kind === "friction") {
+    const k = e.scope || "root";
+    byScope.set(k, (byScope.get(k) || 0) + 1);
+  }
+  const parts = [...byScope.entries()].sort((a, b) => b[1] - a[1]).map(([s, n]) => s + " " + n);
+  const scopesEl = document.getElementById("inboxscopes");
+  scopesEl.innerHTML = "";
+  if (parts.length) {
+    scopesEl.appendChild(document.createTextNode("pending frictions by scope: "));
+    parts.forEach((p, i) => {
+      if (i) scopesEl.appendChild(document.createTextNode(" · "));
+      const b = el("b", null, p);
+      scopesEl.appendChild(b);
+    });
+  }
+  if (!shown.length) { list.appendChild(el("div", "empty", "nothing here — the inbox fills as sessions journal and register frictions.")); return; }
+  for (const e of shown) {
+    const card = el("div", "entry" + (e.drained ? " drained" : ""));
+    const head = el("div", "head");
+    head.appendChild(el("span", "kind " + e.kind, e.kind));
+    head.appendChild(el("span", "who", e.user));
+    if (e.origin) head.appendChild(el("span", "origin", "via " + e.origin));
+    head.appendChild(el("span", "scope" + (e.scope ? "" : " rootq"), "→ " + (e.scope || "root")));
+    head.appendChild(el("span", "when", new Date(e.at).toLocaleString()));
+    head.appendChild(e.drained
+      ? el("span", "stamp", "drained " + new Date(e.drained).toLocaleString())
+      : el("span", "stamp live", "undrained"));
+    card.appendChild(head);
+    const txt = el("div", "text clamped", e.text);
+    card.appendChild(txt);
+    list.appendChild(card);
+    // in the DOM now — only offer expand when the clamp actually cut something
+    if (txt.scrollHeight > txt.clientHeight + 1) {
+      const t = el("a", "more", "▸ more");
+      t.onclick = () => { const c = txt.classList.toggle("clamped"); t.textContent = c ? "▸ more" : "▾ less"; };
+      card.appendChild(t);
+    }
+  }
+}
+
+// ---- force-graph (2D): purposes + humans ----
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = src; s.onload = res; s.onerror = () => rej(new Error("failed to load " + src));
+    document.head.appendChild(s);
+  });
+}
+function graphData() {
+  const d = G.definition, nodes = [], links = [];
+  for (const p of d.purposes) {
+    nodes.push({ id: "p:" + p.id, kind: "purpose", pid: p.id, label: p.id, gap: purposeGaps(p).length > 0 });
+    if (p.parent && P.has(p.parent)) links.push({ source: "p:" + p.parent, target: "p:" + p.id, kind: "tree" });
+  }
+  const users = new Map();
+  for (const a of G.assignments) {
+    if (!showPeople || hiddenPeople.has(a.user.id)) continue;
+    if (!users.has(a.user.id)) users.set(a.user.id, { id: "u:" + a.user.id, kind: "human", uid: a.user.id, label: a.user.name.split(" ")[0], owner: false });
+    if (a.role === "owner") users.get(a.user.id).owner = true;
+    links.push({ source: "u:" + a.user.id, target: "p:" + a.purpose, kind: "role", role: a.role });
+  }
+  for (const u of users.values()) nodes.push(u);
+  return { nodes, links };
+}
+
+// ---- people layer control (graph view) ----
+function refreshGraphData() { if (fg) fg.graphData(graphData()); }
+function renderPeopleCtl() {
+  if (!G) return;
+  const box = document.getElementById("peoplectl");
+  box.hidden = false;
+  box.innerHTML = "";
+  box.appendChild(el("h4", null, "people"));
+  const mkRow = (labelTxt, checked, cls, onchange) => {
+    const label = el("label", cls + (checked ? " on" : ""));
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = checked;
+    cb.onchange = () => onchange(cb.checked);
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(labelTxt));
+    return label;
+  };
+  box.appendChild(mkRow("show people", showPeople, "master", (on) => {
+    showPeople = on; renderPeopleCtl(); refreshGraphData();
+  }));
+  const byName = [...assignByUser.values()].sort((a, b) => a.user.name.localeCompare(b.user.name));
+  for (const { user } of byName) {
+    const row = mkRow(user.name, showPeople && !hiddenPeople.has(user.id), "", (on) => {
+      if (on) hiddenPeople.delete(user.id); else hiddenPeople.add(user.id);
+      renderPeopleCtl(); refreshGraphData();
+    });
+    if (!showPeople) row.querySelector("input").disabled = true;
+    box.appendChild(row);
+  }
+}
+function firstPurposeOf(uid) { return (G.assignments.find(a => a.user.id === uid) || {}).purpose; }
+async function ensureGraph() {
+  if (fg) return;
+  const host = document.getElementById("graph");
+  try {
+    if (!window.ForceGraph) await loadScript("https://unpkg.com/force-graph");
+  } catch (e) {
+    host.innerHTML = '<div class="empty">couldn\'t load the graph library (offline?). The Tree tab works without internet.</div>';
+    return;
+  }
+  fg = ForceGraph()(host)
+    .backgroundColor("#0a0f1a")
+    .graphData(graphData())
+    .nodeId("id")
+    .linkColor(l => l.kind === "tree" ? "rgba(255,255,255,0.09)" : (l.role === "owner" ? "#1d5560" : "#2b3340"))
+    .linkWidth(l => (l.kind === "role" && l.role === "owner") ? 2 : 1)
+    .nodePointerAreaPaint((node, color, ctx) => {
+      ctx.fillStyle = color; const r = node.kind === "human" ? 6 : 7;
+      ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, 2 * Math.PI); ctx.fill();
+    })
+    .nodeCanvasObject((node, ctx, scale) => {
+      const isSel = (node.kind === "purpose" && node.pid === selected) || (node.kind === "human" && node.uid === selectedPerson);
+      if (node.kind === "purpose") {
+        ctx.beginPath(); ctx.arc(node.x, node.y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = node.gap ? "#e5534b" : "#A78BFA"; ctx.fill();
+      } else {
+        const s = 9; ctx.fillStyle = node.owner ? "#22D3EE" : "#7e8799";
+        ctx.fillRect(node.x - s / 2, node.y - s / 2, s, s);
+      }
+      if (isSel) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2 / scale; ctx.beginPath(); ctx.arc(node.x, node.y, 8, 0, 2 * Math.PI); ctx.stroke(); }
+      const fontSize = Math.max(2.5, 11 / scale);
+      ctx.font = fontSize + "px 'JetBrains Mono', ui-monospace, monospace";
+      ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.fillStyle = node.kind === "purpose" ? "#EAEDF4" : "#9aa3b4";
+      ctx.fillText(node.label, node.x, node.y + 8);
+    })
+    .onNodeClick(node => {
+      if (node.kind === "human") { selectPerson(node.uid); }
+      else { select(node.pid); }
+      fg.centerAt(node.x, node.y, 500);
+    });
+}
+
+load();
+</script>
+</body>
+</html>
