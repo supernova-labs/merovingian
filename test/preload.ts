@@ -2,13 +2,13 @@
 // imported — i.e. before the top-level `reset(...)` bootstraps a throwaway db.
 //
 // The golden suite provisions and mints against the dev DB (compose :8020). Real
-// provisioning now REQUIRES MEROVINGIAN_JWT_SECRET (a real tenant can't be silently
-// keyed to the public dev secret). Tests are the sanctioned dev context, so we
-// declare the dev key here — the SAME one auth.surql falls back to and mintIdentityJwt
-// defaults to — keeping provisioning and minting in sync with zero per-test config.
+// provisioning REQUIRES MEROVINGIAN_JWT_SECRET, so we set one here — a stable, private
+// TEST secret (deliberately NOT the public DEV_JWT_SECRET, so the real-tenant gate that
+// rejects the public key is exercised realistically). Provisioning and minting both read
+// this one value, staying in sync with zero per-test config.
 //
-// ??= respects a secret already in the operator's shell (e.g. a real tenant's): the
-// throwaway acme dbs just get keyed to it, and mint uses the same value — still consistent.
-import { DEV_JWT_SECRET } from "../src/provider/surreal.ts";
-
-process.env.MEROVINGIAN_JWT_SECRET ??= DEV_JWT_SECRET;
+// `if (!…)` (not `??=`) so an EMPTY string is treated as unset too; and an operator's own
+// secret already in the shell still wins (the throwaway acme dbs just get keyed to it).
+if (!process.env.MEROVINGIAN_JWT_SECRET) {
+  process.env.MEROVINGIAN_JWT_SECRET = "test-suite-signing-secret-not-the-public-dev-key";
+}

@@ -154,14 +154,23 @@ export async function ensureDataSchema(db: Surreal): Promise<void> {
 
 /** The identity DEFINE ACCESS — provisioned ONLY on the apply/reset path (never the
  *  drain). Binds the trusted signing KEY from provisioningSecret: a real tenant gets
- *  the private MEROVINGIAN_JWT_SECRET; dev/test (allowDevKey, via reset) the public key. */
-async function ensureAuthSchema(db: Surreal, allowDevKey: boolean): Promise<void> {
-  await db.query(await readFile(AUTH_SCHEMA_PATH, "utf8"), { jwt_secret: provisioningSecret(allowDevKey) });
+ *  the private MEROVINGIAN_JWT_SECRET; dev/test (reset) the public key.
+ *
+ *  On a converge (non-reset) it is applied ONLY when the access is ABSENT (a virgin db):
+ *  a routine `deploy apply` (e.g. adding a user) must never silently re-key a live tenant
+ *  with whatever secret the env happens to hold — that would invalidate every outstanding
+ *  token. Re-keying is explicit: it happens on `reset` (a dev/test wipe) alone. */
+async function ensureAuthSchema(db: Surreal, reset: boolean): Promise<void> {
+  if (!reset) {
+    const [info] = await db.query<[{ accesses?: Record<string, unknown> }]>("INFO FOR DB");
+    if (info?.accesses?.identity) return; // already keyed — leave it (rotate via reset)
+  }
+  await db.query(await readFile(AUTH_SCHEMA_PATH, "utf8"), { jwt_secret: provisioningSecret(reset) });
 }
 
-async function ensureSchema(db: Surreal, allowDevKey: boolean): Promise<void> {
+async function ensureSchema(db: Surreal, reset: boolean): Promise<void> {
   await db.query(await readFile(SCHEMA_PATH, "utf8"));
-  await ensureAuthSchema(db, allowDevKey);
+  await ensureAuthSchema(db, reset);
   await ensureDataSchema(db);
 }
 
@@ -233,8 +242,9 @@ export async function applyGraph(db: Surreal, definition: Definition, users: Rec
   const errors = validateGraph(definition, users);
   if (errors.length) throw new GraphValidationError(errors);
 
-  // reset is the dev/test provisioning path (never a live tenant) — it alone may fall
-  // back to the public dev key. deploy apply (reset:false) requires MEROVINGIAN_JWT_SECRET.
+  // reset is the dev/test provisioning path (never a live tenant): it alone may fall back
+  // to the public dev key and re-key the access. A converge (reset:false) provisions the
+  // access only on a virgin db and requires MEROVINGIAN_JWT_SECRET.
   await ensureSchema(db, opts.reset ?? false);
   await ensureDomainSchema(db, definition);
   const desired = desiredState(definition, users);

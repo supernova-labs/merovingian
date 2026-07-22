@@ -8,12 +8,15 @@ import { join } from "node:path";
 import {
   surrealConfig,
   surrealReachable,
+  connectSurreal,
   connectWithToken,
   mintIdentityJwt,
   DEV_JWT_SECRET,
   provisioningSecret,
 } from "../src/provider/surreal.ts";
 import { reset } from "../src/commands/reset.ts";
+import { applyGraph } from "../src/graph/apply.ts";
+import { loadGraphFile } from "../src/graph/load-graph.ts";
 
 const TEST_DB = "acme_authgate";
 const EXAMPLE_YAML = join(import.meta.dir, "../fixtures/example/graph.yaml");
@@ -65,6 +68,20 @@ describe("provisioningSecret — the deploy-apply gate", () => {
       expect(provisioningSecret(true)).toBe("a-real-secret");
     });
   });
+
+  test("the public dev key set as a 'private' secret is rejected for a real tenant", () => {
+    withEnv(DEV_JWT_SECRET, () => {
+      expect(() => provisioningSecret(false)).toThrow(/PUBLIC dev key/);
+      expect(provisioningSecret(true)).toBe(DEV_JWT_SECRET); // dev/test may use it
+    });
+  });
+
+  test("an empty secret is treated as unset (not a valid key)", () => {
+    withEnv("", () => {
+      expect(() => provisioningSecret(false)).toThrow(/required/);
+      expect(provisioningSecret(true)).toBe(DEV_JWT_SECRET);
+    });
+  });
 });
 
 (dbUp ? describe : describe.skip)("a private-keyed tenant rejects dev-key tokens", () => {
@@ -82,5 +99,27 @@ describe("provisioningSecret — the deploy-apply gate", () => {
     } finally {
       await db.close();
     }
+  });
+
+  test("a routine converge does NOT re-key the access (no silent token invalidation)", async () => {
+    const { definition, users } = loadGraphFile(EXAMPLE_YAML);
+    const db = await connectSurreal(cfg);
+    // A converge running with a DRIFTED env secret must leave the existing KEY intact.
+    const prev = process.env.MEROVINGIAN_JWT_SECRET;
+    process.env.MEROVINGIAN_JWT_SECRET = "a-drifted-secret-from-a-stale-env";
+    try {
+      await applyGraph(db, definition, users, { reset: false });
+    } finally {
+      if (prev === undefined) delete process.env.MEROVINGIAN_JWT_SECRET;
+      else process.env.MEROVINGIAN_JWT_SECRET = prev;
+      await db.close();
+    }
+    // the ORIGINAL private key still works — the drifted apply did not re-key.
+    const ok = await connectWithToken(cfg, mintIdentityJwt(cfg, "ada", REAL_SECRET));
+    await ok.close();
+    // and the drifted secret is NOT trusted.
+    await expect(
+      connectWithToken(cfg, mintIdentityJwt(cfg, "ada", "a-drifted-secret-from-a-stale-env")),
+    ).rejects.toThrow();
   });
 });
