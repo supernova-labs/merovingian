@@ -1,0 +1,45 @@
+docs/guides/going-to-production.md
+  s_208d3200a73d1e::t_3acd9540acfeba 64-66,69-73
+  s_208d3200a73d1e::t_33fbbe13d2e7da 74
+src/server/service.ts
+  s_208d3200a73d1e::t_4fec4d81f202b3 91-101
+test/auth-gate.test.ts
+  s_208d3200a73d1e::t_d6524e9c3939f6 1-86
+docs/guides/connection-and-secrets.md
+  s_208d3200a73d1e::t_6a729df2dcc699 81-86
+src/provider/surreal.ts
+  s_208d3200a73d1e::t_868024202c3a3d 10-32
+src/graph/apply.ts
+  s_208d3200a73d1e::t_44448e8f93393d 236-238
+  s_208d3200a73d1e::t_b2cedb6c2c36f4 34
+  s_208d3200a73d1e::t_fc41ff5b48bf04 146-150,155-162,164
+  s_208d3200a73d1e::t_3a56c1ca46ceb9 18
+surreal/auth.surql
+  s_208d3200a73d1e::t_5b9d010c64cb77 1-22
+surreal/data.surql
+  s_208d3200a73d1e::t_b1f33fe0a93713 1-6
+bunfig.toml
+  s_208d3200a73d1e::t_319f91b64bcfc1 1-3
+docs/reference/env-vars.md
+  s_208d3200a73d1e::t_818d6fe5d5f4c3 39
+test/preload.ts
+  s_208d3200a73d1e::t_3dbee778867f2c 1-14
+docs/concepts/enforcement.md
+  s_208d3200a73d1e::t_adcc319b983b25 197-203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "502a7ec879581b7018b5e7285285c153370b5a9a",
+  "prompts": {},
+  "sessions": {
+    "s_208d3200a73d1e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1f4896b-2430-4652-b964-f3f355b52786",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
