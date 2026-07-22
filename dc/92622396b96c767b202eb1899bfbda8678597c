@@ -1,0 +1,45 @@
+docs/decisions/consolidadas/0007-architect-vs-source-e-bootstrap-de-tenant.md
+  s_08e7c0b5f56d7d::t_9fc774ed280643 18,34,56,133
+docs/decisions/consolidadas/0012-library-do-tenant-e-distribuicao-hibrida.md
+  s_08e7c0b5f56d7d::t_9fc774ed280643 101-102,115
+docs/guides/connection-and-secrets.md
+  s_08e7c0b5f56d7d::t_9fc774ed280643 30
+docs/decisions/consolidadas/0008-owner-vs-member-e-atribuicao-multipla.md
+  s_08e7c0b5f56d7d::t_9fc774ed280643 15,68-71,136
+.gitignore
+  s_08e7c0b5f56d7d::t_72dbb962669697 8-11
+docs/decisions/fermentacao/0009-topologia-de-deploy-e-governanca-declarativa.md
+  s_08e7c0b5f56d7d::t_9fc774ed280643 228
+test/tenant-config.test.ts
+  s_08e7c0b5f56d7d::t_72dbb962669697 46-47,51,60,64-65,69,71-72,76-78,84-85,91-92,96-99,101,106-108,110-111
+docs/decisions/consolidadas/0002-permissionamento-e-dominio.md
+  s_08e7c0b5f56d7d::t_9fc774ed280643 5,25
+docs/decisions/consolidadas/0003-modelo-de-decisoes.md
+  s_08e7c0b5f56d7d::t_9fc774ed280643 6,49
+docs/decisions/consolidadas/0011-dados-de-dominio-sao-do-tenant.md
+  s_08e7c0b5f56d7d::t_9fc774ed280643 89-90
+docs/decisions/consolidadas/0014-frictions-com-escopo-e-governanca-local.md
+  s_08e7c0b5f56d7d::t_9fc774ed280643 11
+docs/decisions/consolidadas/0010-governanca-e-tooling-de-repo.md
+  s_08e7c0b5f56d7d::t_9fc774ed280643 50,64
+docs/decisions/INDEX.md
+  s_08e7c0b5f56d7d::t_9fc774ed280643 85
+docs/decisions/consolidadas/0004-topologia-e-build-time.md
+  s_08e7c0b5f56d7d::t_9fc774ed280643 6,34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "dc92622396b96c767b202eb1899bfbda8678597c",
+  "prompts": {},
+  "sessions": {
+    "s_08e7c0b5f56d7d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2277e9f6-d740-458b-9786-0021ce6a3a63",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
