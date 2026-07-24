@@ -30,7 +30,7 @@ Throughout this doc commands are written as `merovingian <command>`. The other t
 | Family | Commands | Where the target comes from |
 |---|---|---|
 | **Authoring** | `init`, `deploy plan`, `deploy apply`, `reset`, `library update` | Read the graph from `--graph <path>` or `./graph.yaml` in the cwd (plus its sibling `library/`). **The namespace comes from the yaml** (`namespace:` field). |
-| **Runtime** | `login`, `graph`, `build`, `data`, `passwd`, `inbox`, `decisions`, `console` | Take a `namespace` **positional** argument (selects the SurrealDB / offline stub). |
+| **Runtime** | `login`, `graph`, `build`, `data`, `passwd`, `inbox`, `decisions`, `console` | Take a `namespace` **positional** argument (selects the SurrealDB / offline stub). Exception: `passwd` is **Surreal-only** (credentials live in the db; there is no stub backend for it). |
 
 `init` is a special case: it takes a `<tenant>` positional (the name of the repo to scaffold), not a
 graph — it *creates* the graph and seeds the library.
@@ -146,10 +146,12 @@ needed on the machine. Without it, the legacy path resolves the user with the sy
 ### `passwd <namespace> <user>`
 
 Operator surface: set or rotate a person's SIGNIN password (ADR 0015). Connects with the system
-credential, verifies the user exists in the graph, and upserts the argon2 hash into the runtime
-`credential` table — `deploy apply`/`reset` never touch it; deleting the user from the graph
-deletes the credential with it. The new password comes from `MEROVINGIAN_NEW_PASS` or stdin
-(piped or typed; minimum 8 characters). Source: `src/commands/passwd.ts`.
+credential (Surreal-only — no stub), verifies the user exists in the graph, and upserts the argon2
+hash into the runtime `credential` table. Credential lifecycle: re-projections never wipe passwords
+(`reset` and routine applies leave `credential` rows alone), but **removing a user from the graph
+removes their credential with them** (`deploy apply --yes` deletes both) — a later user with the
+same id never inherits the old password. The new password comes from `MEROVINGIAN_NEW_PASS` or
+stdin (piped or typed; minimum 8 characters). Source: `src/commands/passwd.ts`.
 
 ```bash
 MEROVINGIAN_NEW_PASS='their-first-password' merovingian passwd acme ada
