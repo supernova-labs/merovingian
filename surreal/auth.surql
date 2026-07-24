@@ -17,6 +17,17 @@
 -- dev/test provisioning (reset) falls back to the PUBLIC dev key. A dev-key token is
 -- rejected by any real tenant by construction — the two keys never match. SurrealDB
 -- stores the KEY redacted, so the secret never leaks back through INFO FOR DB.
+--
+-- SIGNIN (ADR: signin-antes-do-service): the person authenticates with their OWN
+-- password — hash in the runtime `credential` table (data.surql), compared server-side
+-- with argon2 — and SurrealDB itself issues the scoped token, signed with the KEY that
+-- never leaves the database. No machine holds the signing key; each machine holds only
+-- its person's password (blast radius = that one identity). Coexists with WITH JWT:
+-- externally-signed tokens (dev/test mint, the future build/auth service) keep working.
 DEFINE ACCESS OVERWRITE identity ON DATABASE TYPE RECORD
+  SIGNIN (
+    SELECT * FROM user WHERE record::id(id) = $user
+      AND crypto::argon2::compare(type::record("credential", $user).pass, $pass)
+  )
   WITH JWT ALGORITHM HS256 KEY $jwt_secret
   DURATION FOR TOKEN 1h, FOR SESSION 1h;

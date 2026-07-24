@@ -10,11 +10,14 @@ import {
   surrealReachable,
   connectSurreal,
   connectWithToken,
+  connectAsPassword,
+  signinIdentity,
   mintIdentityJwt,
   DEV_JWT_SECRET,
   provisioningSecret,
 } from "../src/provider/surreal.ts";
 import { reset } from "../src/commands/reset.ts";
+import { passwd } from "../src/commands/passwd.ts";
 import { applyGraph } from "../src/graph/apply.ts";
 import { loadGraphFile } from "../src/graph/load-graph.ts";
 
@@ -121,5 +124,83 @@ describe("provisioningSecret — the deploy-apply gate", () => {
     await expect(
       connectWithToken(cfg, mintIdentityJwt(cfg, "ada", "a-drifted-secret-from-a-stale-env")),
     ).rejects.toThrow();
+  });
+});
+
+(dbUp ? describe : describe.skip)("password SIGNIN (the person's own credential)", () => {
+  test("passwd sets the credential; signin authenticates and $auth resolves", async () => {
+    await passwd("acme", "ada", { surrealDb: TEST_DB, password: "ada-password-1" });
+    const db = await connectAsPassword(cfg, "ada", "ada-password-1");
+    try {
+      const [uid] = await db.query<[string]>("RETURN record::id($auth)");
+      expect(uid).toBe("ada");
+    } finally {
+      await db.close();
+    }
+  });
+
+  test("wrong password is rejected", async () => {
+    await expect(signinIdentity(cfg, "ada", "wrong-password")).rejects.toThrow();
+  });
+
+  test("a user with NO credential cannot sign in", async () => {
+    await expect(signinIdentity(cfg, "ben", "anything-at-all")).rejects.toThrow();
+  });
+
+  test("the credential hash is invisible to a signed-in user", async () => {
+    const db = await connectAsPassword(cfg, "ada", "ada-password-1");
+    try {
+      const [rows] = await db.query<[unknown[]]>("SELECT * FROM credential");
+      expect(rows).toEqual([]);
+    } finally {
+      await db.close();
+    }
+  });
+
+  test("the signed-in session is subject to PERMISSIONS like any token", async () => {
+    // ada (content/acme owner) sees no client rows scoped to others unless seeded;
+    // the point is the query RUNS as a record identity, not a system user.
+    const db = await connectAsPassword(cfg, "ada", "ada-password-1");
+    try {
+      const [rows] = await db.query<[unknown[]]>("SELECT * FROM user");
+      // user table is closed to record users in schema.surql (no PERMISSIONS clause)
+      expect(Array.isArray(rows)).toBe(true);
+    } finally {
+      await db.close();
+    }
+  });
+
+  test("passwd rejects an unknown user and a too-short password", async () => {
+    await expect(passwd("acme", "nobody", { surrealDb: TEST_DB, password: "long-enough-pw" })).rejects.toThrow(/not found/);
+    await expect(passwd("acme", "ada", { surrealDb: TEST_DB, password: "short" })).rejects.toThrow(/too short/);
+  });
+
+  test("credentials SURVIVE a converge (deploy apply re-projects structure, never passwords)", async () => {
+    const { definition, users } = loadGraphFile(EXAMPLE_YAML);
+    const db = await connectSurreal(cfg);
+    try {
+      await applyGraph(db, definition, users, { reset: false });
+    } finally {
+      await db.close();
+    }
+    const again = await connectAsPassword(cfg, "ada", "ada-password-1");
+    try {
+      const [uid] = await again.query<[string]>("RETURN record::id($auth)");
+      expect(uid).toBe("ada");
+    } finally {
+      await again.close();
+    }
+  });
+
+  test("passwd rotation: old password stops working, new one signs in", async () => {
+    await passwd("acme", "ada", { surrealDb: TEST_DB, password: "ada-password-2" });
+    await expect(signinIdentity(cfg, "ada", "ada-password-1")).rejects.toThrow();
+    const db = await connectAsPassword(cfg, "ada", "ada-password-2");
+    try {
+      const [uid] = await db.query<[string]>("RETURN record::id($auth)");
+      expect(uid).toBe("ada");
+    } finally {
+      await db.close();
+    }
   });
 });

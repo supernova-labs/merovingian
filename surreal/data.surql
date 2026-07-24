@@ -8,6 +8,16 @@
 -- Domain tables (a tenant's business data) do NOT live here — they are GENERATED
 -- from the graph's surreal buckets at apply time (ADR 0011, src/graph/domain.ts).
 
+-- Credentials for password SIGNIN (runtime data, NEVER structural): keyed by the
+-- user's plain id (credential:<uid>), NOT a record link — so graph deletes never
+-- block on it, and an orphaned credential is inert (SIGNIN returns the user record;
+-- user gone → signin fails). Lives HERE (not schema.surql) because apply's full-content
+-- replace / reset's wipe must never touch passwords — set via `merovingian passwd`.
+-- PERMISSIONS NONE: no record identity ever reads a hash; only the root/system path
+-- writes it, and the SIGNIN clause (definition context) compares it server-side.
+DEFINE TABLE OVERWRITE credential SCHEMAFULL PERMISSIONS NONE;
+DEFINE FIELD OVERWRITE pass ON credential TYPE string;
+
 -- The learning inbox (ambient): append-only content, scoped resolution (ADR 0014).
 -- The authenticated identity appends; `user` is stamped server-side — unforgeable.
 -- `scope` routes the friction to the purpose that owns the PROBLEM: members read and

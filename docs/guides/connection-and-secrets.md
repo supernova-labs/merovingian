@@ -147,8 +147,12 @@ call (`src/mcp/token-source.ts`). `build` writes their env for you:
 
 - **Remote/real**: `MEROVINGIAN_SERVICE_URL` set → the MCP calls `<service>/token` with the local
   `gh` token per call; no token ever rests in a file, and expiry stops mattering.
-- **Dev/local-surreal**: `MEROVINGIAN_USER` set → the MCP dev-mints the scoped JWT locally using
-  `MEROVINGIAN_JWT_SECRET`.
+- **Password signin (ADR 0015)**: `MEROVINGIAN_USER` + `MEROVINGIAN_PASS` set → the MCP signs in
+  with the person's own password; SurrealDB checks the argon2 hash (`credential` table) and itself
+  issues the scoped token. **No signing key on the machine** — each machine holds only its person's
+  password (set by the operator with `merovingian passwd <ns> <user>`).
+- **Dev/local-surreal**: only `MEROVINGIAN_USER` set → the MCP dev-mints the scoped JWT locally using
+  `MEROVINGIAN_JWT_SECRET` (a real tenant rejects what this signs — dev/test dbs only).
 
 You normally don't set these by hand; `build` derives them from the session and transport. See
 [env-vars](../reference/env-vars.md#system-mcp-env-written-into-settingslocaljson--mcpjson-by-build).

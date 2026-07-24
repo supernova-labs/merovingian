@@ -20,6 +20,7 @@ de cada uma está em `fermentacao/` (em discussão) ou `consolidadas/` (fechadas
 | 0012 | Library do tenant + distribuição híbrida | 🟢 Consolidada | `consolidadas/` | conteúdo comportamental no tenant repo (build materializa a fatia); marketplace = produto + terceiros; init semeia cópias |
 | 0013 | Domínio de decisões: log + jurisprudência | 🟢 Consolidada | `consolidadas/` | log em voo (padrão inbox, purpose-scoped) · record ratificado (git→db, padrão library) · promoção via drain · `decides:` ganha significado (impl. entregue 2026-07-03) |
 | 0014 | Frictions com escopo + governança local | 🟢 Consolidada | `consolidadas/` | a friction É a task: `scope` (escritor escopa, root re-escopa/pesca) · leitura/resolução por lineage REAL (não origin) · governança local = skill `pending` (humano invoca) · um `drained` só + `resolved_through` (impl. entregue 2026-07-10) |
+| 0015 | SIGNIN por senha antes do service | 🟢 Consolidada | `consolidadas/` | cada pessoa com a própria senha (argon2 em `credential`, runtime); o banco emite o token (KEY nunca sai); coexiste com JWT externo → service vira sucessor, não pré-requisito; condição: banco em rede privada (impl. entregue 2026-07-24) |
 
 🟢 consolidada (lastro) · 🟡 superseded (history, aponta pro sucessor) · 🔵 fermentação (aberta)
 

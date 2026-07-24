@@ -7,7 +7,7 @@ import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { SURREAL_IDENT } from "../graph/domain.ts";
 import { sessionFile } from "../paths.ts";
-import { connectAs, surrealConfig } from "../provider/surreal.ts";
+import { connectAs, connectAsPassword, surrealConfig } from "../provider/surreal.ts";
 import type { Session } from "./login.ts";
 
 /** Rows of `table` visible to `userId` under the enforced PERMISSIONS. */
@@ -19,7 +19,10 @@ export async function visibleRows(
 ): Promise<Record<string, unknown>[]> {
   if (!SURREAL_IDENT.test(table)) throw new Error(`"${table}" is not a safe table name`);
   const cfg = surrealConfig(namespace, surrealDb ? { db: surrealDb } : {});
-  const db = await connectAs(cfg, userId);
+  // password signin when the person's own credential is present (no signing key on
+  // this machine); otherwise the dev-mint path (dev/test dbs only).
+  const pass = process.env.MEROVINGIAN_PASS;
+  const db = pass ? await connectAsPassword(cfg, userId, pass) : await connectAs(cfg, userId);
   try {
     const [rows] = await db.query<[Record<string, unknown>[]]>(
       "SELECT * FROM type::table($t) LIMIT 20",

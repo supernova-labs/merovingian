@@ -80,18 +80,55 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   ]);
 }
 
-/** Connect + signin + use. Caller owns close(). */
+/** Connect + signin + use. Caller owns close(). Tries the credential at ROOT scope
+ *  first (the dev default), then NAMESPACE, then DATABASE — so a real server can hand
+ *  the operator a db-scoped system user (least privilege; a db OWNER can deploy/drain
+ *  its own tenant) instead of root. First scope that authenticates wins. */
 export async function connectSurreal(cfg: SurrealConfig, timeoutMs = 4000): Promise<Surreal> {
   const db = new Surreal();
   try {
     await withTimeout(db.connect(cfg.url), timeoutMs, `connect ${cfg.url}`);
-    await db.signin({ username: cfg.username, password: cfg.password });
+    const { username, password } = cfg;
+    try {
+      await db.signin({ username, password });
+    } catch {
+      try {
+        await db.signin({ username, password, namespace: cfg.ns });
+      } catch {
+        await db.signin({ username, password, namespace: cfg.ns, database: cfg.db });
+      }
+    }
     await db.use({ namespace: cfg.ns, database: cfg.db });
     return db;
   } catch (err) {
     await db.close().catch(() => {});
     throw err;
   }
+}
+
+/** Password SIGNIN via the identity record access: SurrealDB checks the argon2 hash in
+ *  `credential` and ITSELF issues the scoped token (signed with the KEY that never leaves
+ *  the database). Returns the token — the same shape the mint/service paths produce. */
+export async function signinIdentity(cfg: SurrealConfig, userId: string, pass: string, timeoutMs = 6000): Promise<string> {
+  const db = new Surreal();
+  try {
+    await withTimeout(db.connect(cfg.url), timeoutMs, `connect ${cfg.url}`);
+    const ret: unknown = await withTimeout(
+      db.signin({ namespace: cfg.ns, database: cfg.db, access: "identity", variables: { user: userId, pass } } as never),
+      timeoutMs,
+      "signin identity",
+    );
+    const token = typeof ret === "string" ? ret : (ret as { access?: string })?.access;
+    if (!token) throw new Error("signin succeeded but no token in the response");
+    return token;
+  } finally {
+    await db.close().catch(() => {});
+  }
+}
+
+/** Connect authenticated as `userId` by password (subject to PERMISSIONS, like any token). */
+export async function connectAsPassword(cfg: SurrealConfig, userId: string, pass: string, timeoutMs = 6000): Promise<Surreal> {
+  return connectWithToken(cfg, await signinIdentity(cfg, userId, pass, timeoutMs), timeoutMs);
 }
 
 function b64url(s: string): string {
