@@ -1,0 +1,27 @@
+docs/guides/operating-a-tenant.md
+  s_208d3200a73d1e::t_58390a1dcf56ef 173-178,184-193
+docs/concepts/topology.md
+  s_208d3200a73d1e::t_14650a4510f2d0 3-8
+  s_208d3200a73d1e::t_6a850bb7d3099f 109,113
+docs/guides/going-to-production.md
+  s_208d3200a73d1e::t_d6cce48ec94c76 49-74
+  s_208d3200a73d1e::t_3ebd4e9805e428 97-104
+  s_208d3200a73d1e::t_20ca93eefadf3e 160-165
+  s_208d3200a73d1e::t_1f7b82bb740cd2 139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "97b7fb67eacd313601c07b7a277a642e9aa9e73d",
+  "prompts": {},
+  "sessions": {
+    "s_208d3200a73d1e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1f4896b-2430-4652-b964-f3f355b52786",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
