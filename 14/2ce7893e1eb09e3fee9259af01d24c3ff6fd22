@@ -1,0 +1,32 @@
+src/graph/apply.ts
+  s_208d3200a73d1e::t_a3baf167acfdb8 283-285,289
+  s_208d3200a73d1e::t_31c5313359482a 286-288
+src/commands/data.ts
+  s_208d3200a73d1e::t_fd9e42ac8abc61 23-25,27-38
+  s_208d3200a73d1e::t_226cb04f2265c8 8,11
+src/provider/surreal.ts
+  s_208d3200a73d1e::t_c37f9c99dc616e 75-77,79,82-85
+test/auth-gate.test.ts
+  s_208d3200a73d1e::t_8123672f9e9f37 147-154,158,162-163,166-168
+  s_208d3200a73d1e::t_7d4f8137bc5e55 159-161,164-165
+  s_208d3200a73d1e::t_9052fb5244f4ec 182-184,188
+  s_208d3200a73d1e::t_3598607a1c6b39 169-170
+src/commands/login.ts
+  s_208d3200a73d1e::t_8f66e3c566083c 66-68,71-73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "142ce7893e1eb09e3fee9259af01d24c3ff6fd22",
+  "prompts": {},
+  "sessions": {
+    "s_208d3200a73d1e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1f4896b-2430-4652-b964-f3f355b52786",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
