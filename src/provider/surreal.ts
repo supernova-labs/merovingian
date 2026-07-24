@@ -72,12 +72,17 @@ export function surrealConfig(tenant: string, overrides: Partial<SurrealConfig> 
   };
 }
 
-/** Reject if `p` doesn't settle within `ms` (the ws client has no connect timeout). */
+/** Reject if `p` doesn't settle within `ms` (the ws client has no connect timeout).
+ *  The timer is cleared on settle — a pending timeout would otherwise hold the event
+ *  loop open and stall CLI exit for the full window. */
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
   return Promise.race([
     p,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`timeout: ${label} (${ms}ms)`)), ms)),
-  ]);
+    new Promise<T>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`timeout: ${label} (${ms}ms)`)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
 }
 
 /** Connect + signin + use. Caller owns close(). Tries the credential at ROOT scope

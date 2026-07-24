@@ -5,9 +5,10 @@
 
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { SURREAL_IDENT } from "../graph/domain.ts";
 import { sessionFile } from "../paths.ts";
-import { connectAs, connectAsPassword, surrealConfig } from "../provider/surreal.ts";
+import { connectAs, connectAsPassword, connectWithToken, surrealConfig } from "../provider/surreal.ts";
 import type { Session } from "./login.ts";
 
 /** Rows of `table` visible to `userId` under the enforced PERMISSIONS. */
@@ -19,10 +20,22 @@ export async function visibleRows(
 ): Promise<Record<string, unknown>[]> {
   if (!SURREAL_IDENT.test(table)) throw new Error(`"${table}" is not a safe table name`);
   const cfg = surrealConfig(namespace, surrealDb ? { db: surrealDb } : {});
-  // password signin when the person's own credential is present (no signing key on
-  // this machine); otherwise the dev-mint path (dev/test dbs only).
+  // token acquisition mirrors the MCP token-source order: the service (gh-auth) wins,
+  // then the person's own password signin, then dev-mint (dev/test dbs only).
+  const svc = process.env.MEROVINGIAN_SERVICE_URL;
   const pass = process.env.MEROVINGIAN_PASS;
-  const db = pass ? await connectAsPassword(cfg, userId, pass) : await connectAs(cfg, userId);
+  let db;
+  if (svc) {
+    const gh = execFileSync("gh", ["auth", "token"], { encoding: "utf8" }).trim();
+    const res = await fetch(`${svc}/token?namespace=${encodeURIComponent(namespace)}`, { headers: { Authorization: `Bearer ${gh}` } });
+    const body = (await res.json()) as { token?: string; error?: string };
+    if (!res.ok || !body.token) throw new Error(`/token: ${res.status} ${body.error ?? ""}`);
+    db = await connectWithToken(cfg, body.token);
+  } else if (pass) {
+    db = await connectAsPassword(cfg, userId, pass);
+  } else {
+    db = await connectAs(cfg, userId);
+  }
   try {
     const [rows] = await db.query<[Record<string, unknown>[]]>(
       "SELECT * FROM type::table($t) LIMIT 20",

@@ -144,7 +144,28 @@ describe("provisioningSecret — the deploy-apply gate", () => {
   });
 
   test("a user with NO credential cannot sign in", async () => {
+    // the auth-gate db is reused across runs and reset PRESERVES credentials —
+    // make the no-credential premise explicit instead of assuming history.
+    const root = await connectSurreal(cfg);
+    try {
+      await root.query("DELETE credential WHERE record::id(id) = 'ben'");
+    } finally {
+      await root.close();
+    }
     await expect(signinIdentity(cfg, "ben", "anything-at-all")).rejects.toThrow();
+  });
+
+  test("password login resolves the identity WITHOUT a system credential (closed user table)", async () => {
+    // the user table is closed to record identities — even own-record fields don't
+    // read back — so the login path takes the identity from $auth itself. This is
+    // exactly the query the CLI login runs.
+    const db = await connectAsPassword(cfg, "ada", "ada-password-1");
+    try {
+      const [uid] = await db.query<[string]>("RETURN record::id($auth)");
+      expect(uid).toBe("ada");
+    } finally {
+      await db.close();
+    }
   });
 
   test("the credential hash is invisible to a signed-in user", async () => {
@@ -158,13 +179,13 @@ describe("provisioningSecret — the deploy-apply gate", () => {
   });
 
   test("the signed-in session is subject to PERMISSIONS like any token", async () => {
-    // ada (content/acme owner) sees no client rows scoped to others unless seeded;
-    // the point is the query RUNS as a record identity, not a system user.
+    // the user table is CLOSED to record identities (schema.surql: no PERMISSIONS
+    // clause = NONE): a password session scanning it must get ZERO rows — proof it
+    // runs as a record identity, not a system user.
     const db = await connectAsPassword(cfg, "ada", "ada-password-1");
     try {
       const [rows] = await db.query<[unknown[]]>("SELECT * FROM user");
-      // user table is closed to record users in schema.surql (no PERMISSIONS clause)
-      expect(Array.isArray(rows)).toBe(true);
+      expect(rows).toEqual([]);
     } finally {
       await db.close();
     }
