@@ -11,6 +11,7 @@ import { build } from "./commands/build.ts";
 import { graph } from "./commands/graph.ts";
 import { reset } from "./commands/reset.ts";
 import { data } from "./commands/data.ts";
+import { passwd } from "./commands/passwd.ts";
 import { inbox } from "./commands/inbox.ts";
 import { decisions } from "./commands/decisions.ts";
 import { namespaceAdd } from "./commands/namespace.ts";
@@ -31,6 +32,7 @@ Usage:
   merovingian build <namespace> [--purposes a,b]   project the workspace (in cwd)
   merovingian reset [--graph P]                    DEV/TEST: wipe structure + reproject (never on a live tenant — first run is just deploy apply)
   merovingian data <namespace> <table>             list rows the logged-in user CAN see (enforced by Surreal)
+  merovingian passwd <namespace> <user>            set/rotate a person's SIGNIN password (operator; reads MEROVINGIAN_NEW_PASS or stdin)
   merovingian inbox <namespace> [--all] [--drain [--ids a,b]] [--rescope <id> --to <purpose|root>]   governance drain (root): list/stamp/triage the learning inbox
   merovingian mcp <inbox|decisions|surreal-data>            run a bundled system MCP server (stdio — what the emitted .mcp.json invokes)
   merovingian decisions <namespace> [--all] [--drain [--ids a,b]]   governance drain (root): the in-flight decision log (promotion candidates)
@@ -52,7 +54,7 @@ Runtime commands (build/graph/console/…) take a namespace (selects the db / st
 `;
 
 export interface ParsedArgs {
-  command: "namespace" | "login" | "graph" | "build" | "reset" | "data" | "inbox" | "decisions" | "console" | "deploy" | "init" | "library" | "mcp" | "help";
+  command: "namespace" | "login" | "graph" | "build" | "reset" | "data" | "passwd" | "inbox" | "decisions" | "console" | "deploy" | "init" | "library" | "mcp" | "help";
   namespace?: string;
   user?: string;
   url?: string;
@@ -158,6 +160,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     return { command: "reset", graph };
   }
   if (cmd === "data") return { command: "data", namespace: rest[0], table: rest[1] };
+  if (cmd === "passwd") return { command: "passwd", namespace: rest[0], user: rest[1] };
   if (cmd === "inbox" || cmd === "decisions") {
     const { positionals, all, drain, ids, rescope, to } = extractFlags(rest);
     return { command: cmd, namespace: positionals[0], all, drain, ids, rescope, to };
@@ -224,6 +227,12 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
   if (parsed.command === "data") {
     if (!parsed.namespace || !parsed.table) throw new Error(`usage: merovingian data <namespace> <table>\n\n${USAGE}`);
     await data(parsed.namespace, parsed.table);
+    return;
+  }
+
+  if (parsed.command === "passwd") {
+    if (!parsed.namespace || !parsed.user) throw new Error(`usage: merovingian passwd <namespace> <user>\n\n${USAGE}`);
+    await passwd(parsed.namespace, parsed.user);
     return;
   }
 

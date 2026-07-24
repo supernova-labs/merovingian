@@ -280,7 +280,13 @@ export async function applyGraph(db: Surreal, definition: Definition, users: Rec
   await reconcileDecisionDomains(db, definition);
   await reconcileEdges(db, edgeDelta(desired, current));
   await rescopeOrphanedFrictions(db, current, recordDeletes);
-  for (const d of recordDeletes) await db.delete(new RecordId(d.kind, d.id));
+  for (const d of recordDeletes) {
+    await db.delete(new RecordId(d.kind, d.id));
+    // a removed HUMAN takes their credential along: if the same uid is ever re-created
+    // for a different person, the old holder's password must not reactivate. Query
+    // DELETE (not db.delete) — idempotent when the user never had a credential.
+    if (d.kind === "user") await db.query("DELETE type::record('credential', $u)", { u: d.id });
+  }
 
   return { status: "applied", plan, applied: { created: plan.create.length, updated: plan.update.length, deleted: plan.delete.length } };
 }

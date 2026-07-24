@@ -7,7 +7,8 @@ import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { SURREAL_IDENT } from "../graph/domain.ts";
 import { sessionFile } from "../paths.ts";
-import { connectAs, surrealConfig } from "../provider/surreal.ts";
+import { connectWithToken, surrealConfig } from "../provider/surreal.ts";
+import { tokenSourceFor } from "../mcp/token-source.ts";
 import type { Session } from "./login.ts";
 
 /** Rows of `table` visible to `userId` under the enforced PERMISSIONS. */
@@ -19,7 +20,9 @@ export async function visibleRows(
 ): Promise<Record<string, unknown>[]> {
   if (!SURREAL_IDENT.test(table)) throw new Error(`"${table}" is not a safe table name`);
   const cfg = surrealConfig(namespace, surrealDb ? { db: surrealDb } : {});
-  const db = await connectAs(cfg, userId);
+  // ONE token order for every surface (see tokenSourceFor): service > password > dev-mint.
+  // 6s window matches the signin path (the password flow already allows it end-to-end).
+  const db = await connectWithToken(cfg, await tokenSourceFor(cfg, userId, namespace)(), 6000);
   try {
     const [rows] = await db.query<[Record<string, unknown>[]]>(
       "SELECT * FROM type::table($t) LIMIT 20",

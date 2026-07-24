@@ -67,7 +67,9 @@ not set them by hand. See [emit](../../src/projection/emit.ts) and
 | `SURREAL_NS` | `merovingian` | SurrealDB namespace for the MCP connection. |
 | `MEROVINGIAN_SERVICE_URL` | *(unset)* | **Remote/real path.** The build/auth service URL; the MCP fetches a fresh scoped token per call from `<url>/token` using the local `gh` token. When set, the MCP does NOT mint locally. |
 | `MEROVINGIAN_NAMESPACE` | falls back to `MEROVINGIAN_DB` | The merovingian namespace passed to the service's `/token` call. |
-| `MEROVINGIAN_USER` | *(unset)* | **Dev path.** When `MEROVINGIAN_SERVICE_URL` is unset, the MCP dev-mints a scoped JWT locally for this user id. One of `MEROVINGIAN_SERVICE_URL` or `MEROVINGIAN_USER` must be set, or the token source throws. |
+| `MEROVINGIAN_USER` | *(unset)* | The person's user id for the local token paths (password signin or dev-mint). One of `MEROVINGIAN_SERVICE_URL` or `MEROVINGIAN_USER` must be set, or the token source throws. |
+| `MEROVINGIAN_PASS` | *(unset)* | **Password SIGNIN (ADR 0015).** The person's own password: SurrealDB checks the argon2 hash in `credential` and itself issues the scoped token — no signing key on this machine. Order: `MEROVINGIAN_SERVICE_URL` > `MEROVINGIAN_PASS` > dev-mint. Lives in the workspace's gitignored `.env`. |
+| `MEROVINGIAN_NEW_PASS` | *(unset)* | Input for `merovingian passwd <ns> <user>` (operator: set/rotate a person's password; falls back to stdin). |
 | `MEROVINGIAN_BUCKETS` | `[]` (absent/broken JSON = no mounts) | The identity's bucket mounts (a JSON `SurrealMount[]`), read by the `surreal-data` MCP (`mountsFromEnv` in `src/mcp/surreal-data.ts`) as its tool surface (`tables` / `select`). Stamped by `build` from the manifest's surreal mounts — **not user-set**. Affordance only: enforcement stays with the db's PERMISSIONS (ADR 0011). |
 | `MEROVINGIAN_PURPOSES` | `[]` | The projection's visible purposes (a JSON `string[]`), read by the `inbox` MCP (`purposesFromEnv` in `src/mcp/inbox.ts`) as the scope-hint for `friction`/`pending`. Stamped by `build`. Affordance only: read/resolve reach is the db's lineage permission (ADR 0014). |
 

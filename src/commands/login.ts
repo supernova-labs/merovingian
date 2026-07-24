@@ -9,7 +9,7 @@
 import { writeJsonAtomic } from "../fs/atomic.ts";
 import { sessionFile } from "../paths.ts";
 import { stubProviderFor } from "../provider/stub.ts";
-import { SurrealProvider, connectSurreal, surrealConfig } from "../provider/surreal.ts";
+import { SurrealProvider, connectSurreal, connectWithToken, signinIdentity, surrealConfig } from "../provider/surreal.ts";
 import type { User } from "../provider/types.ts";
 import { defaultBackend, type Backend } from "../service/build-service.ts";
 import { readNamespace, ghToken } from "../transport.ts";
@@ -23,6 +23,8 @@ export interface Session {
 
 export interface LoginOpts {
   backend?: Backend;
+  /** password for identity SIGNIN (also read from MEROVINGIAN_PASS) */
+  password?: string;
 }
 
 export async function login(namespace: string, userId?: string, opts: LoginOpts = {}): Promise<void> {
@@ -54,13 +56,31 @@ export async function login(namespace: string, userId?: string, opts: LoginOpts 
   // (a real local tenant has no fixture — the stub only knows the examples).
   if (!userId) throw new Error(`local login needs a user: merovingian login ${namespace} <user>`);
   const backend = defaultBackend(opts.backend);
-  let user: User;
+  let user: Pick<User, "id" | "name">;
   if (backend === "surreal") {
-    const db = await connectSurreal(surrealConfig(namespace));
-    try {
-      user = await new SurrealProvider(db, namespace).resolveUser(userId);
-    } finally {
-      await db.close();
+    const cfg = surrealConfig(namespace);
+    const pass = opts.password ?? process.env.MEROVINGIAN_PASS;
+    if (pass) {
+      // password SIGNIN: proves the identity against the argon2 hash AND needs no
+      // system credential on this machine — the connection is the scoped user itself.
+      // The user table is CLOSED to record identities (schema.surql) — even the own
+      // record's fields don't read back in a session query — so take the identity from
+      // $auth itself and skip the cosmetic name lookup (the session stores only the id).
+      const db = await connectWithToken(cfg, await signinIdentity(cfg, userId, pass));
+      try {
+        const [uid] = await db.query<[string]>("RETURN record::id($auth)");
+        if (!uid) throw new Error("signin ok but $auth did not resolve — schema drift?");
+        user = { id: uid, name: uid };
+      } finally {
+        await db.close();
+      }
+    } else {
+      const db = await connectSurreal(cfg);
+      try {
+        user = await new SurrealProvider(db, namespace).resolveUser(userId);
+      } finally {
+        await db.close();
+      }
     }
   } else {
     user = await stubProviderFor(namespace).resolveUser(userId);
