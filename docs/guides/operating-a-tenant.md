@@ -170,17 +170,27 @@ Each person who wants a workspace authenticates once per machine. The session is
 merovingian namespace add acme https://build.acme.example   # once, registers the remote
 merovingian login acme                                      # uses your gh auth token
 
-# Local tenant (no remote) — pass the user id:
+# Local tenant, password SIGNIN (ADR 0015) — the person's own credential:
+#   operator, once: openssl rand -base64 18 | merovingian passwd acme ada
+#   person's workspace .env: MEROVINGIAN_USER=ada + MEROVINGIAN_PASS=<their password>
+merovingian login acme ada        # SurrealDB checks the hash, issues the token — no system creds
+
+# Local tenant, operator convenience (system creds in env, no password set):
 merovingian login acme ada                     # validates against the live deployed db
 ```
 
 - **Remote** path (`namespace add` done): omit the user; the CLI uses `gh auth token` and the
   service's `/whoami` to resolve you. Requires `gh auth login`.
-- **Local** path: the `<user>` positional is required and must be a user id in the graph. Backend
-  selection mirrors `build` (`--backend` / `MEROVINGIAN_BACKEND`, default `surreal`) — the default
-  hits the live deployed db, which is what a real tenant needs. Do **not** set `--backend stub`
-  here: the stub only knows the `acme` fixture, so a real tenant fails with
-  `unknown namespace "<ns>" (known: acme)`.
+- **Password** path (`MEROVINGIAN_PASS` set): the login authenticates AS the person via the
+  identity SIGNIN — no root/system credential on their machine, and the MCPs and `data`
+  authenticate the same way from the workspace `.env`. This is the per-person path for a real
+  tenant without a service. Onboarding order: `deploy apply` (the user exists in the graph) →
+  `passwd` (operator) → `.env` (person) → `login`.
+- **Local operator** path (no password in env): the `<user>` positional is required and must be a
+  user id in the graph; resolution uses the system connection. Backend selection mirrors `build`
+  (`--backend` / `MEROVINGIAN_BACKEND`, default `surreal`) — the default hits the live deployed
+  db, which is what a real tenant needs. Do **not** set `--backend stub` here: the stub only knows
+  the `acme` fixture, so a real tenant fails with `unknown namespace "<ns>" (known: acme)`.
 
 `build`, `graph`, and `data` all fail with `not logged in to "<ns>"` until this succeeds.
 

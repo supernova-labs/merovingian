@@ -1,7 +1,11 @@
 # Topology — the runtime pieces
 
-Who runs where, and what each one holds and trusts. The design keeps secrets off the user's machine:
-root credentials and the JWT signing key live only in the build/auth service.
+Who runs where, and what each one holds and trusts. The design keeps secrets off the user's machine.
+Two ways to get there: the **build/auth service** (root creds + the JWT signing key live only
+server-side, identity via GitHub — the diagram below), or **password SIGNIN** (ADR 0015, no service:
+each person holds only their own password; SurrealDB checks the argon2 hash in `credential` and
+itself issues the scoped token, signed with a KEY that never leaves the database). Either way, no
+machine ever holds a forge-anyone secret.
 
 ```
   ┌─────────────────────────── user's machine ───────────────────────────┐
@@ -102,11 +106,11 @@ service (and dev tooling); record/JWT sessions are always subordinate to the per
 
 | Piece            | Runs where          | Holds                              | Trusts                          |
 |------------------|---------------------|------------------------------------|---------------------------------|
-| CLI              | user machine        | gh token                           | the service's `Manifest`/token  |
+| CLI              | user machine        | gh token *or* own password (`.env`)| the service's `Manifest`/token, or the DB-issued SIGNIN token |
 | workspace + MCPs | user machine        | a token *source* (no token)        | SurrealDB `PERMISSIONS`         |
 | console          | user machine (`:local`) | nothing (no auth)              | localhost binding               |
 | build/auth service | server-side       | **root creds + JWT signing key**   | GitHub identity                 |
-| SurrealDB        | server / container  | the graph + business data          | service-signed JWTs             |
+| SurrealDB        | server / container  | the graph + business data **+ the signing KEY + credential hashes (SIGNIN)** | service-signed JWTs / its own SIGNIN |
 
 Default backend is `surreal` (the live DB); `--backend stub` selects the offline `acme` fixture,
 and a remote namespace config points at the service instead. See [architecture.md](./architecture.md) for the code seams
