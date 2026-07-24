@@ -1,0 +1,32 @@
+src/mcp/token-source.ts
+  s_208d3200a73d1e::t_8268d79e3e061b 20-21,23-27,38,40-46
+src/commands/data.ts
+  s_208d3200a73d1e::t_f83f6f5023eef1 10-11
+  s_208d3200a73d1e::t_ef8e1012bab0f9 23-24
+test/auth-gate.test.ts
+  s_208d3200a73d1e::t_25ed93c1b9565b 148-149,153-154
+docs/decisions/INDEX.md
+  s_208d3200a73d1e::t_394ad0cbb79ab5 45-51
+docs/reference/cli.md
+  s_208d3200a73d1e::t_2e0ac3bd80531f 142-161
+  s_208d3200a73d1e::t_3e841cad3bb221 33
+  s_208d3200a73d1e::t_eb5991c46cacdc 52
+src/commands/passwd.ts
+  s_208d3200a73d1e::t_9481a64a85a45d 16-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "0f5fc1ff14bcd4ca98244d55beef05c5c70de59c",
+  "prompts": {},
+  "sessions": {
+    "s_208d3200a73d1e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1f4896b-2430-4652-b964-f3f355b52786",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
