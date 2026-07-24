@@ -145,10 +145,13 @@ describe("provisioningSecret — the deploy-apply gate", () => {
 
   test("a user with NO credential cannot sign in", async () => {
     // the auth-gate db is reused across runs and reset PRESERVES credentials —
-    // make the no-credential premise explicit instead of assuming history.
+    // make the no-credential premise explicit AND verified, so a rejected signin
+    // can't be a false positive from a merely-wrong password.
     const root = await connectSurreal(cfg);
     try {
       await root.query("DELETE credential WHERE record::id(id) = 'ben'");
+      const [rows] = await root.query<[unknown[]]>("SELECT * FROM credential WHERE record::id(id) = 'ben'");
+      expect(rows).toEqual([]);
     } finally {
       await root.close();
     }

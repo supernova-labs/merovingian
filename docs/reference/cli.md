@@ -30,7 +30,7 @@ Throughout this doc commands are written as `merovingian <command>`. The other t
 | Family | Commands | Where the target comes from |
 |---|---|---|
 | **Authoring** | `init`, `deploy plan`, `deploy apply`, `reset`, `library update` | Read the graph from `--graph <path>` or `./graph.yaml` in the cwd (plus its sibling `library/`). **The namespace comes from the yaml** (`namespace:` field). |
-| **Runtime** | `login`, `graph`, `build`, `data`, `inbox`, `decisions`, `console` | Take a `namespace` **positional** argument (selects the SurrealDB / offline stub). |
+| **Runtime** | `login`, `graph`, `build`, `data`, `passwd`, `inbox`, `decisions`, `console` | Take a `namespace` **positional** argument (selects the SurrealDB / offline stub). |
 
 `init` is a special case: it takes a `<tenant>` positional (the name of the repo to scaffold), not a
 graph — it *creates* the graph and seeds the library.
@@ -49,6 +49,7 @@ See [`build-vs-deploy`](../concepts/build-vs-deploy.md) for the conceptual split
 | `build <ns>` | — | `<ns>` | `--purposes` `--backend` |
 | `reset` | yes | — | `--graph` |
 | `data <ns> <table>` | — | `<ns>` `<table>` | — |
+| `passwd <ns> <user>` | — | `<ns>` `<user>` | — (password via `MEROVINGIAN_NEW_PASS` or stdin) |
 | `inbox <ns>` | — | `<ns>` | `--all` `--drain` `--ids` `--rescope` `--to` |
 | `mcp <name>` | — | `inbox` \| `decisions` \| `surreal-data` | — (stdio server; what the emitted `.mcp.json` invokes) |
 | `decisions <ns>` | — | `<ns>` | `--all` `--drain` `--ids` |
@@ -137,6 +138,26 @@ merovingian login acme                       # remote (gh identity)
 
 `build`, `graph`, and `data` all **require a prior `login`** — they read the session file and
 throw `not logged in to "<ns>"` if it is missing.
+
+With `MEROVINGIAN_PASS` set, the local-surreal login authenticates by **password SIGNIN**
+(ADR 0015): the DB checks the argon2 hash and issues the scoped token — no system credential
+needed on the machine. Without it, the legacy path resolves the user with the system connection.
+
+### `passwd <namespace> <user>`
+
+Operator surface: set or rotate a person's SIGNIN password (ADR 0015). Connects with the system
+credential, verifies the user exists in the graph, and upserts the argon2 hash into the runtime
+`credential` table — `deploy apply`/`reset` never touch it; deleting the user from the graph
+deletes the credential with it. The new password comes from `MEROVINGIAN_NEW_PASS` or stdin
+(piped or typed; minimum 8 characters). Source: `src/commands/passwd.ts`.
+
+```bash
+MEROVINGIAN_NEW_PASS='their-first-password' merovingian passwd acme ada
+openssl rand -base64 18 | merovingian passwd acme ada       # generated
+```
+
+Onboarding order: `deploy apply` (user exists in the graph) → `passwd <ns> <user>` → the person
+puts `MEROVINGIAN_USER`/`MEROVINGIAN_PASS` in their workspace `.env` → `login` + MCPs work.
 
 ### `graph <namespace> [--backend stub|surreal]`
 

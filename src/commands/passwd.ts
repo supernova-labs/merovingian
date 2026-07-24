@@ -13,7 +13,9 @@ async function readPassword(): Promise<string> {
   const env = process.env.MEROVINGIAN_NEW_PASS;
   if (env) return env;
   if (process.stdin.isTTY) console.error("new password (input is visible — prefer piping or MEROVINGIAN_NEW_PASS):");
-  for await (const line of console) return line.trim();
+  // the console iterator already strips the line terminator — preserve the line EXACTLY
+  // (a trim here would silently alter passwords with intentional edge whitespace).
+  for await (const line of console) return line;
   throw new Error("no password provided (stdin closed; set MEROVINGIAN_NEW_PASS or pipe it)");
 }
 

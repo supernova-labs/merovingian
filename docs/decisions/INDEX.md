@@ -42,6 +42,13 @@ Vivem no `0009` (o único ativo de peso), todos **roadmap**, não bloqueantes:
 
 ## Histórico de curadoria
 
+- **2026-07-24** — Nasce `0015` (consolidada): **SIGNIN por senha antes do service** — cada
+  pessoa autentica com a própria senha (hash argon2 na tabela runtime `credential`; o `apply`
+  nunca a toca) e o próprio SurrealDB emite o token scoped: a KEY de assinatura não sai do
+  banco, nenhuma máquina carrega chave-mestra. Coexiste com `WITH JWT` (dev-mint e o service
+  futuro intactos) → o service (#6) vira sucessor do rollout, não pré-requisito. Condição
+  registrada: o banco durável em rede privada. Detonador: onboarding da segunda pessoa
+  (pergunta do Luis: "por que não a própria senha, que eu dou ao criar o usuário?").
 - **2026-07-10** — Nasce `0014` (consolidada): **frictions com escopo + governança local** —
   o loop FFF ganha o caminho eferente. A friction É a task: `scope option<record<purpose>>`
   (escritor escopa no nascimento; vazio = fila do root; root re-escopa na triagem e pesca o
