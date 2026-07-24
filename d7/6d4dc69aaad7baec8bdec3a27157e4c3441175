@@ -1,0 +1,55 @@
+surreal/auth.surql
+  s_208d3200a73d1e::t_b4fdd2ad021817 20-26,28-31
+docs/reference/env-vars.md
+  s_208d3200a73d1e::t_f6af4b4db8edca 70-72
+docs/decisions/consolidadas/0015-signin-por-senha-antes-do-service.md
+  s_208d3200a73d1e::t_35b96231fb1d82 1-87
+docs/guides/connection-and-secrets.md
+  s_208d3200a73d1e::t_f267bbb45331d0 150-155
+src/commands/data.ts
+  s_208d3200a73d1e::t_73b5a453389e33 10
+  s_208d3200a73d1e::t_2230cb3aa3da68 22-25
+src/provider/surreal.ts
+  s_208d3200a73d1e::t_ed18e855ddcef2 83-86,91-100,109-132
+  s_208d3200a73d1e::t_2a3e054650b851 133
+docs/decisions/INDEX.md
+  s_208d3200a73d1e::t_f0b6c538e61b43 23
+surreal/data.surql
+  s_208d3200a73d1e::t_edf483a4af1384 11-20
+src/commands/passwd.ts
+  s_208d3200a73d1e::t_e53c5e068c9b2f 1-49
+src/mcp/token-source.ts
+  s_208d3200a73d1e::t_41ffe3add22889 6
+  s_208d3200a73d1e::t_d8c362682e72ce 20-25,39-41
+test/auth-gate.test.ts
+  s_208d3200a73d1e::t_600e34856934b1 129-177,195-206
+  s_208d3200a73d1e::t_b56975110350c9 13-14,20
+  s_208d3200a73d1e::t_9cf7070827abb2 178-194
+src/commands/login.ts
+  s_208d3200a73d1e::t_ceae64837b0be3 26-27
+  s_208d3200a73d1e::t_be1a375208a5ee 61-83
+  s_208d3200a73d1e::t_9e24fa658c8b3c 59
+  s_208d3200a73d1e::t_3b72e57e5d60b2 12
+src/cli.ts
+  s_208d3200a73d1e::t_8cabb6c44b4e04 233-238
+  s_208d3200a73d1e::t_e7be73f7e860c9 163
+  s_208d3200a73d1e::t_c45eb274ca03d2 35
+  s_208d3200a73d1e::t_b5775ee55a9e1f 57
+  s_208d3200a73d1e::t_c0c8b2248bfcc1 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d76d4dc69aaad7baec8bdec3a27157e4c3441175",
+  "prompts": {},
+  "sessions": {
+    "s_208d3200a73d1e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1f4896b-2430-4652-b964-f3f355b52786",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
