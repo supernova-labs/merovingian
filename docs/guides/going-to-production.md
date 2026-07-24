@@ -46,7 +46,32 @@ In-process surreal means **this machine** holds the root creds (`SURREAL_USER`/`
 the signing key (`MEROVINGIAN_JWT_SECRET`). Fine for an operator; not what you hand to every user.
 See [connection-and-secrets](connection-and-secrets.md).
 
-## Step 3 — the build/auth service (secrets server-side)
+## Step 3 — more people, no service yet: password SIGNIN (ADR 0015)
+
+Before standing up the service, the small-team path: each person authenticates with **their own
+password**. The operator sets it (`merovingian passwd <ns> <user>` — argon2 hash in the runtime
+`credential` table); the person keeps `MEROVINGIAN_USER`/`MEROVINGIAN_PASS` in their workspace's
+gitignored `.env`. SurrealDB checks the hash and **itself issues** the scoped token, signed with
+the `KEY` that never leaves the database — no machine holds the signing key, and a compromised
+laptop exposes exactly one identity (rotate it with `passwd`).
+
+```bash
+# operator, once per person (after deploy apply put them in the graph):
+openssl rand -base64 18 | merovingian passwd acme ada
+# the person, in their workspace .env:
+#   MEROVINGIAN_USER=ada
+#   MEROVINGIAN_PASS=<the password you handed them>
+merovingian login acme ada        # password SIGNIN — no system creds on their machine
+merovingian data acme clients     # scoped reads; the MCPs authenticate the same way
+```
+
+The condition attached (see the ADR): every machine dials the database directly, so the durable
+SurrealDB must live on a **private network** (VPN/firewall) — never a public port. Known limit:
+`build` on a member's machine still reads structure with system creds — serve `/manifest` from the
+service inside the private network for that (issue #19); everything else (login, data, MCP tokens)
+is covered by the password.
+
+## Step 4 — the build/auth service (secrets server-side)
 
 The service (`src/server/service.ts`, `bin/merovingian-service.ts`) is the server-side box that:
 
@@ -69,8 +94,14 @@ bun bin/merovingian-service.ts                          # (or: bun run service)
 The **same** `MEROVINGIAN_JWT_SECRET` must be set when you provision the tenant (`deploy apply`) — it
 binds the `KEY` in `surreal/auth.surql`'s `DEFINE ACCESS identity`. A real `deploy apply` with no
 secret set refuses to run (it won't key a tenant to the public dev secret). Generate it once, keep it
-private, share it only between the provisioning step and the service. Rotating it = re-run `deploy
-apply` with the new value (re-applies the `DEFINE ACCESS`), then restart the service with the same value.
+private, share it only between the provisioning step and the service.
+
+**Rotating the key of a LIVE tenant is deliberately explicit** — a routine `deploy apply` never
+re-keys (it provisions the access only on a virgin db, so a drifted env can't silently invalidate
+every outstanding token). To rotate: apply `surreal/auth.surql` directly with the new value
+(root/db-owner: `db.query(<auth.surql>, { jwt_secret: <new> })`), then restart whatever mints with
+the same value. Under password-SIGNIN-only operation the key never needs to be held anywhere after
+provisioning — rotation just means re-keying the access with a fresh random value and discarding it.
 
 Endpoints, all `Authorization: Bearer <gh-token>`:
 
@@ -105,7 +136,7 @@ connection vars (it connects as **root**, server-side only), and `MEROVINGIAN_JW
 key). `bin/merovingian-service.ts` takes no flags. It sets no bind hostname, so it listens on all
 interfaces — front it with a reverse proxy / firewall (see [topology](../concepts/topology.md)).
 
-## Step 4 — the NS / DB model (multi-tenant)
+## Step 5 — the NS / DB model (multi-tenant)
 
 SurrealDB namespace is **fixed** at `merovingian`; each tenant is a separate SurrealDB **database**
 named after the tenant:
@@ -126,12 +157,12 @@ isolation is per-database plus the record-level PERMISSIONS keyed on the scoped 
 
 ## Recap: secret placement
 
-| Secret | stub | surreal (in-process) | service (remote) |
-| --- | --- | --- | --- |
-| Surreal root creds | — | operator machine | service only |
-| JWT signing key | — | operator machine | service only |
-| Company API keys (`${VAR}`) | — | build env | service env |
-| User machine holds | — | root + key | `gh` token + short-lived scoped token |
+| Secret | stub | surreal (in-process) | password SIGNIN (ADR 0015) | service (remote) |
+| --- | --- | --- | --- | --- |
+| Surreal root creds | — | operator machine | operator machine only | service only |
+| JWT signing key | — | operator machine | **inside the DB only** (discard after provisioning) | service only |
+| Company API keys (`${VAR}`) | — | build env | workspace `.env` | service env |
+| User machine holds | — | root + key | **their own password** (workspace `.env`) | `gh` token + short-lived scoped token |
 
 See [connection-and-secrets](connection-and-secrets.md) for exactly how each of these is set and
 where it lands.
