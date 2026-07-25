@@ -1,0 +1,55 @@
+docs/concepts/topology.md
+  s_208d3200a73d1e::t_200d60f6cf90cf 7-10
+src/graph/records.ts
+  s_208d3200a73d1e::t_33758cc08a035d 173-186,189,198
+  s_208d3200a73d1e::t_a4fc48f49c47a8 133,143
+  s_208d3200a73d1e::t_b3157adbcd8532 41-78,81-88,91,96,99-102
+docs/decisions/consolidadas/0016-o-grafo-tambem-e-dado.md
+  s_208d3200a73d1e::t_9568ccb532d34d 1-80
+docs/decisions/INDEX.md
+  s_208d3200a73d1e::t_77ba95fb3d7523 46-54
+  s_208d3200a73d1e::t_dbe79d15cb02f3 24
+src/service/build-service.ts
+  s_208d3200a73d1e::t_cc5a3ed977a94d 103-123
+  s_208d3200a73d1e::t_c5c73734161199 79-82
+  s_208d3200a73d1e::t_e62ffa1f88ebe5 14
+test/lineage-read.test.ts
+  s_208d3200a73d1e::t_6947292b7fac21 1-117
+docs/guides/connection-and-secrets.md
+  s_208d3200a73d1e::t_844375af877641 150-155
+surreal/data.surql
+  s_208d3200a73d1e::t_b9049d26c903b3 57-70
+src/commands/login.ts
+  s_208d3200a73d1e::t_4f38726fb2cdfc 66-67,70-75
+surreal/schema.surql
+  s_208d3200a73d1e::t_6205ed8bc636a8 15-27,30-33
+  s_208d3200a73d1e::t_509282646b2f20 79-80,83,87
+  s_208d3200a73d1e::t_76403dacd3b14e 48-54,61
+  s_208d3200a73d1e::t_79ca4c1b704cf3 65-69,76,81-82,84,86,92-97,102-103,105-110,112,114-116,123-125
+test/auth-gate.test.ts
+  s_208d3200a73d1e::t_9f5453f64099c6 185-187,190-191
+src/commands/build.ts
+  s_208d3200a73d1e::t_496b7dad2f52aa 39
+src/commands/graph.ts
+  s_208d3200a73d1e::t_734cf36aee87eb 42
+docs/guides/going-to-production.md
+  s_208d3200a73d1e::t_068fdff64912ab 69-75
+docs/reference/cli.md
+  s_208d3200a73d1e::t_316587aac6a130 144-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "0ee8cec502f284393eeaddf12f0f52df87f3f466",
+  "prompts": {},
+  "sessions": {
+    "s_208d3200a73d1e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1f4896b-2430-4652-b964-f3f355b52786",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
