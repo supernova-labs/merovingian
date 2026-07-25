@@ -1,0 +1,19 @@
+cubic.yaml
+  s_208d3200a73d1e::t_80ab3429d6a321 1-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "f671b0d9531d90be118f827d79a05678a96c7b3a",
+  "prompts": {},
+  "sessions": {
+    "s_208d3200a73d1e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1f4896b-2430-4652-b964-f3f355b52786",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
