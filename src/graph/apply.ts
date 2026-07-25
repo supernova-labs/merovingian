@@ -18,7 +18,7 @@ import { RecordId, Table, type Surreal } from "surrealdb";
 import { SurrealProvider, provisioningSecret } from "../provider/surreal.ts";
 import type { Definition, User } from "../provider/types.ts";
 import { domainSchema } from "./domain.ts";
-import { structuralRecords, compact } from "./records.ts";
+import { structuralRecords, compact, readersOf, ambientFlags } from "./records.ts";
 import {
   desiredState,
   edgeDelta,
@@ -238,6 +238,35 @@ export interface ApplyOpts {
   confirmDeletes?: boolean;
 }
 
+/** Write the ADR 0016 derived fields (readers/ambient) for the CURRENT state's rows.
+ *  Targeted SET updates (never full-content) — safe to run before the plan gates. */
+async function backfillDerivedReaders(db: Surreal, def: Definition): Promise<void> {
+  const readers = readersOf(def);
+  const ambient = ambientFlags(def);
+  const link = (ids: string[] = []) => ids.map((x) => new RecordId("purpose", x));
+  for (const b of def.buckets) {
+    await db.query("UPDATE type::record('bucket', $id) SET readers = $r", { id: b.id, r: link(readers.bucket.get(b.id)) });
+  }
+  for (const name of Object.keys(def.toolCatalog)) {
+    await db.query("UPDATE type::record('tool', $id) SET readers = $r", { id: name, r: link(readers.tool.get(name)) });
+  }
+  for (const name of Object.keys(def.skillCatalog)) {
+    await db.query("UPDATE type::record('skill', $id) SET readers = $r, ambient = $a", {
+      id: name, r: link(readers.skill.get(name)), a: ambient.skills.has(name),
+    });
+  }
+  for (const name of Object.keys(def.marketplaces)) {
+    await db.query("UPDATE type::record('marketplace', $id) SET readers = $r, ambient = $a", {
+      id: name, r: link(readers.marketplace.get(name)), a: ambient.marketplaces.has(name),
+    });
+  }
+  const agentNames = new Set<string>();
+  for (const a of Object.values(def.agentByPurpose)) if (a.source === "library") agentNames.add(a.name);
+  for (const name of agentNames) {
+    await db.query("UPDATE type::record('agent', $id) SET readers = $r", { id: name, r: link(readers.agent.get(name)) });
+  }
+}
+
 export async function applyGraph(db: Surreal, definition: Definition, users: Record<string, User>, opts: ApplyOpts = {}): Promise<ApplyReport> {
   const errors = validateGraph(definition, users);
   if (errors.length) throw new GraphValidationError(errors);
@@ -260,6 +289,15 @@ export async function applyGraph(db: Surreal, definition: Definition, users: Rec
 
   // apply (converge): plan → gates → mutate.
   const current = await readCurrentState(db, definition.namespace);
+
+  // ADR 0016 migration ordering: ensureSchema (above) turned the lineage SELECT
+  // permissions ON — but rows written before the derived fields existed have
+  // readers = NONE, i.e. invisible to every member the instant the permissions land.
+  // A needs-confirm/blocked return below would leave the db that way indefinitely.
+  // Backfill from the CURRENT definition (idempotent; the upsert overwrites with the
+  // desired values later) so member reads survive every exit path of this converge.
+  await backfillDerivedReaders(db, current.def);
+
   const plan = planGraph(desired, current);
   const recordDeletes = plan.delete.filter((d) => d.kind !== "responsible");
 

@@ -20,7 +20,7 @@ import { LocalBuildService } from "../src/service/build-service.ts";
 import { reset } from "../src/commands/reset.ts";
 import { passwd } from "../src/commands/passwd.ts";
 import { loadGraphFile } from "../src/graph/load-graph.ts";
-import { readCurrentState } from "../src/graph/apply.ts";
+import { readCurrentState, applyGraph } from "../src/graph/apply.ts";
 import { desiredState, planGraph, planIsEmpty } from "../src/graph/plan.ts";
 
 const TEST_DB = "acme_lineage";
@@ -100,6 +100,47 @@ async function manifestVia(db: Awaited<ReturnType<typeof connectSurreal>>, userI
       expect(edges.map((e) => e.purpose)).toEqual(["delivery"]);
     } finally {
       await db.close();
+    }
+  });
+
+  test("migration: a legacy db (empty readers) is backfilled BEFORE the confirm gate", async () => {
+    // Simulate pre-0016 rows: readers emptied → the lineage permissions fail-closed and
+    // members see NOTHING. A converge must repair this even when it STOPS at
+    // needs-confirm (the gate returns before any upsert) — the backfill runs first.
+    const root = await connectSurreal(cfg);
+    try {
+      await root.query("UPDATE bucket SET readers = []; UPDATE tool SET readers = []; UPDATE skill SET readers = [], ambient = false; UPDATE agent SET readers = [];");
+      const blind = await connectAsPassword(cfg, "cleo", "cleo-password-1");
+      try {
+        const [b] = await blind.query<[unknown[]]>("SELECT * FROM bucket");
+        expect(b).toEqual([]); // fail-closed, as designed
+      } finally {
+        await blind.close();
+      }
+      // a desired graph that REMOVES a bucket → plan.delete non-empty → needs-confirm
+      const { definition, users } = loadGraphFile(EXAMPLE_YAML);
+      const pruned = {
+        ...definition,
+        buckets: definition.buckets.filter((b) => b.id !== "proposals"),
+        purposes: definition.purposes.map((p) => ({
+          ...p,
+          owns: p.owns.filter((x) => x !== "proposals"),
+          reads: p.reads.filter((x) => x !== "proposals"),
+        })),
+      };
+      const report = await applyGraph(root, pruned, users, { reset: false });
+      expect(report.status).toBe("needs-confirm"); // no upsert ran...
+      const healed = await connectAsPassword(cfg, "cleo", "cleo-password-1");
+      try {
+        const [ids] = await healed.query<[{ id: string }[]]>("SELECT record::id(id) AS id FROM bucket");
+        expect(ids.map((r) => r.id).sort()).toEqual(["clients", "kb-method", "kb-projects"]); // ...but the backfill did
+        const [skills] = await healed.query<[{ id: string }[]]>("SELECT record::id(id) AS id FROM skill");
+        expect(skills.map((r) => r.id).sort()).toEqual(["friction", "journal", "pending"]); // ambient restored too
+      } finally {
+        await healed.close();
+      }
+    } finally {
+      await root.close();
     }
   });
 

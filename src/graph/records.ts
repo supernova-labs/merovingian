@@ -78,6 +78,18 @@ export function readersOf(def: Definition): {
   return maps;
 }
 
+/** Ambient flags (ADR 0016): the skills every workspace carries — and the marketplaces
+ *  of the ambient PLUGIN skills — are readable by any authenticated identity. */
+export function ambientFlags(def: Definition): { skills: Set<string>; marketplaces: Set<string> } {
+  const skills = new Set(def.ambient.skills);
+  const marketplaces = new Set<string>();
+  for (const name of skills) {
+    const ref = def.skillCatalog[name];
+    if (ref?.source === "plugin") marketplaces.add(ref.marketplace);
+  }
+  return { skills, marketplaces };
+}
+
 const purposeLinks = (ids: string[] = []) => ids.map((x) => new RecordId("purpose", x));
 
 export function toolDoc(name: string, t: ToolDef, readers: string[] = []): RecordDoc {
@@ -173,12 +185,7 @@ export function structuralRecords(def: Definition, users: Record<string, User>):
   const readers = readersOf(def);
   // ambient skills go into EVERY workspace — flagged so any authenticated identity
   // reads them (and the marketplace of an ambient PLUGIN skill inherits the flag).
-  const ambientSkills = new Set(def.ambient.skills);
-  const ambientMarketplaces = new Set<string>();
-  for (const name of ambientSkills) {
-    const ref = def.skillCatalog[name];
-    if (ref?.source === "plugin") ambientMarketplaces.add(ref.marketplace);
-  }
+  const { skills: ambientSkills, marketplaces: ambientMarketplaces } = ambientFlags(def);
   for (const [name, t] of Object.entries(def.toolCatalog)) docs.push(toolDoc(name, t, readers.tool.get(name)));
   for (const [name, repo] of Object.entries(def.marketplaces))
     docs.push(marketplaceDoc(name, repo, readers.marketplace.get(name), ambientMarketplaces.has(name)));
