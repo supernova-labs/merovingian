@@ -63,14 +63,16 @@ export async function login(namespace: string, userId?: string, opts: LoginOpts 
     if (pass) {
       // password SIGNIN: proves the identity against the argon2 hash AND needs no
       // system credential on this machine — the connection is the scoped user itself.
-      // The user table is CLOSED to record identities (schema.surql) — even the own
-      // record's fields don't read back in a session query — so take the identity from
-      // $auth itself and skip the cosmetic name lookup (the session stores only the id).
+      // The user table grants the OWN row (id = $auth, ADR 0016), so the person's
+      // name reads back; other humans stay invisible.
       const db = await connectWithToken(cfg, await signinIdentity(cfg, userId, pass));
       try {
-        const [uid] = await db.query<[string]>("RETURN record::id($auth)");
-        if (!uid) throw new Error("signin ok but $auth did not resolve — schema drift?");
-        user = { id: uid, name: uid };
+        const [me] = await db.query<[{ uid: string; name?: string }[]]>(
+          "SELECT record::id(id) AS uid, name FROM user WHERE id = $auth",
+        );
+        const row = me[0];
+        if (!row?.uid) throw new Error("signin ok but $auth did not resolve — schema drift?");
+        user = { id: row.uid, name: row.name ?? row.uid };
       } finally {
         await db.close();
       }

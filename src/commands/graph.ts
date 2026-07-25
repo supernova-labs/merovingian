@@ -39,7 +39,7 @@ export async function graph(namespace: string, opts: GraphOpts = {}): Promise<Ma
   const session = JSON.parse(await readFile(path, "utf8")) as Session;
   const remote = await remoteOptsFor(namespace);
 
-  const { service, close } = await buildServiceFor(namespace, { backend: opts.backend, ...remote });
+  const { service, close } = await buildServiceFor(namespace, { backend: opts.backend, asUser: session.user, ...remote });
   let manifest: Manifest;
   try {
     manifest = await service.getManifest(session.user); // full entitlement

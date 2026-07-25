@@ -141,7 +141,9 @@ throw `not logged in to "<ns>"` if it is missing.
 
 With `MEROVINGIAN_PASS` set, the local-surreal login authenticates by **password SIGNIN**
 (ADR 0015): the DB checks the argon2 hash and issues the scoped token — no system credential
-needed on the machine. Without it, the legacy path resolves the user with the system connection.
+needed on the machine. The same variable makes `build` and `graph` connect **as the person**
+(ADR 0016): the structural tables are SELECT-scoped by lineage, so the database hands the
+provider exactly their slice. Without it, the legacy operator path uses the system connection.
 
 ### `passwd <namespace> <user>`
 

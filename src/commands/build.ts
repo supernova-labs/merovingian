@@ -36,7 +36,7 @@ export async function build(namespace: string, opts: BuildOpts = {}): Promise<Ma
   const storeRoot = opts.storeRoot ?? repoStore(namespace);
   const remote = await remoteOptsFor(namespace);
 
-  const { service, close } = await buildServiceFor(namespace, { backend: opts.backend, storeRoot, ...remote });
+  const { service, close } = await buildServiceFor(namespace, { backend: opts.backend, storeRoot, asUser: session.user, ...remote });
   let manifest: Manifest;
   try {
     manifest = await service.getManifest(session.user, { purposes: opts.purposes });
