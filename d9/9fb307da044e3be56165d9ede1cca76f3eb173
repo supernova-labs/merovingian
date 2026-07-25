@@ -1,0 +1,22 @@
+src/graph/records.ts
+  s_208d3200a73d1e::t_91fb6022784184 93-95
+src/graph/apply.ts
+  s_208d3200a73d1e::t_36118e34ebffb8 21
+  s_208d3200a73d1e::t_a185dc516fb1a0 247,250,254,259,265
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d99fb307da044e3be56165d9ede1cca76f3eb173",
+  "prompts": {},
+  "sessions": {
+    "s_208d3200a73d1e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1f4896b-2430-4652-b964-f3f355b52786",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
