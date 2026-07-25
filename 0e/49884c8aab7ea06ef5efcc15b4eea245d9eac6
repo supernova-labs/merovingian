@@ -1,0 +1,27 @@
+src/graph/apply.ts
+  s_208d3200a73d1e::t_ebba2ecf2d3314 292-300
+  s_208d3200a73d1e::t_719eaf948e8f59 21
+  s_208d3200a73d1e::t_43b935a578bf00 241-269
+test/lineage-read.test.ts
+  s_208d3200a73d1e::t_c3ab4e919c3a45 23
+  s_208d3200a73d1e::t_108d73be05c806 106-146
+src/graph/records.ts
+  s_208d3200a73d1e::t_c185ae66efa545 188
+  s_208d3200a73d1e::t_4c67634f11d3a3 81-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "0e49884c8aab7ea06ef5efcc15b4eea245d9eac6",
+  "prompts": {},
+  "sessions": {
+    "s_208d3200a73d1e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1f4896b-2430-4652-b964-f3f355b52786",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
