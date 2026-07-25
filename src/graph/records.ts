@@ -90,7 +90,9 @@ export function ambientFlags(def: Definition): { skills: Set<string>; marketplac
   return { skills, marketplaces };
 }
 
-const purposeLinks = (ids: string[] = []) => ids.map((x) => new RecordId("purpose", x));
+/** ids → purpose record links. Shared by structuralRecords AND the converge backfill
+ *  (apply.ts) so the two write paths can never drift on the readers shape. */
+export const purposeLinks = (ids: string[] = []) => ids.map((x) => new RecordId("purpose", x));
 
 export function toolDoc(name: string, t: ToolDef, readers: string[] = []): RecordDoc {
   return { recordId: new RecordId("tool", name), content: compact({ kind: t.kind, command: t.command, args: t.args, env: t.env, keySource: t.keySource, url: t.url, readers: purposeLinks(readers) }) };

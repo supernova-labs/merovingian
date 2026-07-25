@@ -18,7 +18,7 @@ import { RecordId, Table, type Surreal } from "surrealdb";
 import { SurrealProvider, provisioningSecret } from "../provider/surreal.ts";
 import type { Definition, User } from "../provider/types.ts";
 import { domainSchema } from "./domain.ts";
-import { structuralRecords, compact, readersOf, ambientFlags } from "./records.ts";
+import { structuralRecords, compact, readersOf, ambientFlags, purposeLinks } from "./records.ts";
 import {
   desiredState,
   edgeDelta,
@@ -243,27 +243,26 @@ export interface ApplyOpts {
 async function backfillDerivedReaders(db: Surreal, def: Definition): Promise<void> {
   const readers = readersOf(def);
   const ambient = ambientFlags(def);
-  const link = (ids: string[] = []) => ids.map((x) => new RecordId("purpose", x));
   for (const b of def.buckets) {
-    await db.query("UPDATE type::record('bucket', $id) SET readers = $r", { id: b.id, r: link(readers.bucket.get(b.id)) });
+    await db.query("UPDATE type::record('bucket', $id) SET readers = $r", { id: b.id, r: purposeLinks(readers.bucket.get(b.id)) });
   }
   for (const name of Object.keys(def.toolCatalog)) {
-    await db.query("UPDATE type::record('tool', $id) SET readers = $r", { id: name, r: link(readers.tool.get(name)) });
+    await db.query("UPDATE type::record('tool', $id) SET readers = $r", { id: name, r: purposeLinks(readers.tool.get(name)) });
   }
   for (const name of Object.keys(def.skillCatalog)) {
     await db.query("UPDATE type::record('skill', $id) SET readers = $r, ambient = $a", {
-      id: name, r: link(readers.skill.get(name)), a: ambient.skills.has(name),
+      id: name, r: purposeLinks(readers.skill.get(name)), a: ambient.skills.has(name),
     });
   }
   for (const name of Object.keys(def.marketplaces)) {
     await db.query("UPDATE type::record('marketplace', $id) SET readers = $r, ambient = $a", {
-      id: name, r: link(readers.marketplace.get(name)), a: ambient.marketplaces.has(name),
+      id: name, r: purposeLinks(readers.marketplace.get(name)), a: ambient.marketplaces.has(name),
     });
   }
   const agentNames = new Set<string>();
   for (const a of Object.values(def.agentByPurpose)) if (a.source === "library") agentNames.add(a.name);
   for (const name of agentNames) {
-    await db.query("UPDATE type::record('agent', $id) SET readers = $r", { id: name, r: link(readers.agent.get(name)) });
+    await db.query("UPDATE type::record('agent', $id) SET readers = $r", { id: name, r: purposeLinks(readers.agent.get(name)) });
   }
 }
 
