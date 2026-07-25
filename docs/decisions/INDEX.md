@@ -21,6 +21,7 @@ de cada uma está em `fermentacao/` (em discussão) ou `consolidadas/` (fechadas
 | 0013 | Domínio de decisões: log + jurisprudência | 🟢 Consolidada | `consolidadas/` | log em voo (padrão inbox, purpose-scoped) · record ratificado (git→db, padrão library) · promoção via drain · `decides:` ganha significado (impl. entregue 2026-07-03) |
 | 0014 | Frictions com escopo + governança local | 🟢 Consolidada | `consolidadas/` | a friction É a task: `scope` (escritor escopa, root re-escopa/pesca) · leitura/resolução por lineage REAL (não origin) · governança local = skill `pending` (humano invoca) · um `drained` só + `resolved_through` (impl. entregue 2026-07-10) |
 | 0015 | SIGNIN por senha antes do service | 🟢 Consolidada | `consolidadas/` | cada pessoa com a própria senha (argon2 em `credential`, runtime); o banco emite o token (KEY nunca sai); coexiste com JWT externo → service vira sucessor, não pré-requisito; condição: banco em rede privada (impl. entregue 2026-07-24) |
+| 0016 | O grafo também é dado | 🟢 Consolidada | `consolidadas/` | FOR select estrutural pela régua de lineage (0014) + `readers`/`ambient` derivados → build/graph rodam COMO a pessoa (senha), zero credencial de sistema em máquina de membro; regra nova: nunca subquery em permission (não roda com perms do caller — achado 2026-07-25); invariante: paridade byte-a-byte do manifest (impl. entregue 2026-07-25) |
 
 🟢 consolidada (lastro) · 🟡 superseded (history, aponta pro sucessor) · 🔵 fermentação (aberta)
 
@@ -42,6 +43,15 @@ Vivem no `0009` (o único ativo de peso), todos **roadmap**, não bloqueantes:
 
 ## Histórico de curadoria
 
+- **2026-07-25** — Nasce `0016` (consolidada): **o grafo também é dado** — FOR select das
+  tabelas estruturais escopado pela régua de lineage da 0014 (`readers`/`ambient` derivados
+  no apply, padrão do `lineage`), e `build`/`graph` passam a rodar COMO a pessoa (conexão
+  por senha): a fatia vem do banco, não de filtro em memória com root. Mata a necessidade
+  do service para onboarding (#19 reposicionada). Achado que fixou o mecanismo: subquery em
+  PERMISSIONS **não** roda com as perms do caller (vê demais) — denormalizar + dot-access é
+  a regra. Invariante de teste: paridade byte-a-byte do manifest (o resolve degrada mudo).
+  Detonador: pergunta do Luis ("por que o build precisa do mapa completo?") no dia seguinte
+  à 0015.
 - **2026-07-24** — Nasce `0015` (consolidada): **SIGNIN por senha antes do service** — cada
   pessoa autentica com a própria senha (hash argon2 na tabela runtime `credential`; o `apply`
   nunca a toca) e o próprio SurrealDB emite o token scoped: a KEY de assinatura não sai do

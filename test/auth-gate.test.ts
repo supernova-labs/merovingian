@@ -182,13 +182,13 @@ describe("provisioningSecret — the deploy-apply gate", () => {
   });
 
   test("the signed-in session is subject to PERMISSIONS like any token", async () => {
-    // the user table is CLOSED to record identities (schema.surql: no PERMISSIONS
-    // clause = NONE): a password session scanning it must get ZERO rows — proof it
-    // runs as a record identity, not a system user.
+    // ADR 0016: the user table grants exactly the OWN row (id = $auth). A password
+    // session scanning it sees ONE row — hers — and no other human. Proof it runs
+    // as a record identity, not a system user (root would see all three).
     const db = await connectAsPassword(cfg, "ada", "ada-password-1");
     try {
-      const [rows] = await db.query<[unknown[]]>("SELECT * FROM user");
-      expect(rows).toEqual([]);
+      const [rows] = await db.query<[{ id: unknown }[]]>("SELECT record::id(id) AS id FROM user");
+      expect(rows.map((r) => r.id)).toEqual(["ada"]);
     } finally {
       await db.close();
     }

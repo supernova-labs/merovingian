@@ -54,12 +54,20 @@ DEFINE FIELD OVERWRITE drained ON inbox TYPE option<datetime>;
 
 -- ─── The decision domain (ADR 0013) ─────────────────────────────────────────
 -- Lookup written by apply from purpose.decides (domain → owning purpose). Needed
--- because subquery SCANS inside PERMISSIONS run with the CALLER's permissions
--- (purpose is closed to record users → empty), while record-pointer DOT-ACCESS
--- ignores the target table's permissions — the same mechanism domain.ts relies on
--- (bucket:⟨id⟩.owner.lineage). Reconciled on every apply; a removed domain's row
--- is DELETED (it is live authorization).
-DEFINE TABLE OVERWRITE decision_domain SCHEMAFULL;
+-- because subquery SCANS inside PERMISSIONS are NOT a trustworthy mechanism:
+-- empirically (2026-07-25, SurrealDB 3.x) they do NOT run with the caller's
+-- permissions — they can see MORE than the caller should (the opposite of what
+-- this note used to claim). Record-pointer DOT-ACCESS in permission/definition
+-- context is the reliable mechanic — the same one domain.ts relies on
+-- (bucket:⟨id⟩.owner.lineage) and ADR 0016 extends to the structural tables via
+-- denormalized readers/lineage fields. Reconciled on every apply; a removed
+-- domain's row is DELETED (it is live authorization).
+-- FOR select (ADR 0016): the person's build resolves the decision domains of
+-- their slice — visible when the owning purpose is within reach.
+DEFINE TABLE OVERWRITE decision_domain SCHEMAFULL
+  PERMISSIONS
+    FOR select WHERE $auth->responsible->purpose CONTAINSANY owner.lineage
+    FOR create, update, delete NONE;
 DEFINE FIELD OVERWRITE owner ON decision_domain TYPE record<purpose>;
 
 -- Ratified decision records (jurisprudence). Authored in the tenant repo's

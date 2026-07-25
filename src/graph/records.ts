@@ -38,25 +38,68 @@ export function lineageOf(purposes: Purpose[]): Map<string, string[]> {
   return new Map(purposes.map((p) => [p.id, chain(p.id)]));
 }
 
-export function toolDoc(name: string, t: ToolDef): RecordDoc {
-  return { recordId: new RecordId("tool", name), content: compact({ kind: t.kind, command: t.command, args: t.args, env: t.env, keySource: t.keySource, url: t.url }) };
+/** Derived readers (ADR 0016): for each bucket/catalog entry, the purposes that
+ *  reference it — denormalized flat (like lineage) so the structural SELECT
+ *  permissions check reach via dot-access (readers.lineage), never a subquery
+ *  (permission-context scans do NOT run with the caller's permissions). Arrays are
+ *  sorted for deterministic output (the round-trip test pins record shapes). */
+export function readersOf(def: Definition): {
+  bucket: Map<string, string[]>;
+  tool: Map<string, string[]>;
+  skill: Map<string, string[]>;
+  agent: Map<string, string[]>;
+  marketplace: Map<string, string[]>;
+} {
+  const maps = {
+    bucket: new Map<string, string[]>(),
+    tool: new Map<string, string[]>(),
+    skill: new Map<string, string[]>(),
+    agent: new Map<string, string[]>(),
+    marketplace: new Map<string, string[]>(),
+  };
+  const add = (m: Map<string, string[]>, key: string, pid: string) => {
+    const arr = m.get(key) ?? [];
+    if (!arr.includes(pid)) arr.push(pid);
+    m.set(key, arr);
+  };
+  for (const p of def.purposes) {
+    for (const b of [...p.owns, ...p.reads]) add(maps.bucket, b, p.id);
+    for (const t of p.tools) add(maps.tool, t, p.id);
+    for (const s of p.skills) {
+      add(maps.skill, s, p.id);
+      const ref = def.skillCatalog[s];
+      if (ref?.source === "plugin") add(maps.marketplace, ref.marketplace, p.id);
+    }
+    const a = def.agentByPurpose[p.id];
+    if (a?.source === "library") add(maps.agent, a.name, p.id);
+    else if (a) add(maps.marketplace, a.marketplace, p.id);
+  }
+  for (const m of Object.values(maps)) for (const arr of m.values()) arr.sort();
+  return maps;
 }
 
-export function marketplaceDoc(name: string, repo: string): RecordDoc {
-  return { recordId: new RecordId("marketplace", name), content: { repo } };
+const purposeLinks = (ids: string[] = []) => ids.map((x) => new RecordId("purpose", x));
+
+export function toolDoc(name: string, t: ToolDef, readers: string[] = []): RecordDoc {
+  return { recordId: new RecordId("tool", name), content: compact({ kind: t.kind, command: t.command, args: t.args, env: t.env, keySource: t.keySource, url: t.url, readers: purposeLinks(readers) }) };
 }
 
-export function skillDoc(name: string, s: SkillRef): RecordDoc {
+export function marketplaceDoc(name: string, repo: string, readers: string[] = [], ambient = false): RecordDoc {
+  return { recordId: new RecordId("marketplace", name), content: { repo, readers: purposeLinks(readers), ambient } };
+}
+
+export function skillDoc(name: string, s: SkillRef, readers: string[] = [], ambient = false): RecordDoc {
   const content =
     s.source === "plugin"
       ? { source: "plugin", plugin: s.plugin, marketplace: new RecordId("marketplace", s.marketplace) }
       : { source: "library", files: s.files };
-  return { recordId: new RecordId("skill", name), content };
+  return { recordId: new RecordId("skill", name), content: { ...content, readers: purposeLinks(readers), ambient } };
 }
 
-/** A library agent's content record (one per DISTINCT agent name — deduped). */
-export function agentDoc(name: string, content: string): RecordDoc {
-  return { recordId: new RecordId("agent", name), content: { content } };
+/** A library agent's content record (one per DISTINCT agent name — deduped;
+ *  readers = the UNION of purposes carrying it). */
+export function agentDoc(name: string, content: string, readers: string[] = []): RecordDoc {
+  return { recordId: new RecordId("agent", name), content: { content, readers: purposeLinks(readers) } };
 }
 
 /** A ratified decision record (ADR 0013) — id is "<domain>/<slug>" (⟨⟩-escaped by
@@ -87,7 +130,7 @@ export function configDoc(namespace: string, ambient: string[]): RecordDoc {
   return { recordId: new RecordId("config", namespace), content: { ambient } };
 }
 
-export function bucketDoc(b: Bucket): RecordDoc {
+export function bucketDoc(b: Bucket, readers: string[] = []): RecordDoc {
   return {
     recordId: new RecordId("bucket", b.id),
     content: compact({
@@ -97,6 +140,7 @@ export function bucketDoc(b: Bucket): RecordDoc {
       owner: new RecordId("purpose", b.owner),
       rowScope: b.rowScope,
       sens: b.sens,
+      readers: purposeLinks(readers),
     }),
   };
 }
@@ -126,12 +170,23 @@ export function userDoc(u: User): RecordDoc {
  *  are reconciled separately). Order is irrelevant (upsert by id, no FK enforcement). */
 export function structuralRecords(def: Definition, users: Record<string, User>): RecordDoc[] {
   const docs: RecordDoc[] = [];
-  for (const [name, t] of Object.entries(def.toolCatalog)) docs.push(toolDoc(name, t));
-  for (const [name, repo] of Object.entries(def.marketplaces)) docs.push(marketplaceDoc(name, repo));
-  for (const [name, s] of Object.entries(def.skillCatalog)) docs.push(skillDoc(name, s));
+  const readers = readersOf(def);
+  // ambient skills go into EVERY workspace — flagged so any authenticated identity
+  // reads them (and the marketplace of an ambient PLUGIN skill inherits the flag).
+  const ambientSkills = new Set(def.ambient.skills);
+  const ambientMarketplaces = new Set<string>();
+  for (const name of ambientSkills) {
+    const ref = def.skillCatalog[name];
+    if (ref?.source === "plugin") ambientMarketplaces.add(ref.marketplace);
+  }
+  for (const [name, t] of Object.entries(def.toolCatalog)) docs.push(toolDoc(name, t, readers.tool.get(name)));
+  for (const [name, repo] of Object.entries(def.marketplaces))
+    docs.push(marketplaceDoc(name, repo, readers.marketplace.get(name), ambientMarketplaces.has(name)));
+  for (const [name, s] of Object.entries(def.skillCatalog))
+    docs.push(skillDoc(name, s, readers.skill.get(name), ambientSkills.has(name)));
   for (const [id, d] of Object.entries(def.decisionCatalog ?? {})) docs.push(decisionDoc(id, d));
   docs.push(configDoc(def.namespace, def.ambient.skills));
-  for (const b of def.buckets) docs.push(bucketDoc(b));
+  for (const b of def.buckets) docs.push(bucketDoc(b, readers.bucket.get(b.id)));
   const lin = lineageOf(def.purposes);
   for (const p of def.purposes) docs.push(purposeDoc(p, def.agentByPurpose[p.id], lin.get(p.id) ?? [p.id]));
   // library agent content — one record per DISTINCT name (several purposes may share
@@ -140,7 +195,7 @@ export function structuralRecords(def: Definition, users: Record<string, User>):
   for (const a of Object.values(def.agentByPurpose)) {
     if (a.source === "library" && a.content !== undefined) agentContent.set(a.name, a.content);
   }
-  for (const [name, content] of agentContent) docs.push(agentDoc(name, content));
+  for (const [name, content] of agentContent) docs.push(agentDoc(name, content, readers.agent.get(name)));
   for (const u of Object.values(users)) docs.push(userDoc(u));
   return docs;
 }

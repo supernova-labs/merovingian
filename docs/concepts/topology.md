@@ -4,8 +4,10 @@ Who runs where, and what each one holds and trusts. The design keeps secrets off
 Two ways to get there: the **build/auth service** (root creds + the JWT signing key live only
 server-side, identity via GitHub — the diagram below), or **password SIGNIN** (ADR 0015, no service:
 each person holds only their own password; SurrealDB checks the argon2 hash in `credential` and
-itself issues the scoped token, signed with a KEY that never leaves the database). Either way, no
-machine ever holds a forge-anyone secret.
+itself issues the scoped token, signed with a KEY that never leaves the database). Under SIGNIN the
+password covers the whole cycle — including `build`/`graph`: the structural tables are SELECT-scoped
+by lineage (ADR 0016), so the person's own connection reads exactly their slice of the graph. Either
+way, no machine ever holds a forge-anyone secret.
 
 ```
   ┌─────────────────────────── user's machine ───────────────────────────┐

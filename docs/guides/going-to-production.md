@@ -66,10 +66,13 @@ merovingian data acme clients     # scoped reads; the MCPs authenticate the same
 ```
 
 The condition attached (see the ADR): every machine dials the database directly, so the durable
-SurrealDB must live on a **private network** (VPN/firewall) — never a public port. Known limit:
-`build` on a member's machine still reads structure with system creds — serve `/manifest` from the
-service inside the private network for that (issue #19); everything else (login, data, MCP tokens)
-is covered by the password.
+SurrealDB must live on a **private network** (VPN/firewall) — never a public port.
+
+The password covers the WHOLE cycle — `login`, `data`, the MCP tokens, **and `build`/`graph`**
+(ADR 0016: the structural tables are SELECT-scoped by lineage, so the person's own connection
+reads exactly their slice; no system credential ever lands on a member's machine). The service
+remains the path for GitHub identity and for hiding the database from user machines — not an
+onboarding prerequisite.
 
 ## Step 4 — the build/auth service (secrets server-side)
 

@@ -11,7 +11,7 @@
 import type { DefinitionProvider } from "../provider/types.ts";
 import { resolve, resolveToolEnv, type Manifest } from "../projection/resolve.ts";
 import { stubProviderFor } from "../provider/stub.ts";
-import { SurrealProvider, connectSurreal, surrealConfig, mintIdentityJwt } from "../provider/surreal.ts";
+import { SurrealProvider, connectSurreal, connectAsPassword, signinIdentity, surrealConfig, mintIdentityJwt } from "../provider/surreal.ts";
 import { repoStore, repoDir } from "../paths.ts";
 
 export type Backend = "stub" | "surreal";
@@ -76,6 +76,10 @@ export interface ServiceOpts {
   surrealDb?: string;
   /** when set, use the remote HTTP service (gh-authenticated) */
   remote?: { url: string; ghToken: string };
+  /** the session user — with MEROVINGIAN_PASS set, the surreal backend connects AS
+   *  this person (password SIGNIN) and the structural PERMISSIONS scope every read
+   *  to their slice (ADR 0016). No system credential on the machine. */
+  asUser?: string;
 }
 
 /** Resolve the env/flag default backend. Surreal is the product default; the stub
@@ -96,6 +100,27 @@ export async function buildServiceFor(namespace: string, opts: ServiceOpts = {})
 
   if (backend === "surreal") {
     const cfg = surrealConfig(namespace, opts.surrealDb ? { db: opts.surrealDb } : {});
+
+    // password path (ADR 0015/0016): the person's own credential, no system creds on
+    // this machine. The connection IS the scoped identity — the structural PERMISSIONS
+    // hand the provider exactly their slice, and tokens come from the DB's own SIGNIN
+    // (never minted here; this path cannot forge anyone).
+    const pass = process.env.MEROVINGIAN_PASS;
+    if (pass && opts.asUser) {
+      const asUser = opts.asUser;
+      const db = await connectAsPassword(cfg, asUser, pass);
+      return {
+        service: new LocalBuildService(new SurrealProvider(db, namespace), opts.storeRoot),
+        identityToken: async (userId) => {
+          if (userId !== asUser) throw new Error(`password session is ${asUser} — cannot issue a token for ${userId}`);
+          return signinIdentity(cfg, asUser, pass);
+        },
+        close: async () => {
+          await db.close();
+        },
+      };
+    }
+
     const db = await connectSurreal(cfg);
     return {
       service: new LocalBuildService(new SurrealProvider(db, namespace), opts.storeRoot),
