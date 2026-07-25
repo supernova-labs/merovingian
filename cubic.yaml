@@ -1,0 +1,110 @@
+# yaml-language-server: $schema=https://cubic.dev/schema/cubic-repository-config.schema.json
+#
+# cubic AI review settings (settings as code).
+# Docs: https://docs.cubic.dev/configure/cubic-yaml
+#
+# Platform mechanics (see the open-notebook config this is modeled on):
+# - Max 5 active custom agents; each agent's text (+ linked files) caps at 10,000
+#   chars, truncated SILENTLY — invariants are inlined here, not file-linked.
+# - Precedence: repo cubic.yaml > org config > dashboard > defaults.
+
+version: 1
+
+reviews:
+  ignore:
+    files:
+      - 'bun.lock'
+
+  custom_instructions: |
+    House rules: conventional commits; ADRs are written in Portuguese
+    (docs/decisions/), product docs in English; releases are tag-driven (no
+    CHANGELOG file — don't ask for one). The golden test suite runs the SAME
+    assertions against the stub AND SurrealDB (surreal-backed tests skip cleanly
+    when the db is down — never let a feature exist for only one backend).
+    Design rationale lives in docs/decisions/INDEX.md (status source of truth);
+    when a PR touches an area an ADR governs, judge it against that ADR rather
+    than generic best practice.
+
+  custom_rules:
+    - name: Architecture invariants (the ADRs)
+      description: |
+        Flag violations of the consolidated decisions:
+        - Source × tenant separation is sacred: NOTHING resembling real tenant
+          data enters this repo — fixtures are the synthetic `acme` tenant only
+          (fixtures/example/). New fixtures/tests/docs must stay synthetic.
+        - Domain data belongs to the tenant (ADR 0011): the engine never
+          hardcodes business table names; domain tables + PERMISSIONS are
+          GENERATED from the graph's buckets (src/graph/domain.ts). A PR adding
+          a business-specific table/column to the engine is wrong by definition.
+        - Enforcement lives in the DATABASE (ADR 0002/0011): access control is
+          SurrealDB PERMISSIONS against $auth, never CLI/prompt-side filtering.
+          Mount ≠ authority — projecting a file/mcp grants nothing by itself.
+        - Structure × runtime split: structural records are full-content
+          replaced by apply and wiped by reset; runtime data (inbox,
+          decision_log, credential) must survive both. Anything that must
+          outlive a converge may NOT live on a structural record (ADR 0015
+          learned this for passwords).
+        - Decisions model (ADR 0013): ratified records ship via git → deploy
+          (root), never written at runtime; the in-flight log is append-only.
+
+    - name: Mechanical caveats of this codebase
+      description: |
+        Recurring pitfalls — check PRs against each:
+        - surreal/data.surql is RE-APPLIED by the inbox/decisions drain at
+          runtime: it must NEVER contain DEFINE ACCESS, keys, or any
+          security-critical statement. Those live in surreal/auth.surql, applied
+          ONLY by the provisioning path (apply on virgin db / reset). A converge
+          must never silently re-key a live tenant's identity access.
+        - Tables closed to record identities return EMPTY scans, not errors —
+          code reading "its own" row must use $auth-based patterns, and session
+          queries do NOT bypass table permissions (definition-context dot-access
+          does; they are different). Never "fix" an empty scan by opening a
+          structural table's permissions — the permission mechanics of
+          decision_log/inbox depend on closed tables.
+        - Any change under plugin/ requires bumping BOTH manifests together:
+          .claude-plugin/marketplace.json AND plugin/.claude-plugin/plugin.json
+          (installed copies strand otherwise).
+        - The npm tarball is a `files` whitelist in package.json AND a required
+          list in .github/workflows/publish.yml — a new runtime-read file must
+          be added to both or the published CLI breaks (v0.1.0 shipped broken
+          exactly this way).
+        - New golden tests must run against stub AND surreal with the same
+          assertions; surreal tests bootstrap their own throwaway db via reset
+          and must skip (not fail) when the db is down.
+
+    - name: Auth & secrets
+      description: |
+        This engine mints/verifies scoped identity tokens — hold auth PRs to:
+        - No hardcoded signing keys or secrets. The ONLY sanctioned constant is
+          DEV_JWT_SECRET (public on purpose; trusted exclusively by dev/test
+          dbs). A path that could let it become a real tenant's KEY is a
+          vulnerability (provisioningSecret guards this — don't weaken it).
+        - No long-lived credential at rest: tokens are fetched/minted per call
+          via a token *source*; never write a token to a file or emit one into
+          a workspace artifact.
+        - ONE token acquisition order — service > password signin > dev-mint —
+          implemented in tokenSourceFor (src/mcp/token-source.ts). Any new
+          surface that needs a token must reuse it, not reimplement it.
+        - Env secrets: empty string = unset (envJwtSecret) — a truthiness check
+          alone reintroduces the divergence bug.
+        - Passwords: argon2 hashed server-side (crypto::argon2), never logged,
+          echoed, or stored plain; the credential table stays PERMISSIONS NONE;
+          removing a user must remove their credential (uid reuse must never
+          reactivate an old password).
+        - Changes to SIGNIN/PERMISSIONS/access need ADVERSARIAL tests: prove the
+          rejected paths (wrong key, wrong password, no credential, closed
+          table) — not just the happy path.
+
+  auto_ultrareview: custom
+  auto_ultrareview_custom_prompt: |
+    Run an ultrareview when the PR touches identity access definitions, token
+    minting/verification, the PERMISSIONS generator, or the provisioning path —
+    anything that could weaken who can read whose rows.
+  auto_ultrareview_file_patterns:
+    - 'surreal/**'
+    - 'src/provider/surreal.ts'
+    - 'src/graph/domain.ts'
+    - 'src/graph/apply.ts'
+    - 'src/server/**'
+    - 'src/mcp/token-source.ts'
+    - 'src/commands/passwd.ts'
