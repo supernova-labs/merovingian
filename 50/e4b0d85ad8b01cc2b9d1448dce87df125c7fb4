@@ -1,0 +1,30 @@
+docs/reference/cli.md
+  s_1538ec2899e471::t_d5f0354ba6e904 192-194
+docs/guides/operating-a-tenant.md
+  s_1538ec2899e471::t_d5f0354ba6e904 218,220
+docs/reference/machine-layout.md
+  s_1538ec2899e471::t_d5f0354ba6e904 56,58
+package.json
+  s_1538ec2899e471::t_ff711956bd2251 3
+src/projection/emit-codex.ts
+  s_1538ec2899e471::t_d5f0354ba6e904 61-68,73,116,139
+test/golden.test.ts
+  s_1538ec2899e471::t_d5f0354ba6e904 308,310-311,318-320
+  s_1538ec2899e471::t_d9146e4f28e3b3 309
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "50e4b0d85ad8b01cc2b9d1448dce87df125c7fb4",
+  "prompts": {},
+  "sessions": {
+    "s_1538ec2899e471": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f9ec9-e3ec-7163-a1b8-1cedffcba0da",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
