@@ -1,0 +1,23 @@
+docs/reference/cli.md
+  s_208d3200a73d1e::t_7fe6426f226020 159-161,164-165
+docs/guides/operating-a-tenant.md
+  s_208d3200a73d1e::t_7ccc40615e3e4c 185-188
+docs/guides/onboarding-a-member.md
+  s_208d3200a73d1e::t_4274e592458c7f 1-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "8d45c20d4cdfb9d537e5baf65b712766127eeaab",
+  "prompts": {},
+  "sessions": {
+    "s_208d3200a73d1e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1f4896b-2430-4652-b964-f3f355b52786",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
