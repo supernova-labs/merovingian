@@ -45,10 +45,15 @@ export async function checkExternal(def: Definition): Promise<ExternalCheck> {
       targets.push({ repo: b.repo, kind: "kb" });
     }
   }
-  for (const repo of Object.values(def.marketplaces)) {
-    if (!seen.has(repo)) {
-      seen.add(repo);
-      targets.push({ repo, kind: "marketplace" });
+  for (const marketplace of Object.values(def.marketplaces)) {
+    for (const binding of [marketplace.claude, marketplace.codex]) {
+      const repo = binding?.source;
+      // gh repo view only understands GitHub owner/repo coordinates. Codex may
+      // legitimately use a local path or another Git URL.
+      if (repo && /^[^/]+\/[^/]+$/.test(repo) && !seen.has(repo)) {
+        seen.add(repo);
+        targets.push({ repo, kind: "marketplace" });
+      }
     }
   }
 

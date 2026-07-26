@@ -104,22 +104,28 @@ mkdir -p /tmp/ada-acme && cd /tmp/ada-acme
 bun bin/merovingian.ts build acme --backend stub
 ```
 
-It writes `CLAUDE.md`, `.mcp.json`, `.claude/settings.local.json`, the **materialized library
-slice** — `.claude/skills/<name>/…` and `.claude/agents/<name>.md` for the library skills/agents
+It writes both native harness projections: Claude Code (`CLAUDE.md`, `.mcp.json`,
+`.claude/settings.local.json`, `.claude/skills`, `.claude/agents`) and Codex (`AGENTS.md`,
+`.codex/config.toml`, `.agents/skills`, `.codex/agents`). The **materialized library slice** contains
+the library skills/agents
 `ada`'s purposes carry (content from the fixture's `fixtures/example/library/`, listed file-by-file
 in the build output) — `.merovingian/build.json`, and symlinks `context/<bucket>` for the buckets
-`ada` can read. The emitted `CLAUDE.md` indexes it all under `## Library (materialized into
-.claude/)` and `## Plugins (external)`. Narrow it with `--purposes`:
+`ada` can read. Both root instruction files index the same scoped semantics. Narrow it with
+`--purposes`:
 
 ```bash
 bun bin/merovingian.ts build acme --purposes content --backend stub
 ```
 
+On first use, open the generated folder as the Codex workspace and accept its trust prompt. Codex
+intentionally ignores project-local `.codex/config.toml` until that exact workspace is trusted, so
+its projected MCP servers and read-only OKF permissions are inactive before this one-time step.
+
 This guide builds from the `stub` backend (the offline fixture). Drop the flag to build against the
 live database you deployed in step 2 — `surreal` is the default backend.
 
-Re-running the build wipes and rebuilds `.claude/skills/` and `.claude/agents/` from the manifest —
-try the `--purposes content` narrowing above and watch the library slice shrink accordingly.
+Re-running the build removes stale files from each emitter's prior inventory and preserves foreign
+siblings. Try the `--purposes content` narrowing above and watch both library slices shrink.
 
 > **Expect okf warnings with the fixture.** The `acme` example's `okf-repo` buckets point at
 > `acme-labs/*` repos that don't exist on GitHub. `build` still emits the workspace files, but prints

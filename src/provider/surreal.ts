@@ -5,6 +5,7 @@
 import { createHmac } from "node:crypto";
 import { Surreal, RecordId } from "surrealdb";
 import { registeredSurrealUrl } from "../transport.ts";
+import { parseAgentMarkdown } from "../graph/agent-content.ts";
 import type { DefinitionProvider, Definition, DecisionDef, Purpose, Bucket, User, ToolDef, SkillRef, AgentRef, AssignmentRow, Role } from "./types.ts";
 
 /** The PUBLIC dev signing key — matches auth.surql's DEFINE ACCESS when a tenant is
@@ -211,13 +212,18 @@ interface BucketRow {
 interface ConfigRow {
   ambient: string[];
 }
-interface MarketplaceRow { id: RecordId; repo: string }
+interface MarketplaceRow {
+  id: RecordId;
+  repo: string | null;
+  claude: { source: string; name: string } | null;
+  codex: { source: string; name: string } | null;
+}
 interface SkillRow {
   id: RecordId; source: "plugin" | "library";
   plugin: string | null; marketplace: RecordId | null;
   files: Record<string, string> | null;
 }
-interface AgentRow { id: RecordId; content: string }
+interface AgentRow { id: RecordId; description: string; content: string }
 interface DecisionRow {
   id: RecordId; domain: string; status: DecisionDef["status"]; title: string;
   content: string; supersedes: RecordId | null; at: unknown;
@@ -275,8 +281,22 @@ export class SurrealProvider implements DefinitionProvider {
       };
     }
 
-    const marketplaces: Record<string, string> = {};
-    for (const m of marketplaceRows) marketplaces[idOf(m.id)] = m.repo;
+    const marketplaces: Definition["marketplaces"] = {};
+    for (const m of marketplaceRows) {
+      const name = idOf(m.id);
+      marketplaces[name] = {
+        ...(m.claude
+          ? { claude: m.claude }
+          : m.repo
+            ? { claude: { source: m.repo, name } }
+            : {}),
+        ...(m.codex
+          ? { codex: m.codex }
+          : m.repo
+            ? { codex: { source: m.repo, name } }
+            : {}),
+      };
+    }
 
     const skillCatalog: Record<string, SkillRef> = {};
     for (const s of skillRows) {
@@ -286,8 +306,14 @@ export class SurrealProvider implements DefinitionProvider {
           : { source: "plugin", plugin: s.plugin ?? "", marketplace: idOf(s.marketplace) };
     }
 
-    const agentContent = new Map<string, string>();
-    for (const a of agentRows) agentContent.set(idOf(a.id), a.content);
+    const agentContent = new Map<string, { description: string; content: string }>();
+    for (const a of agentRows) {
+      const legacy = parseAgentMarkdown(a.content);
+      agentContent.set(idOf(a.id), {
+        description: a.description || legacy.description || "",
+        content: legacy.content,
+      });
+    }
 
     const decisionCatalog: Record<string, DecisionDef> = {};
     for (const d of decisionRows) {
@@ -309,7 +335,11 @@ export class SurrealProvider implements DefinitionProvider {
       agentByPurpose[idOf(p.id)] =
         at >= 0
           ? { source: "plugin", plugin: p.agent.slice(0, at), marketplace: p.agent.slice(at + 1) }
-          : { source: "library", name: p.agent, ...(agentContent.has(p.agent) ? { content: agentContent.get(p.agent)! } : {}) };
+          : {
+              source: "library",
+              name: p.agent,
+              ...(agentContent.has(p.agent) ? agentContent.get(p.agent)! : {}),
+            };
     }
 
     return {

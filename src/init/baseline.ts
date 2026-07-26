@@ -45,6 +45,10 @@ tools: {}
 # resolves from library/ by convention — no entry needed. marketplaces: is optional
 # and only declared when external content appears.
 
+agents:
+  shell:
+    description: "The tenant shell — the orchestrator everyone lands on; routes requests to the right purpose."
+
 # purposes: the tree. Start with the shell; grow it via governance.
 purposes:
   - id: ${tenant}

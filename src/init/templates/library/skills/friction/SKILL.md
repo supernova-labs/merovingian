@@ -20,8 +20,8 @@ Frictions are the fuel of governance.
    blocked, or what improvement opportunity appeared. If the human gave a hint
    (`$ARGUMENTS`), use it as direction; otherwise take the most relevant recent one.
 
-2. **Assemble the record** as structured markdown, in the shape of
-   `${CLAUDE_SKILL_DIR}/format.md`. Be rich and specific **in the record** (not in
+2. **Assemble the record** as structured markdown, in the shape of the sibling
+   `format.md` file. Be rich and specific **in the record** (not in
    the reply).
 
 3. **Scope it — whose problem is this?** The criterion is the MOUNTS: who has the

@@ -45,18 +45,18 @@ sees root creds or the signing key: it asks the service for a `Manifest` and con
 namespace is served locally (stub/surreal) or by a remote service is recorded per-machine
 (`src/transport.ts`, `readNamespace`).
 
-### The workspace (Claude Code project folder)
+### The workspace (Claude Code or Codex project folder)
 
 Emitted by `build`: `CLAUDE.md` (index), `.mcp.json` (MCP servers), `.claude/settings.local.json`
 (external marketplaces/plugins, `additionalDirectories`, env — git-ignored),
-`.claude/skills/` + `.claude/agents/` (the materialized library slice — wiped and rebuilt every
-build, ADR 0012), `.merovingian/build.json` (stamp). It carries **no reusable credential** — only a
-*token source* telling the MCPs how to fetch a fresh scoped JWT. Trusts nothing on its own; its
-access is decided by the DB.
+`.claude/skills/` + `.claude/agents/`; and the Codex-native `AGENTS.md`, `.codex/config.toml`,
+`.agents/skills/` + `.codex/agents/`. `.merovingian/build.json` records exact ownership per
+emitter. It carries no reusable Merovingian credential — only a *token source* telling system MCPs
+how to fetch a fresh scoped JWT. Trusts nothing on its own; its access is decided by the DB.
 
 ### The stdio MCPs (`src/mcp/`)
 
-Child processes launched by Claude Code inside the workspace, speaking JSON-RPC over stdio (all logs
+Child processes launched by the active harness inside the workspace, speaking JSON-RPC over stdio (all logs
 to stderr).
 
 - **`surreal-data`** — scoped reads of business data, **manifest-driven** (ADR 0011): two generic

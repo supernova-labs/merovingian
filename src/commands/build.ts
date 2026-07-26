@@ -15,6 +15,7 @@ import { surrealConfig } from "../provider/surreal.ts";
 import { remoteOptsFor } from "../transport.ts";
 import type { Session } from "./login.ts";
 import { assignmentsLabel, type Manifest } from "../projection/resolve.ts";
+import { inspectCodexPlugins, readBuildStamp } from "./plugins.ts";
 
 async function readSession(namespace: string): Promise<Session> {
   const path = sessionFile(namespace);
@@ -59,7 +60,7 @@ export async function build(namespace: string, opts: BuildOpts = {}): Promise<Ma
   }
 
   const target = opts.targetDir ?? process.cwd();
-  const { files } = await emit(manifest, target, access);
+  const { files, degradations } = await emit(manifest, target, access);
 
   // clone/pull the entitled okf repos and symlink them into ./context.
   const okf = await materializeOkf(manifest, target);
@@ -68,6 +69,21 @@ export async function build(namespace: string, opts: BuildOpts = {}): Promise<Ma
   for (const f of files) console.log(`  ${f}`);
   for (const o of okf.mounted) console.log(`  context/${o.bucket} -> ${o.path}`);
   for (const d of okf.denied) console.warn(`  ⚠ context/${d.bucket} not mounted (${d.repo}): ${d.reason}`);
+  for (const degradation of degradations) {
+    console.warn(
+      `  ⚠ ${degradation.builder} omitted ${degradation.capability} "${degradation.resource}": ` +
+        degradation.reason,
+    );
+  }
+  const pluginStatus = await inspectCodexPlugins(await readBuildStamp(target));
+  if (pluginStatus.unavailable) {
+    console.warn(`  ⚠ could not verify Codex plugins: ${pluginStatus.unavailable}`);
+  } else if (pluginStatus.missing.length) {
+    console.warn(
+      `  ⚠ missing Codex plugins: ${pluginStatus.missing.map((plugin) => plugin.nativeId).join(", ")}; ` +
+        "run merovingian plugins sync",
+    );
+  }
   // uncatalogued tools ship as echo placeholders — say so instead of failing silently.
   for (const t of manifest.toolMounts) {
     if (t.command === "echo" && t.args[0] === `stub:${t.name}`) {

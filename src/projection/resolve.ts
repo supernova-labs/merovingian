@@ -15,8 +15,9 @@
 // The parent never expands the child: projection starts from the *assumed*
 // purpose, never from privilege above it.
 
-import type { Assignment, Bucket, Definition, User } from "../provider/types.ts";
+import type { Assignment, Bucket, Definition, MarketplaceDef, User } from "../provider/types.ts";
 import { repoStore, repoDir } from "../paths.ts";
+import { parseSkillMarkdown } from "../graph/skill-content.ts";
 
 export interface OkfMount {
   bucket: string;
@@ -35,6 +36,8 @@ export interface SurrealMount {
 /** A library skill carried by the manifest — content included (ADR 0012). */
 export interface LibrarySkill {
   name: string;
+  description: string;
+  instructions: string;
   /** relative path ("SKILL.md" + supporting files) -> content */
   files: Record<string, string>;
 }
@@ -42,7 +45,15 @@ export interface LibrarySkill {
 /** A library agent carried by the manifest — content included (ADR 0012). */
 export interface LibraryAgent {
   name: string;
-  content: string;
+  description: string;
+  instructions: string;
+}
+
+export interface PurposeAgent {
+  purpose: string;
+  agent: string;
+  source: "library" | "plugin";
+  description?: string;
 }
 
 /** A tool resolved against the catalog → a real (or placeholder) MCP server. */
@@ -74,14 +85,16 @@ export interface Manifest {
   toolMounts: ToolMount[];
   /** resolved company keys → settings.local.json env (filled by the service layer) */
   toolEnv: Record<string, string>;
-  /** "plugin@marketplace" keys for enabledPlugins — EXTERNAL content only */
+  /** Logical "plugin@marketplace" requirements — EXTERNAL content only. */
   plugins: string[];
-  /** marketplace name -> repo, only the ones the plugins span → extraKnownMarketplaces */
-  marketplaces: Record<string, string>;
+  /** Used logical marketplaces with per-harness distribution bindings. */
+  marketplaces: Record<string, MarketplaceDef>;
   /** library skills this identity carries — emit materializes them into .claude/skills/ */
   librarySkills: LibrarySkill[];
   /** library agents of the visible purposes (deduped) — emit → .claude/agents/ */
   libraryAgents: LibraryAgent[];
+  /** purpose -> agent routing map for the root instructions. */
+  purposeAgents: PurposeAgent[];
   /** ambient skills, always on */
   ambientSkills: string[];
   /** skills of visible purposes (for the CLAUDE.md index) */
@@ -221,7 +234,8 @@ export function resolve(def: Definition, user: User, opts: ResolveOpts = {}): Ma
   const pluginSet = new Set<string>();
   const usedMarketplaces = new Set<string>();
   const librarySkills: LibrarySkill[] = [];
-  const libraryAgentByName = new Map<string, string>();
+  const libraryAgentByName = new Map<string, { description: string; instructions: string }>();
+  const purposeAgents: PurposeAgent[] = [];
   const addPlugin = (entry: { plugin: string; marketplace: string }) => {
     pluginSet.add(`${entry.plugin}@${entry.marketplace}`);
     usedMarketplaces.add(entry.marketplace);
@@ -230,18 +244,34 @@ export function resolve(def: Definition, user: User, opts: ResolveOpts = {}): Ma
     const ref = def.skillCatalog[s];
     if (!ref) continue;
     if (ref.source === "plugin") addPlugin(ref);
-    else librarySkills.push({ name: s, files: ref.files });
+    else {
+      const parsed = parseSkillMarkdown(s, ref.files["SKILL.md"] ?? "");
+      librarySkills.push({
+        name: s,
+        description: parsed.description,
+        instructions: parsed.instructions,
+        files: ref.files,
+      });
+    }
   }
   // each visible purpose enables its agent (persona) — even with zero skills.
   for (const id of visible) {
     const a = def.agentByPurpose[id];
     if (!a) continue;
-    if (a.source === "plugin") addPlugin(a);
-    else if (a.content !== undefined) libraryAgentByName.set(a.name, a.content);
+    if (a.source === "plugin") {
+      addPlugin(a);
+      purposeAgents.push({ purpose: id, agent: `${a.plugin}@${a.marketplace}`, source: "plugin" });
+    } else if (a.description !== undefined && a.content !== undefined) {
+      libraryAgentByName.set(a.name, { description: a.description, instructions: a.content });
+      purposeAgents.push({ purpose: id, agent: a.name, source: "library", description: a.description });
+    }
   }
-  const libraryAgents: LibraryAgent[] = [...libraryAgentByName.keys()].sort().map((name) => ({ name, content: libraryAgentByName.get(name)! }));
+  const libraryAgents: LibraryAgent[] = [...libraryAgentByName.keys()].sort().map((name) => ({
+    name,
+    ...libraryAgentByName.get(name)!,
+  }));
   const plugins = [...pluginSet].sort();
-  const marketplaces: Record<string, string> = {};
+  const marketplaces: Record<string, MarketplaceDef> = {};
   for (const name of [...usedMarketplaces].sort()) {
     if (def.marketplaces[name]) marketplaces[name] = def.marketplaces[name];
   }
@@ -268,6 +298,7 @@ export function resolve(def: Definition, user: User, opts: ResolveOpts = {}): Ma
     marketplaces,
     librarySkills,
     libraryAgents,
+    purposeAgents: purposeAgents.sort((a, b) => a.purpose.localeCompare(b.purpose)),
     ambientSkills: [...def.ambient.skills],
     skills: [...skillSet].sort(),
     decisionDomains: [...domainSet].sort(),

@@ -17,7 +17,18 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import type { AgentRef, DecisionDef, Definition, PluginRef, SkillRef, User } from "../provider/types.ts";
+import { parseAgentMarkdown } from "./agent-content.ts";
+import { parseSkillMarkdown } from "./skill-content.ts";
+import type {
+  AgentRef,
+  DecisionDef,
+  Definition,
+  MarketplaceBinding,
+  MarketplaceDef,
+  PluginRef,
+  SkillRef,
+  User,
+} from "../provider/types.ts";
 
 // kind mirrors the .mcp.json server types: stdio (local command, the default) or
 // http/sse (a remote MCP endpoint — url only; member auth is Claude Code's OAuth).
@@ -82,14 +93,37 @@ const ExternalRef = z.string().regex(/^[^@\s]+@[^@\s]+$/, {
   message: 'catalog refs are explicit "plugin@marketplace"; local content resolves from library/ by convention — drop the entry',
 });
 
+const AgentMetadataSchema = z.object({
+  description: z.string().min(1),
+}).strict();
+
+const MarketplaceBindingSchema = z.union([
+  z.string(),
+  z.object({
+    source: z.string().min(1),
+    name: z.string().min(1).optional(),
+  }).strict(),
+]);
+
+const MarketplaceSchema = z.union([
+  z.string(),
+  z.object({
+    claude: MarketplaceBindingSchema.optional(),
+    codex: MarketplaceBindingSchema.optional(),
+  }).strict().refine((m) => m.claude !== undefined || m.codex !== undefined, {
+    message: "marketplace requires at least one claude or codex binding",
+  }),
+]);
+
 // .strict() everywhere: contract v2 has no back-compat — a leftover `razao:`,
 // bucket `scope:` or `defaultMarketplace:` must fail loudly, not be ignored.
 const GraphSchema = z.object({
   namespace: z.string(),
   ambient: z.object({ skills: z.array(z.string()).default([]) }).strict().default({ skills: [] }),
-  marketplaces: z.record(z.string()).default({}),
+  marketplaces: z.record(MarketplaceSchema).default({}),
   tools: z.record(ToolSchema).default({}),
   skills: z.record(ExternalRef).default({}),
+  agents: z.record(AgentMetadataSchema).default({}),
   purposes: z.array(PurposeSchema),
   buckets: z.array(BucketSchema).default([]),
   users: z.array(UserSchema).default([]),
@@ -185,9 +219,33 @@ function pluginRef(ref: string): PluginRef {
   return { source: "plugin", plugin: ref.slice(0, at), marketplace: ref.slice(at + 1) };
 }
 
+function marketplaceBinding(value: string | { source: string; name?: string }, logicalName: string): MarketplaceBinding {
+  return typeof value === "string"
+    ? { source: value, name: logicalName }
+    : { source: value.source, name: value.name ?? logicalName };
+}
+
+function marketplaceDef(
+  value: string | {
+    claude?: string | { source: string; name?: string };
+    codex?: string | { source: string; name?: string };
+  },
+  logicalName: string,
+): MarketplaceDef {
+  if (typeof value === "string") {
+    const binding = marketplaceBinding(value, logicalName);
+    return { claude: binding, codex: binding };
+  }
+  return {
+    ...(value.claude !== undefined ? { claude: marketplaceBinding(value.claude, logicalName) } : {}),
+    ...(value.codex !== undefined ? { codex: marketplaceBinding(value.codex, logicalName) } : {}),
+  };
+}
+
 export interface LoadedGraph {
   definition: Definition;
   users: Record<string, User>;
+  warnings: string[];
 }
 
 /** Validate + expand a graph YAML string (+ the tenant library) into a Definition
@@ -195,6 +253,7 @@ export interface LoadedGraph {
  *  `loadGraphFile` wires the real folder. */
 export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBRARY, decisions: TenantDecisions = {}): LoadedGraph {
   const g = GraphSchema.parse(parseYaml(yamlText));
+  const warnings: string[] = [];
 
   // external catalog (authored) …
   const skillCatalog: Record<string, SkillRef> = {};
@@ -204,9 +263,24 @@ export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBR
   const purposes: Definition["purposes"] = g.purposes.map((p) => {
     if (p.agent) {
       // "@" is the discriminator: external plugin ref vs library agent name.
-      agentByPurpose[p.id] = p.agent.includes("@")
-        ? pluginRef(p.agent)
-        : { source: "library", name: p.agent, ...(library.agents[p.agent] !== undefined ? { content: library.agents[p.agent] } : {}) };
+      if (p.agent.includes("@")) {
+        agentByPurpose[p.id] = pluginRef(p.agent);
+      } else {
+        const raw = library.agents[p.agent];
+        const parsed = raw === undefined ? undefined : parseAgentMarkdown(raw);
+        const description = g.agents[p.agent]?.description ?? parsed?.description;
+        if (parsed?.legacyFrontmatter) {
+          warnings.push(
+            `library/agents/${p.agent}.md: frontmatter is deprecated; move description to graph.yaml agents.${p.agent}.description`,
+          );
+        }
+        agentByPurpose[p.id] = {
+          source: "library",
+          name: p.agent,
+          ...(description ? { description } : {}),
+          ...(parsed ? { content: parsed.content } : {}),
+        };
+      }
     }
     return {
       id: p.id,
@@ -231,6 +305,10 @@ export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBR
     for (const rel of Object.keys(files)) {
       if (rel.includes("..") || rel.startsWith("/")) throw new Error(`library skill "${name}": unsafe file path "${rel}"`);
     }
+    const parsed = parseSkillMarkdown(name, files["SKILL.md"]);
+    for (const warning of parsed.lintWarnings) {
+      warnings.push(`library/skills/${name}/SKILL.md: ${warning}`);
+    }
     skillCatalog[name] = { source: "library", files };
   }
 
@@ -252,7 +330,9 @@ export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBR
     toolCatalog: g.tools,
     skillCatalog,
     agentByPurpose,
-    marketplaces: g.marketplaces,
+    marketplaces: Object.fromEntries(
+      Object.entries(g.marketplaces).map(([name, value]) => [name, marketplaceDef(value, name)]),
+    ),
     decisionCatalog: decisions,
   };
 
@@ -270,7 +350,7 @@ export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBR
     };
   }
 
-  return { definition, users };
+  return { definition, users, warnings: [...new Set(warnings)].sort() };
 }
 
 /** Read + parse a graph YAML file from disk, with its sibling library/ + decisions/. */

@@ -63,9 +63,10 @@ merovingian login <namespace> <your-uid>    # expect: logged in as <your name>
 merovingian build <namespace>               # materializes YOUR slice into this folder
 ```
 
-Open the folder in Claude Code. What you see — `CLAUDE.md`, `.claude/skills`,
-`.claude/agents`, `context/` mounts, the scoped MCPs — is exactly your slice of the graph,
-enforced by the database (ADR 0016), not by convention.
+Open the folder in Claude Code or Codex. The native root instructions, skills, subagents,
+`context/` mounts and scoped MCPs are exactly your slice of the graph, enforced by the database
+(ADR 0016), not by convention. If build reports missing Codex plugins, run
+`merovingian plugins sync`.
 
 **Troubleshooting**
 

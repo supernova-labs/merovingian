@@ -6,4 +6,4 @@ allowed-tools: [Read, Glob, Grep]
 
 # route
 
-Read the workspace CLAUDE.md, match the request to a purpose, and hand off.
+Read the workspace root instructions, match the request to a purpose, and hand off.

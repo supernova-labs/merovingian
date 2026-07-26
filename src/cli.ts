@@ -19,6 +19,7 @@ import { startConsole } from "./server/console.ts";
 import { deployPlan, deployApply } from "./commands/deploy.ts";
 import { init } from "./commands/init.ts";
 import { libraryUpdate, renderLibraryUpdate } from "./commands/library.ts";
+import { pluginsSync } from "./commands/plugins.ts";
 import { planIsEmpty } from "./graph/plan.ts";
 import { startUpdateCheck, notifyUpdate } from "./update-check.ts";
 import type { Backend } from "./service/build-service.ts";
@@ -41,6 +42,7 @@ Usage:
   merovingian deploy plan [--graph P]              audit: diff graph.yaml × Surreal (read-only; exit 1=drift 2=invalid)
   merovingian deploy apply [--graph P] [--yes]     converge Surreal to graph.yaml (structure only; --yes to allow deletes)
   merovingian library update [--graph P] [--yes]   refresh the seeded library from the Source templates (audit-first)
+  merovingian plugins sync                         install the Codex plugins required by this built workspace
 
   --owner id · --github login   the founding owner for init
   --graph P            path to the graph.yaml (authoring commands; default ./graph.yaml in cwd)
@@ -55,7 +57,7 @@ Runtime commands (build/graph/console/…) take a namespace (selects the db / st
 `;
 
 export interface ParsedArgs {
-  command: "namespace" | "login" | "graph" | "build" | "reset" | "data" | "passwd" | "inbox" | "decisions" | "console" | "deploy" | "init" | "library" | "mcp" | "help";
+  command: "namespace" | "login" | "graph" | "build" | "reset" | "data" | "passwd" | "inbox" | "decisions" | "console" | "deploy" | "init" | "library" | "plugins" | "mcp" | "help";
   namespace?: string;
   user?: string;
   url?: string;
@@ -143,6 +145,9 @@ export function parseArgs(argv: string[]): ParsedArgs {
     // library update [--graph P] [--yes]
     const { graph, yes } = extractFlags(rest.slice(1));
     return { command: "library", subcommand: rest[0], graph, yes };
+  }
+  if (cmd === "plugins") {
+    return { command: "plugins", subcommand: rest[0] };
   }
   if (cmd === "login") {
     const { positionals, backend } = extractFlags(rest);
@@ -280,6 +285,18 @@ async function run(parsed: ParsedArgs): Promise<void> {
     renderLibraryUpdate(result);
     // exit: 1 = drift pending · 0 = in sync / applied
     process.exitCode = result.status === "drift" ? 1 : 0;
+    return;
+  }
+
+  if (parsed.command === "plugins") {
+    if (parsed.subcommand !== "sync") throw new Error(`usage: merovingian plugins sync`);
+    const result = await pluginsSync();
+    for (const name of result.addedMarketplaces) console.log(`added Codex marketplace ${name}`);
+    for (const id of result.installedPlugins) console.log(`installed Codex plugin ${id}`);
+    for (const id of result.alreadyPresent) console.log(`Codex plugin already present ${id}`);
+    if (!result.installedPlugins.length && !result.addedMarketplaces.length) {
+      console.log("Codex plugins are in sync");
+    }
     return;
   }
 

@@ -10,9 +10,12 @@ import { validateGraph } from "../src/graph/plan.ts";
 
 const LIB: TenantLibrary = {
   skills: {
-    journal: { "SKILL.md": "# journal\nrecord the session", "format.md": "## format" },
-    route: { "SKILL.md": "# route" },
-    dormant: { "SKILL.md": "# never referenced" },
+    journal: {
+      "SKILL.md": "---\nname: journal\ndescription: Record the session\n---\n\n# journal\nrecord the session",
+      "format.md": "## format",
+    },
+    route: { "SKILL.md": "---\nname: route\ndescription: Route work\n---\n\n# route" },
+    dormant: { "SKILL.md": "---\nname: dormant\ndescription: Dormant\n---\n\n# never referenced" },
   },
   agents: {
     core: "# core agent",
@@ -33,6 +36,9 @@ tools:
     keySource: company
 skills:
   audit: compliance@guild
+agents:
+  core:
+    description: The core routing agent
 purposes:
   - id: root
     parent: null
@@ -70,7 +76,12 @@ describe("parseGraph (contract v2)", () => {
   });
 
   test("agent: '@' discriminates external plugin vs library agent (content attached)", () => {
-    expect(definition.agentByPurpose.root).toEqual({ source: "library", name: "core", content: "# core agent" });
+    expect(definition.agentByPurpose.root).toEqual({
+      source: "library",
+      name: "core",
+      description: "The core routing agent",
+      content: "# core agent",
+    });
     expect(definition.agentByPurpose.legal).toEqual({ source: "plugin", plugin: "counsel", marketplace: "guild" });
   });
 
@@ -121,6 +132,64 @@ describe("parseGraph — unresolved refs surface in validateGraph, not the loade
   test("a library agent with no library/agents/<name>.md", () => {
     const { definition, users } = parseGraph(YAML, { skills: LIB.skills, agents: {} });
     expect(validateGraph(definition, users)).toContain(`agent of "root": no library/agents/core.md`);
+  });
+
+  test("legacy agent frontmatter remains a temporary description fallback", () => {
+    const legacy: TenantLibrary = {
+      skills: LIB.skills,
+      agents: {
+        core: "---\nname: core\ndescription: Legacy core\n---\n\n# instructions",
+      },
+    };
+    const withoutCatalog = YAML.replace(
+      "agents:\n  core:\n    description: The core routing agent\n",
+      "",
+    );
+    const { definition, warnings } = parseGraph(withoutCatalog, legacy);
+    expect(definition.agentByPurpose.root).toEqual({
+      source: "library",
+      name: "core",
+      description: "Legacy core",
+      content: "# instructions",
+    });
+    expect(warnings).toEqual([
+      "library/agents/core.md: frontmatter is deprecated; move description to graph.yaml agents.core.description",
+    ]);
+  });
+
+  test("legacy agent descriptions tolerate an unquoted colon", () => {
+    const legacy: TenantLibrary = {
+      skills: LIB.skills,
+      agents: {
+        core: "---\nname: core\ndescription: Routes work: sales and delivery\n---\n\n# instructions",
+      },
+    };
+    const withoutCatalog = YAML.replace(
+      "agents:\n  core:\n    description: The core routing agent\n",
+      "",
+    );
+    const { definition } = parseGraph(withoutCatalog, legacy);
+    expect(definition.agentByPurpose.root).toMatchObject({
+      description: "Routes work: sales and delivery",
+      content: "# instructions",
+    });
+  });
+
+  test("skill reading is permissive while authoring returns a lint warning", () => {
+    const library: TenantLibrary = {
+      skills: {
+        ...LIB.skills,
+        journal: {
+          "SKILL.md": "---\nname: journal\ndescription: Records work: progress and gaps\n---\n\n# journal",
+        },
+      },
+      agents: LIB.agents,
+    };
+    const { definition, warnings } = parseGraph(YAML, library);
+    expect(definition.skillCatalog.journal).toBeDefined();
+    expect(warnings).toContain(
+      "library/skills/journal/SKILL.md: frontmatter is readable but not strict YAML; quote scalar values containing ':'",
+    );
   });
 });
 

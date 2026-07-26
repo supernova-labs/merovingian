@@ -98,8 +98,16 @@ export function toolDoc(name: string, t: ToolDef, readers: string[] = []): Recor
   return { recordId: new RecordId("tool", name), content: compact({ kind: t.kind, command: t.command, args: t.args, env: t.env, keySource: t.keySource, url: t.url, readers: purposeLinks(readers) }) };
 }
 
-export function marketplaceDoc(name: string, repo: string, readers: string[] = [], ambient = false): RecordDoc {
-  return { recordId: new RecordId("marketplace", name), content: { repo, readers: purposeLinks(readers), ambient } };
+export function marketplaceDoc(name: string, marketplace: Definition["marketplaces"][string], readers: string[] = [], ambient = false): RecordDoc {
+  return {
+    recordId: new RecordId("marketplace", name),
+    content: {
+      ...(marketplace.claude ? { claude: marketplace.claude } : {}),
+      ...(marketplace.codex ? { codex: marketplace.codex } : {}),
+      readers: purposeLinks(readers),
+      ambient,
+    },
+  };
 }
 
 export function skillDoc(name: string, s: SkillRef, readers: string[] = [], ambient = false): RecordDoc {
@@ -112,8 +120,8 @@ export function skillDoc(name: string, s: SkillRef, readers: string[] = [], ambi
 
 /** A library agent's content record (one per DISTINCT agent name — deduped;
  *  readers = the UNION of purposes carrying it). */
-export function agentDoc(name: string, content: string, readers: string[] = []): RecordDoc {
-  return { recordId: new RecordId("agent", name), content: { content, readers: purposeLinks(readers) } };
+export function agentDoc(name: string, description: string, content: string, readers: string[] = []): RecordDoc {
+  return { recordId: new RecordId("agent", name), content: { description, content, readers: purposeLinks(readers) } };
 }
 
 /** A ratified decision record (ADR 0013) — id is "<domain>/<slug>" (⟨⟩-escaped by
@@ -200,11 +208,15 @@ export function structuralRecords(def: Definition, users: Record<string, User>):
   for (const p of def.purposes) docs.push(purposeDoc(p, def.agentByPurpose[p.id], lin.get(p.id) ?? [p.id]));
   // library agent content — one record per DISTINCT name (several purposes may share
   // an agent). Unresolved content (undefined) never gets here: applyGraph validates first.
-  const agentContent = new Map<string, string>();
+  const agents = new Map<string, { description: string; content: string }>();
   for (const a of Object.values(def.agentByPurpose)) {
-    if (a.source === "library" && a.content !== undefined) agentContent.set(a.name, a.content);
+    if (a.source === "library" && a.description !== undefined && a.content !== undefined) {
+      agents.set(a.name, { description: a.description, content: a.content });
+    }
   }
-  for (const [name, content] of agentContent) docs.push(agentDoc(name, content, readers.agent.get(name)));
+  for (const [name, agent] of agents) {
+    docs.push(agentDoc(name, agent.description, agent.content, readers.agent.get(name)));
+  }
   for (const u of Object.values(users)) docs.push(userDoc(u));
   return docs;
 }

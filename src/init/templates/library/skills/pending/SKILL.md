@@ -43,7 +43,7 @@ start, not mid-task. The human invokes the cleanup; you do it with them.
      root queue), citing the resolved one. Two problems, two rows — queues stay
      honest and nothing lingers half-done.
    - **Propose, don't just point.** When the structural fix touches a skill you
-     carry, you HAVE its content (`.claude/skills/<name>/` is a byte-identical
+     carry, you HAVE its content (the harness skill directory is a byte-identical
      materialized copy) — write the CONCRETE change into the friction (the new
      step's text, where it lands, what it references). Governance ratifies a
      ready proposal instead of investigating a complaint. Propose ≠ apply: the

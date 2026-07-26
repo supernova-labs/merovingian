@@ -27,12 +27,12 @@ to disk.**
    - **Insights** — important decisions, learnings
 
 2. **Identify context gaps** — the most valuable part (it feeds governance). Read
-   `${CLAUDE_SKILL_DIR}/context-gaps.md` for the patterns (knowledge with no home,
+   the sibling `context-gaps.md` file for the patterns (knowledge with no home,
    undocumented process, skill candidate, inadequate structure). For each gap: what
    was discovered, where it should live, which kind.
 
-3. **Assemble the record** as structured markdown, in the shape of
-   `${CLAUDE_SKILL_DIR}/format.md`. Be rich here — governance reads this later.
+3. **Assemble the record** as structured markdown, in the shape of the sibling
+   `format.md` file. Be rich here — governance reads this later.
 
 4. **Write to the inbox**: call the **`journal` tool** (of the `inbox` MCP server)
    with the assembled markdown as the `text` argument, and **`origin` = who you are

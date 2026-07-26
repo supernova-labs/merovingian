@@ -1,7 +1,7 @@
 {
   "name": "@supernova-labs/merovingian",
-  "version": "0.2.0",
-  "description": "Merovingian OS — the Source: a declarative engine that projects a tenant's purpose-graph into scoped, per-identity Claude Code workspaces, and reconciles the graph with `deploy`.",
+  "version": "0.3.0",
+  "description": "Merovingian OS — a declarative engine that projects a tenant's purpose graph into scoped Claude Code and Codex workspaces, and reconciles it with `deploy`.",
   "license": "MIT",
   "author": "Luis Novo <lfnovo@gmail.com>",
   "homepage": "https://github.com/supernova-labs/merovingian#readme",
@@ -14,6 +14,7 @@
   },
   "keywords": [
     "claude-code",
+    "codex",
     "merovingian",
     "bun",
     "surrealdb",

@@ -176,7 +176,7 @@ merovingian graph acme
 
 ### `build <namespace> [--purposes a,b] [--backend stub|surreal]`
 
-Project the scoped Claude Code workspace the logged-in user is entitled to. **Requires a prior
+Project the scoped Claude Code + Codex workspace the logged-in user is entitled to. **Requires a prior
 `login`** (reads the session file first) and **materializes into the current working directory**
 (`target = process.cwd()`) — it does *not* build inside the tenant repo. Run it from an empty
 workspace folder you own. Source: `src/commands/build.ts`, `src/projection/emit.ts`.
@@ -189,12 +189,27 @@ Writes into the cwd:
 - `.claude/skills/<name>/*` — the library skills this identity carries, materialized from the
   manifest (ADR 0012).
 - `.claude/agents/<name>.md` — the library agents of the visible purposes.
-- `.merovingian/build.json` — a stamp (what built this folder).
+- `AGENTS.md`, `.codex/config.toml`, `.agents/skills/<name>/*`, `.codex/agents/<name>.toml` —
+  the equivalent Codex-native projection.
+- `.merovingian/build.json` — per-emitter ownership and explicit degradation records.
 - `context/<bucket>` — symlinks to the entitled okf repos (cloned/pulled into the central store).
 
-> **Wipe semantics:** emit owns `.claude/skills/` and `.claude/agents/` wholesale — both dirs are
-> **deleted and rebuilt from the manifest on every build**, so a skill you lost access to cannot
-> survive a rebuild. Do not hand-edit them. (Source: `src/projection/emit.ts`.)
+> **Ownership semantics:** emit removes stale files only when they appear in the previous
+> per-emitter inventory. It preserves unowned siblings and refuses to overwrite foreign root/config
+> files. Generated files should not be hand-edited. (Source: `src/projection/emit.ts`.)
+
+On first use, trust the generated workspace when Codex prompts. Codex does not load the local
+`.codex/config.toml` before that exact workspace is trusted; projected MCP servers and OKF
+permissions therefore become active only after this one-time user gate.
+
+When Codex plugins are absent, build prints a warning and still succeeds. Reconcile them explicitly:
+
+```bash
+merovingian plugins sync
+```
+
+Company-key MCP values are written only to mode-0600 local harness configs. A build carrying such
+values refuses to target any folder inside a Git repository.
 
 `--purposes` narrows the build to a subset of accessible purposes. Default backend `surreal`.
 

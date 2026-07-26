@@ -23,9 +23,10 @@ graph.yaml + library/  ──load──▶  Definition  ──resolve(user)─�
   the global definition onto one identity: visible purposes, buckets, tools, plugins, library
   skills/agents (content included), scope stamps. Because it's pure it is trivially golden-testable
   and indifferent to where the `Definition` came from.
-- **`emit(manifest, dir, access?) → files`** (`src/projection/emit.ts`) — materializes the `Manifest`
-  into the workspace folder (atomic writes), including the library slice into `.claude/skills/` and
-  `.claude/agents/` (both wiped and rebuilt each build). The only IO in the projection path.
+- **`emit(manifest, dir, access?) → files`** (`src/projection/emit.ts`) — prepares Claude Code and
+  Codex native artifacts from the same neutral manifest, validates ownership, and applies them as
+  one rollback-capable transaction. Stale cleanup follows exact per-emitter inventories. The only
+  IO in the projection path.
 
 ## The provider abstraction
 
