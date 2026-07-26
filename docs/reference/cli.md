@@ -156,12 +156,13 @@ same id never inherits the old password. The new password comes from `MEROVINGIA
 stdin (piped or typed; minimum 8 characters). Source: `src/commands/passwd.ts`.
 
 ```bash
-MEROVINGIAN_NEW_PASS='their-first-password' merovingian passwd acme ada
-openssl rand -base64 18 | merovingian passwd acme ada       # generated
+# generate AND capture — a bare `openssl | passwd` pipe would set a password nobody ever saw:
+PW=$(openssl rand -base64 18); echo "hand over securely: $PW"
+MEROVINGIAN_NEW_PASS="$PW" merovingian passwd acme ada; unset PW
 ```
 
-Onboarding order: `deploy apply` (user exists in the graph) → `passwd <ns> <user>` → the person
-puts `MEROVINGIAN_USER`/`MEROVINGIAN_PASS` in their workspace `.env` → `login` + MCPs work.
+Full runbook (both sides, copy-paste for the member):
+[onboarding-a-member](../guides/onboarding-a-member.md).
 
 ### `graph <namespace> [--backend stub|surreal]`
 

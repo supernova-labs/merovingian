@@ -182,10 +182,10 @@ merovingian login acme ada                     # validates against the live depl
 - **Remote** path (`namespace add` done): omit the user; the CLI uses `gh auth token` and the
   service's `/whoami` to resolve you. Requires `gh auth login`.
 - **Password** path (`MEROVINGIAN_PASS` set): the login authenticates AS the person via the
-  identity SIGNIN — no root/system credential on their machine, and the MCPs and `data`
-  authenticate the same way from the workspace `.env`. This is the per-person path for a real
-  tenant without a service. Onboarding order: `deploy apply` (the user exists in the graph) →
-  `passwd` (operator) → `.env` (person) → `login`.
+  identity SIGNIN — no root/system credential on their machine, and `build`/`graph`/`data`/MCPs
+  all authenticate the same way from the workspace `.env`. This is the per-person path for a
+  real tenant without a service. Full two-sided runbook (operator + member copy-paste):
+  [onboarding-a-member](onboarding-a-member.md).
 - **Local operator** path (no password in env): the `<user>` positional is required and must be a
   user id in the graph; resolution uses the system connection. Backend selection mirrors `build`
   (`--backend` / `MEROVINGIAN_BACKEND`, default `surreal`) — the default hits the live deployed
