@@ -29,8 +29,9 @@ export interface PlanResult {
 }
 
 export async function deployPlan(opts: { graph?: string } = {}): Promise<PlanResult> {
-  const { definition, users, tenantDir } = loadDesired(opts.graph);
+  const { definition, users, warnings, tenantDir } = loadDesired(opts.graph);
   const namespace = definition.namespace;
+  for (const warning of warnings) console.warn(`⚠ ${warning}`);
 
   const validationErrors = validateGraph(definition, users);
   if (validationErrors.length) {
@@ -65,8 +66,9 @@ export interface ApplyCliResult {
 }
 
 export async function deployApply(opts: { graph?: string; surrealDb?: string; yes?: boolean } = {}): Promise<ApplyCliResult> {
-  const { definition, users, tenantDir } = loadDesired(opts.graph);
+  const { definition, users, warnings, tenantDir } = loadDesired(opts.graph);
   const namespace = definition.namespace;
+  for (const warning of warnings) console.warn(`⚠ ${warning}`);
   const conn = await connectionOverrides(tenantDir, namespace);
   const cfg = surrealConfig(namespace, { ...conn, ...(opts.surrealDb ? { db: opts.surrealDb } : {}) });
   const db = await connectSurreal(cfg);

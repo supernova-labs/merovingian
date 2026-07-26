@@ -2,14 +2,14 @@
 
 **Merovingian OS — the Source.** A declarative engine for human–AI partnerships: model an
 organization as a **graph of purposes**, and Merovingian projects each person a **scoped Claude
-Code workspace** and reconciles the graph like infrastructure.
+Code and Codex workspace** and reconciles the graph like infrastructure.
 
 Two operations, one graph:
 
 - **`build`** — *projection*. Given a person, project the workspace they're entitled to: the
   purposes they can see, the knowledge buckets they can read/own, the skills/tools/agent that load
-  (their slice of the tenant **library**, materialized into `.claude/`), and the row-level scope on
-  sensitive data. `build = projection of the global definition onto a scoped target
+  (their slice of the tenant **library**, materialized into each harness's native layout), and the
+  row-level scope on sensitive data. `build = projection of the global definition onto a scoped target
   (Purpose × Scope × Human)`.
 - **`deploy`** — *reconciliation*. The desired state is a `graph.yaml` **plus a `library/`** of
   first-party skill/agent prompts, both in the tenant repo (ADR 0012); `deploy plan` diffs them
@@ -70,9 +70,9 @@ merovingian build acme          # project ada's scoped workspace into this folde
 value (see [going-to-production](docs/guides/going-to-production.md) for the service that holds it in
 a team setup).
 
-Open the workspace in Claude Code and the projection is live: `CLAUDE.md` (the scoped index),
-`.claude/skills` + `.claude/agents` (the person's slice of the tenant library), `.mcp.json`
-(system MCPs: inbox, decisions, scoped data). A tenant on its own database declares it once in
+Open the workspace in Claude Code or Codex and the projection is live. One build emits each
+harness's native root instructions, skills, subagents, MCPs and permission config from the same
+scoped manifest. A tenant on its own database declares it once in
 `merovingian.toml` — every command finds the right server from anywhere.
 
 **Contributing / running from a checkout:** `bun install`, then `bun bin/merovingian.ts <command>`

@@ -11,8 +11,8 @@ goal is a fast, correct handoff — not doing the work here.
 
 ## Steps
 
-1. **Read the map**: the workspace `CLAUDE.md` lists the visible purposes, their
-   skills, tools, context (okf) and data (surreal) mounts.
+1. **Read the map**: the workspace root instructions list the visible purposes,
+   their skills, tools, context (okf) and data (surreal) mounts.
 2. **Match**: which purpose *decides* what this request needs? Prefer the deepest
    purpose that fully contains it (a leaf over its parent).
 3. **Handoff**: name the purpose and its persona, state WHY in one line, and hand
@@ -29,7 +29,7 @@ and drop the rest, and don't do it all yourself: **decompose and orchestrate**.
 1. **Decompose**: split the input into parts, each matched to its purpose (step 2
    per part). Show the human the split in one compact list before dispatching
    anything consequential.
-2. **Dispatch**: the purpose personas are available as subagents (`.claude/agents/`).
+2. **Dispatch**: the purpose personas are available as subagents.
    Send each part to its persona as a task with a self-contained briefing — the
    subagent starts with a clean context and knows nothing you don't tell it. Quote
    the relevant slice of the input (or point precisely at it); independent parts go

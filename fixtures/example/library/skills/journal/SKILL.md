@@ -5,5 +5,5 @@ description: Record the session — progress, problems, insights and context gap
 
 # journal
 
-Record a session snapshot into the learning inbox. Follow the shape in
-`${CLAUDE_SKILL_DIR}/format.md`, then call the `journal` tool of the `inbox` MCP.
+Record a session snapshot into the learning inbox. Follow the shape in the sibling
+`format.md` file, then call the `journal` tool of the `inbox` MCP.

@@ -10,7 +10,7 @@
 // Runs against the generic `acme` example tenant (fixtures/example/graph.yaml).
 
 import { describe, test, expect, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, readFileSync, existsSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, existsSync, mkdirSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -76,7 +76,12 @@ function runGolden(get: GetManifest) {
       expect(m.librarySkills.map((s) => s.name)).toEqual(expect.arrayContaining(["journal", "friction"])); // always on
       // the only EXTERNAL content in the tree: the audit skill + the sales agent
       expect(m.plugins.sort()).toEqual(["compliance@guild", "sales-advisor@guild"].sort());
-      expect(m.marketplaces).toEqual({ guild: "acme-labs/guild" });
+      expect(m.marketplaces).toEqual({
+        guild: {
+          claude: { source: "acme-labs/guild", name: "guild" },
+          codex: { source: "acme-labs/guild", name: "guild" },
+        },
+      });
     });
   });
 
@@ -106,7 +111,7 @@ function runGolden(get: GetManifest) {
       const journal = m.librarySkills.find((s) => s.name === "journal")!;
       expect(Object.keys(journal.files).sort()).toEqual(["SKILL.md", "format.md"].sort());
       expect(journal.files["format.md"]).toContain("Context gaps");
-      expect(m.libraryAgents.find((a) => a.name === "content")!.content).toContain("public content");
+      expect(m.libraryAgents.find((a) => a.name === "content")!.instructions).toContain("public content");
     });
   });
 
@@ -286,37 +291,136 @@ function runGolden(get: GetManifest) {
     test("writes the projected workspace, library content materialized", async () => {
       const m = await get("cleo");
       const target = tmp();
-      const { files } = await emit(m, target);
-      // 4 core files + journal (SKILL.md, format.md) + friction + pending + the delivery agent
-      expect(files.length).toBe(9);
+      const { files, degradations } = await emit(m, target);
+      // Common stamp + equivalent Claude/Codex native surfaces.
+      expect(files.length).toBe(16);
       for (const f of [
         "CLAUDE.md", ".mcp.json", ".claude/settings.local.json", ".merovingian/build.json",
         ".claude/skills/journal/SKILL.md", ".claude/skills/journal/format.md",
         ".claude/skills/friction/SKILL.md", ".claude/skills/pending/SKILL.md", ".claude/agents/delivery.md",
+        "AGENTS.md", ".codex/config.toml", ".codex/agents/delivery.toml",
+        ".agents/skills/journal/SKILL.md", ".agents/skills/journal/format.md",
+        ".agents/skills/friction/SKILL.md", ".agents/skills/pending/SKILL.md",
       ]) {
         expect(existsSync(join(target, f))).toBe(true);
       }
       expect(readFileSync(join(target, ".claude/agents/delivery.md"), "utf8")).toContain("delivery persona");
+      expect(readFileSync(join(target, ".codex/agents/delivery.toml"), "utf8")).toContain(
+        'description = "The acme delivery persona',
+      );
       const settings = JSON.parse(readFileSync(join(target, ".claude", "settings.local.json"), "utf8"));
       expect([...settings.permissions.additionalDirectories].sort()).toEqual(
         [join(STORE, "kb-method"), join(STORE, "kb-projects")].sort(),
       );
+      const codexConfig = readFileSync(join(target, ".codex", "config.toml"), "utf8");
+      expect(codexConfig).toContain('default_permissions = "merovingian"');
+      expect(codexConfig).toContain(`${JSON.stringify(join(STORE, "kb-method"))} = "read"`);
+      expect(codexConfig).not.toContain("mcp.example.dev/sse");
+      expect(degradations).toEqual([
+        {
+          builder: "codex",
+          capability: "MCP transport",
+          resource: "tracker",
+          reason: "legacy SSE is not supported; provide a Streamable HTTP endpoint",
+        },
+      ]);
+      const agentsMd = readFileSync(join(target, "AGENTS.md"), "utf8");
+      expect(agentsMd).toContain("Trust this workspace when Codex asks");
+      expect(agentsMd).toContain("legacy SSE is not supported");
       const stamp = JSON.parse(readFileSync(join(target, ".merovingian", "build.json"), "utf8"));
-      expect(stamp).toEqual({
-        namespace: "acme",
-        user: "cleo",
-        assignments: [{ purpose: "delivery", scope: "north", role: "member" }],
-      });
+      expect(stamp.schemaVersion).toBe(2);
+      expect(stamp.namespace).toBe("acme");
+      expect(stamp.user).toBe("cleo");
+      expect(stamp.assignments).toEqual([{ purpose: "delivery", scope: "north", role: "member" }]);
+      expect(stamp.builders.claude.files).toContain(".claude/agents/delivery.md");
+      expect(stamp.builders.codex.files).toContain(".codex/agents/delivery.toml");
+      expect(stamp.builders.codex.degradations).toEqual(degradations);
     });
 
     test("re-emit removes library content the manifest no longer carries (no stale)", async () => {
       const target = tmp();
       await emit(await get("cleo"), target); // has the delivery agent
       expect(existsSync(join(target, ".claude/agents/delivery.md"))).toBe(true);
+      expect(existsSync(join(target, ".codex/agents/delivery.toml"))).toBe(true);
       await emit(await get("ben"), target); // content slice — no delivery agent
       expect(existsSync(join(target, ".claude/agents/delivery.md"))).toBe(false);
+      expect(existsSync(join(target, ".codex/agents/delivery.toml"))).toBe(false);
       expect(existsSync(join(target, ".claude/agents/content.md"))).toBe(true);
+      expect(existsSync(join(target, ".codex/agents/content.toml"))).toBe(true);
       expect(existsSync(join(target, ".claude/skills/write/SKILL.md"))).toBe(true);
+      expect(existsSync(join(target, ".agents/skills/write/SKILL.md"))).toBe(true);
+    });
+
+    test("refuses foreign root/config files before changing the workspace", async () => {
+      const target = tmp();
+      writeFileSync(join(target, "AGENTS.md"), "# My instructions\n");
+      await expect(emit(await get("cleo"), target)).rejects.toThrow(
+        /AGENTS\.md already exists and is not owned by Merovingian/,
+      );
+      expect(readFileSync(join(target, "AGENTS.md"), "utf8")).toBe("# My instructions\n");
+      expect(existsSync(join(target, "CLAUDE.md"))).toBe(false);
+      expect(existsSync(join(target, ".merovingian/build.json"))).toBe(false);
+    });
+
+    test("refuses generated paths whose parent is a symlink", async () => {
+      const target = tmp();
+      const outside = tmp();
+      symlinkSync(outside, join(target, ".codex"));
+      await expect(emit(await get("cleo"), target)).rejects.toThrow(
+        /\.codex is not a workspace directory/,
+      );
+      expect(existsSync(join(target, "CLAUDE.md"))).toBe(false);
+      expect(existsSync(join(outside, "config.toml"))).toBe(false);
+    });
+
+    test("rolls back every emitter when a prepared artifact cannot be written", async () => {
+      const target = tmp();
+      const manifest = await get("cleo");
+      manifest.librarySkills.push({
+        name: "x".repeat(300),
+        description: "forces an overlong path after root artifacts are written",
+        instructions: "test",
+        files: { "SKILL.md": "test" },
+      });
+
+      await expect(emit(manifest, target)).rejects.toThrow();
+      expect(existsSync(join(target, "CLAUDE.md"))).toBe(false);
+      expect(existsSync(join(target, ".mcp.json"))).toBe(false);
+      expect(existsSync(join(target, "AGENTS.md"))).toBe(false);
+      expect(existsSync(join(target, ".codex", "config.toml"))).toBe(false);
+      expect(existsSync(join(target, ".merovingian", "build.json"))).toBe(false);
+    });
+
+    test("stale cleanup preserves files outside the prior per-emitter inventory", async () => {
+      const target = tmp();
+      await emit(await get("cleo"), target);
+      writeFileSync(join(target, ".codex", "notes.md"), "operator-owned\n");
+      writeFileSync(join(target, ".agents", "README.md"), "operator-owned\n");
+      await emit(await get("ben"), target);
+      expect(readFileSync(join(target, ".codex", "notes.md"), "utf8")).toBe("operator-owned\n");
+      expect(readFileSync(join(target, ".agents", "README.md"), "utf8")).toBe("operator-owned\n");
+    });
+
+    test("company secrets are mode 0600, absent from the stamp, and forbidden inside Git", async () => {
+      const manifest = await get("ben"); // content carries the company-key search tool
+      manifest.toolEnv = resolveToolEnv(manifest.toolMounts, { SEARCH_API_KEY: "sk-test" });
+      expect(manifest.toolEnv.SEARCH_API_KEY).toBe("sk-test");
+
+      const generated = tmp();
+      await emit(manifest, generated);
+      const configPath = join(generated, ".codex", "config.toml");
+      expect(readFileSync(configPath, "utf8")).toContain('"SEARCH_API_KEY" = "sk-test"');
+      expect(statSync(configPath).mode & 0o777).toBe(0o600);
+      const stampPath = join(generated, ".merovingian", "build.json");
+      expect(statSync(stampPath).mode & 0o777).toBe(0o600);
+      expect(readFileSync(stampPath, "utf8")).not.toContain("sk-test");
+      expect(readFileSync(join(generated, "AGENTS.md"), "utf8")).not.toContain("sk-test");
+
+      const gitTarget = tmp();
+      mkdirSync(join(gitTarget, ".git"));
+      await expect(emit(manifest, gitTarget)).rejects.toThrow(/company secrets cannot be emitted inside a Git repository/);
+      expect(existsSync(join(gitTarget, ".codex/config.toml"))).toBe(false);
+      expect(existsSync(join(gitTarget, "CLAUDE.md"))).toBe(false);
     });
   });
 }
@@ -356,14 +460,36 @@ describe("multi-marketplace (synthetic def)", () => {
       b: { source: "plugin", plugin: "plug-b", marketplace: "mkt-2" },
     },
     agentByPurpose: {},
-    marketplaces: { "mkt-1": "org/mkt-1", "mkt-2": "org/mkt-2", "mkt-unused": "org/unused" },
+    marketplaces: {
+      "mkt-1": {
+        claude: { source: "org/mkt-1", name: "mkt-1" },
+        codex: { source: "org/mkt-1", name: "mkt-1" },
+      },
+      "mkt-2": {
+        claude: { source: "org/mkt-2", name: "mkt-2" },
+        codex: { source: "org/mkt-2", name: "mkt-2" },
+      },
+      "mkt-unused": {
+        claude: { source: "org/unused", name: "mkt-unused" },
+        codex: { source: "org/unused", name: "mkt-unused" },
+      },
+    },
   };
   const user: User = { id: "u", name: "U", assignments: [{ purpose: "p", role: "owner" }] };
 
   test("plugins span both marketplaces; only used ones are declared", () => {
     const m = resolve(def, user, { storeRoot: STORE });
     expect(m.plugins.sort()).toEqual(["plug-a@mkt-1", "plug-b@mkt-2"]);
-    expect(m.marketplaces).toEqual({ "mkt-1": "org/mkt-1", "mkt-2": "org/mkt-2" });
+    expect(m.marketplaces).toEqual({
+      "mkt-1": {
+        claude: { source: "org/mkt-1", name: "mkt-1" },
+        codex: { source: "org/mkt-1", name: "mkt-1" },
+      },
+      "mkt-2": {
+        claude: { source: "org/mkt-2", name: "mkt-2" },
+        codex: { source: "org/mkt-2", name: "mkt-2" },
+      },
+    });
   });
 });
 

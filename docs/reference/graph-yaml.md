@@ -55,9 +55,12 @@ namespace: acme                    # required
 ambient:                           # optional (default: { skills: [] })
   skills: [journal, friction]
 marketplaces:                      # optional (default: {}) — EXTERNAL channels only
-  guild: acme-labs/guild
+  guild:
+    claude: acme-labs/guild
+    codex: acme-labs/guild
 tools: {}                          # optional (default: {})
 skills: {}                         # optional (default: {}) — EXTERNAL refs only
+agents: {}                         # optional (default: {}) — neutral local-agent metadata
 purposes: []                       # required
 buckets: []                        # optional (default: [])
 users: []                          # optional (default: [])
@@ -67,9 +70,10 @@ users: []                          # optional (default: [])
 | -------------- | ----------------------------- | -------- | ---------------- | ------- |
 | `namespace`    | string                        | yes      | —                | The tenant id. Keys the config singleton and every record's namespace. |
 | `ambient`      | object `{ skills: string[] }` | no       | `{ skills: [] }` | Skills every workspace inherits, with no agent. See [ambient](#ambient). |
-| `marketplaces` | map `name → owner/repo`       | no       | `{}`             | Registry of **external** plugin channels. Only needed when a skill/agent references one. See [marketplaces](#marketplaces). |
+| `marketplaces` | map `name → harness bindings` | no       | `{}`             | Registry of **external** plugin channels, with native Claude/Codex distribution bindings. See [marketplaces](#marketplaces). |
 | `tools`        | map `name → ToolDef`          | no       | `{}`             | The tool ("tubo") registry. See [tools](#tools). |
 | `skills`       | map `name → plugin@marketplace` | no     | `{}`             | The **external** skill catalog. Local content needs no entry — it resolves from `library/`. See [skills](#skills--local-by-default). |
+| `agents`       | map `name → { description }`  | no       | `{}`             | Harness-neutral metadata for local agents. Instructions remain in `library/agents/<name>.md`. |
 | `purposes`     | array of Purpose              | yes      | —                | The purpose tree. See [purposes](#purposes). |
 | `buckets`      | array of Bucket               | no       | `[]`             | Units of knowledge. See [buckets](#buckets). |
 | `users`        | array of User                 | no       | `[]`             | People + their assignments. See [users](#users). |
@@ -95,9 +99,9 @@ convention ([ADR 0012](../decisions/consolidadas/0012-library-do-tenant-e-distri
   `agent:` without an `@` resolves to `library/agents/<name>.md`.
 - **The library is desired state.** `parseGraph` folds the referenced content into the
   `Definition`; `deploy` persists it into the database (skill records `{ source: "library",
-  files }`, agent content into the `agent` table); `build` materializes each person's slice into
-  their workspace (`.claude/skills/<name>/*`, `.claude/agents/<name>.md`). A member never needs to
-  read the tenant repo.
+  files }`, agent metadata + instructions into the `agent` table); `build` materializes each
+  person's slice into both harness-native layouts: `.claude/skills` + `.claude/agents` and
+  `.agents/skills` + `.codex/agents`. A member never needs to read the tenant repo.
 - **Only referenced names fold in.** An unreferenced `library/skills/<x>/` folder is dormant — it
   is not deployed and not materialized.
 - **File paths are sandboxed.** A library skill file path containing `..` or starting with `/`
@@ -177,15 +181,41 @@ either a catalog entry or `library/skills/<name>/SKILL.md` (invariant). Governan
 
 ```yaml
 marketplaces:
-  guild: acme-labs/guild                       # used by an external skill/agent
-  partner-plugins: acme-labs/partner-plugins   # may be registered but unused
+  guild:
+    claude:                                    # Claude marketplace binding
+      source: acme-labs/guild
+      name: guild
+    codex:                                     # Codex marketplace binding
+      source: acme-labs/guild
+      name: guild
+  legacy:
+    claude: acme-labs/claude-only              # a harness may be intentionally absent
 ```
 
-A map of marketplace **name → GitHub repo** (`owner/name`). **Optional** — a fully self-contained
-tenant (everything in `library/`) declares none. Declare one only when an external
-`plugin@marketplace` ref (a catalog skill or a purpose agent) points at it: every marketplace
-referenced by a plugin-variant ref must be registered here (invariant). A marketplace may be
-registered without anything pointing at it yet.
+A map of logical marketplace **name → native harness bindings**. Each binding accepts either a
+source string or `{ source, name }`; `name` defaults to the logical marketplace name. The legacy
+string shorthand (`guild: acme-labs/guild`) binds the same source/name to both harnesses.
+
+**Optional** — a fully self-contained tenant (everything in `library/`) declares none. Every
+marketplace referenced by a plugin-variant ref must be registered and have at least one binding.
+If the selected workspace needs a plugin with no binding for one harness, `build` succeeds with an
+explicit degradation warning. Codex installation is a separate `merovingian plugins sync`.
+
+---
+
+## `agents`
+
+```yaml
+agents:
+  shell:
+    description: Routes work to the purpose that owns it.
+```
+
+Local agent instructions live in `library/agents/<name>.md`; the neutral catalog carries the
+description needed to compile each harness's native agent format. The purpose remains the source
+of the initial mapping (`agent: shell`). Legacy YAML frontmatter in the markdown is temporarily
+accepted as a description fallback and emits a deprecation warning; new libraries should keep the
+markdown instructions-only.
 
 ---
 
@@ -407,7 +437,13 @@ ambient:
   skills: [journal, friction]        # both from library/skills/<name>/
 
 marketplaces:                        # EXTERNAL channels only (optional)
-  guild: acme-labs/guild
+  guild:
+    claude: acme-labs/guild
+    codex: acme-labs/guild
+
+agents:
+  core:
+    description: The root shell that routes work to the right purpose.
 
 skills:
   audit: compliance@guild            # the ONLY catalog entry — everything else is library

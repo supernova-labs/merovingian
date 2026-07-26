@@ -118,10 +118,18 @@ export function validateGraph(def: Definition, users: Record<string, User>): str
 
   for (const [name, sd] of Object.entries(def.skillCatalog))
     if (sd.source === "plugin" && !marketplaceNames.has(sd.marketplace)) errors.push(`skill "${name}": marketplace "${sd.marketplace}" not registered`);
+  for (const [name, marketplace] of Object.entries(def.marketplaces)) {
+    if (!marketplace.claude && !marketplace.codex) {
+      errors.push(`marketplace "${name}": requires at least one claude or codex binding`);
+    }
+  }
   for (const [pid, sd] of Object.entries(def.agentByPurpose)) {
     if (!purposeIds.has(pid)) errors.push(`agent of "${pid}": purpose does not exist`);
     if (sd.source === "plugin" && !marketplaceNames.has(sd.marketplace)) errors.push(`agent of "${pid}": marketplace "${sd.marketplace}" not registered`);
     if (sd.source === "library" && sd.content === undefined) errors.push(`agent of "${pid}": no library/agents/${sd.name}.md`);
+    if (sd.source === "library" && sd.description === undefined) {
+      errors.push(`agent of "${pid}": no description in graph.yaml agents.${sd.name} or legacy frontmatter`);
+    }
   }
 
   for (const u of Object.values(users)) {
@@ -207,8 +215,11 @@ export function planGraph(desired: GraphState, current: GraphState): GraphPlan {
     }
     return changes;
   });
-  diffKind(plan, "marketplace", strMap(desired.def.marketplaces), strMap(current.def.marketplaces), (d, c) => [
-    scalar("repo", d, c),
+  diffKind(plan, "marketplace", asMap(desired.def.marketplaces), asMap(current.def.marketplaces), (d, c) => [
+    scalar("claude.source", d.claude?.source ?? "∅", c.claude?.source ?? "∅"),
+    scalar("claude.name", d.claude?.name ?? "∅", c.claude?.name ?? "∅"),
+    scalar("codex.source", d.codex?.source ?? "∅", c.codex?.source ?? "∅"),
+    scalar("codex.name", d.codex?.name ?? "∅", c.codex?.name ?? "∅"),
   ]);
 
   // decision records (ADR 0013): content as a hash scalar; an ACCEPTED record whose
@@ -229,7 +240,8 @@ export function planGraph(desired: GraphState, current: GraphState): GraphPlan {
 
   // library agent content (deduped by name; the purpose-level ref diffs above)
   diffKind(plan, "agent", libraryAgents(desired), libraryAgents(current), (d, c) => [
-    scalar("content", hash8(d), hash8(c)),
+    scalar("description", d.description, c.description),
+    scalar("content", hash8(d.content), hash8(c.content)),
   ]);
 
   // config singleton: ambient skills (set)
@@ -326,18 +338,17 @@ function envStr(env: Record<string, string>): string {
 function byId<T extends { id: string }>(arr: T[]): Map<string, T> {
   return new Map(arr.map((x) => [x.id, x]));
 }
-/** Distinct library agents (name -> content) in a state — the `agent` table's rows. */
-function libraryAgents(st: GraphState): Map<string, string> {
-  const m = new Map<string, string>();
+/** Distinct library agents in a state — the `agent` table's rows. */
+function libraryAgents(st: GraphState): Map<string, { description: string; content: string }> {
+  const m = new Map<string, { description: string; content: string }>();
   for (const a of Object.values(st.def.agentByPurpose)) {
-    if (a.source === "library" && a.content !== undefined) m.set(a.name, a.content);
+    if (a.source === "library" && a.description !== undefined && a.content !== undefined) {
+      m.set(a.name, { description: a.description, content: a.content });
+    }
   }
   return m;
 }
 function asMap<T>(rec: Record<string, T>): Map<string, T> {
-  return new Map(Object.entries(rec));
-}
-function strMap(rec: Record<string, string>): Map<string, string> {
   return new Map(Object.entries(rec));
 }
 function strMap2(rec: Record<string, { name: string; github?: string }>): Map<string, { name: string; github?: string }> {

@@ -40,6 +40,20 @@ tools:
 skills:
   audit: compliance@guild
 
+agents:
+  core:
+    description: The acme shell — everyone lands here; routes requests to the right purpose.
+  content:
+    description: The acme content persona — positions the company as an authority.
+  delivery:
+    description: The acme delivery persona — delivers the scope.
+  infra:
+    description: The acme infra persona — operates the tenant.
+  method:
+    description: The acme method persona — keeps the method explicit and alive.
+  success:
+    description: The acme client-success persona — owns the client relationship.
+
 # purposes: the tree. `agent` inline = plugin carrying the persona. `parent: null` = root.
 purposes:
   - id: acme

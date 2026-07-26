@@ -82,7 +82,9 @@ DEFINE TABLE OVERWRITE marketplace SCHEMAFULL
   PERMISSIONS
     FOR select WHERE ambient = true OR $auth->responsible->purpose CONTAINSANY array::flatten(readers.lineage)
     FOR create, update, delete NONE;
-DEFINE FIELD OVERWRITE repo ON marketplace TYPE string;
+DEFINE FIELD OVERWRITE repo ON marketplace TYPE option<string>; -- legacy pre-0017
+DEFINE FIELD OVERWRITE claude ON marketplace TYPE option<object> FLEXIBLE;
+DEFINE FIELD OVERWRITE codex ON marketplace TYPE option<object> FLEXIBLE;
 DEFINE FIELD OVERWRITE readers ON marketplace TYPE array<record<purpose>> DEFAULT [];
 DEFINE FIELD OVERWRITE ambient ON marketplace TYPE bool DEFAULT false;
 
@@ -109,6 +111,7 @@ DEFINE TABLE OVERWRITE agent SCHEMAFULL
     FOR select WHERE $auth->responsible->purpose CONTAINSANY array::flatten(readers.lineage)
     FOR create, update, delete NONE;
 DEFINE FIELD OVERWRITE content ON agent TYPE string;
+DEFINE FIELD OVERWRITE description ON agent TYPE string DEFAULT "";
 DEFINE FIELD OVERWRITE readers ON agent TYPE array<record<purpose>> DEFAULT [];
 
 -- a pessoa lê o PRÓPRIO record (login/name); os demais humanos ficam invisíveis.

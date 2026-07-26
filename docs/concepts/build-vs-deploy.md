@@ -42,16 +42,18 @@ a **pure projection of the global definition onto a scoped target** (purpose × 
 `--purposes a,b` can *narrow* a build to a subset (each expanded to descendants), bounded by
 entitlement — it can only ever subtract, never grant.
 
-**Writes** (`src/projection/emit.ts`, Manifest → files in the target folder)
+**Writes** (`src/projection/emit.ts`, one Manifest → both native harness layouts)
 
 - `CLAUDE.md` — the human/agent-readable index of the workspace.
 - `.mcp.json` — the MCP servers, by name (tools + the system `inbox`/`surreal-data` MCPs).
 - `.claude/settings.local.json` — marketplaces, enabled plugins, `additionalDirectories`, env.
   (`settings.local.json`, not `settings.json`: generated, disposable, git-ignored by convention.)
 - `.claude/skills/<name>/*` + `.claude/agents/<name>.md` — the person's slice of the tenant
-  library, materialized from the manifest. **emit owns these two dirs wholesale**: both are wiped
-  and rebuilt on every build, so a skill you lost access to cannot survive a rebuild.
-- `.merovingian/build.json` — a stamp recording what built the folder.
+  library for Claude Code.
+- `AGENTS.md` + `.codex/config.toml` + `.agents/skills/<name>/*` +
+  `.codex/agents/<name>.toml` — the equivalent Codex projection.
+- `.merovingian/build.json` — per-emitter inventory and explicit degradation records. Stale
+  generated files are removed without deleting unowned siblings.
 
 Role does **not** change the workspace: owner and member of the same purpose get the same files.
 Role only gates accountability (governance/deploy/decide), not access.
@@ -59,8 +61,9 @@ Role only gates accountability (governance/deploy/decide), not access.
 **Does NOT**
 
 - Touch SurrealDB structure or business data.
-- Embed a long-lived credential. The emitted MCP config carries a *token source* (how to fetch a
-  fresh scoped JWT per call), never a baked-in token.
+- Embed a long-lived Merovingian credential. System MCP config carries a *token source* (how to
+  fetch a fresh scoped JWT per call), never a baked-in token. Company-key MCP values are local,
+  mode-0600 config only, and make builds inside Git repositories fail closed.
 
 ---
 

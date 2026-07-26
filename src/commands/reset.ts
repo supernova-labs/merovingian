@@ -25,8 +25,9 @@ export interface ResetOpts {
 
 export async function reset(opts: ResetOpts = {}): Promise<void> {
   const graphPath = resolveGraphPath(opts.graph);
-  const { definition, users } = loadGraphFile(graphPath);
+  const { definition, users, warnings } = loadGraphFile(graphPath);
   const namespace = definition.namespace;
+  for (const warning of warnings) console.warn(`⚠ ${warning}`);
   const conn = await connectionOverrides(dirname(graphPath), namespace);
   const cfg: SurrealConfig = surrealConfig(namespace, { ...conn, ...(opts.surrealDb ? { db: opts.surrealDb } : {}) });
   const db = await connectSurreal(cfg);

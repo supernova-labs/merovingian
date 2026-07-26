@@ -35,9 +35,9 @@ The graph model itself (purposes, buckets, assignments, the 5 primitives) is des
 - **`build`** — *projection*. Given a person, project the workspace they are entitled to: the
   purposes they can see (their assigned purposes + descendants), the knowledge buckets they may
   read/own, the skills/tools/agent that load — external plugins *and* their slice of the tenant
-  library, materialized into `.claude/skills/` + `.claude/agents/` — and the row-level scope on
-  sensitive data. Output is a folder of files (`CLAUDE.md`, `.mcp.json`,
-  `.claude/settings.local.json`, the materialized library slice, a build stamp). See
+  library, materialized into native Claude Code and Codex layouts — and the row-level scope on
+  sensitive data. Output is a folder containing `CLAUDE.md` + `.claude/**` and
+  `AGENTS.md` + `.agents/**` + `.codex/**`, plus MCP/config files and a build stamp. See
   [build-vs-deploy.md](./build-vs-deploy.md).
 - **`deploy`** — *reconciliation*. The graph **and the library content** are desired state;
   `deploy plan` diffs them against the live SurrealDB (read-only; content as short hashes),

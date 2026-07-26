@@ -17,9 +17,8 @@ Merovingian works across **two separate folders**. Keeping them apart is the who
 2. **A workspace folder** — a **separate, empty** directory you own. `build` runs **here** and
    materializes the projected workspace **into the current working directory** (`process.cwd()`).
 
-> **`build` does NOT run inside the tenant repo.** It writes `CLAUDE.md`, `.mcp.json`,
-> `.claude/settings.local.json`, `.claude/skills/` + `.claude/agents/` (the materialized library
-> slice), `.merovingian/build.json`, and `context/<bucket>` symlinks into whatever directory you
+> **`build` does NOT run inside the tenant repo.** It writes both Claude Code and Codex native
+> projections, `.merovingian/build.json`, and `context/<bucket>` symlinks into whatever directory you
 > are standing in. Run it from a fresh workspace folder — never the tenant repo, never the Source
 > repo. (Source: `src/commands/build.ts`, `target = process.cwd()`.)
 
@@ -215,15 +214,18 @@ It materializes into the cwd:
 | `.claude/settings.local.json` | Generated, disposable per-build config. |
 | `.claude/skills/<name>/*` | This person's slice of the tenant library — skill content materialized from the manifest. |
 | `.claude/agents/<name>.md` | Library agents of the visible purposes. |
-| `.merovingian/build.json` | Stamp: what built this folder. |
+| `AGENTS.md` | Codex workspace instructions compiled from the same scoped manifest. |
+| `.codex/config.toml` | Codex MCPs and permission profile (mode 0600). |
+| `.agents/skills/<name>/*` | Codex-native materialized skills. |
+| `.codex/agents/<name>.toml` | Codex-native purpose subagents. |
+| `.merovingian/build.json` | Per-emitter ownership and degradation stamp (mode 0600). |
 | `context/<bucket>` | Symlinks to the entitled okf repos (cloned/pulled into the central store `~/merovingian/<ns>/repos`). |
 
-> `.claude/skills/` and `.claude/agents/` are **wiped and rebuilt from the manifest on every
-> build** — stale content from a broader entitlement cannot survive a rebuild, and hand-edits
-> there are lost. Members get their library slice from the build; they never need read access to
-> the tenant repo.
+> Stale generated content from a broader entitlement is removed from both harness inventories,
+> while files outside those inventories are preserved. Members get their library slice from the
+> build; they never need read access to the tenant repo.
 
-Open that folder in Claude Code and the projected workspace is live. Rebuild any time the graph
+Open that folder in Claude Code or Codex and the projected workspace is live. Rebuild any time the graph
 changes — `build` is a projection, safe to re-run.
 
 ## 8. Verify enforcement (optional)

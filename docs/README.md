@@ -1,7 +1,7 @@
 # Merovingian documentation
 
 Merovingian models an organization as a **graph of purposes**: `build` projects each person a scoped
-Claude Code workspace, `deploy` reconciles a `graph.yaml` into SurrealDB. This is the full
+Claude Code and Codex workspace, `deploy` reconciles a `graph.yaml` into SurrealDB. This is the full
 documentation set. New here? Read [concepts/overview.md](./concepts/overview.md) first.
 
 The docs are organized by what you're trying to do (a [Diátaxis](https://diataxis.fr) split):

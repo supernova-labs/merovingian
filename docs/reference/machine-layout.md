@@ -47,14 +47,26 @@ two machine roots above:
 
 ```
 <workspace>/
-  CLAUDE.md                      # the scoped index
-  .mcp.json                      # tools + system MCPs, by name
-  .claude/settings.local.json    # marketplaces, plugins, additionalDirectories, env (gitignored)
-  .claude/skills/<name>/…        # library skills, materialized (wiped + rebuilt each build)
-  .claude/agents/<name>.md       # library agents, materialized (wiped + rebuilt each build)
-  .merovingian/build.json        # stamp: what built this folder
-  context/<bucket>               # symlink → ~/merovingian/<ns>/repos/<name>
+  CLAUDE.md                       # Claude Code scoped instructions
+  .mcp.json                       # Claude Code MCPs
+  .claude/settings.local.json     # Claude marketplaces, permissions and env (0600)
+  .claude/skills/<name>/…
+  .claude/agents/<name>.md
+  AGENTS.md                       # Codex scoped instructions
+  .codex/config.toml              # Codex MCPs + permissions (0600)
+  .agents/skills/<name>/…
+  .codex/agents/<name>.toml
+  .merovingian/build.json         # per-emitter ownership + degradations (0600)
+  context/<bucket>                # symlink → ~/merovingian/<ns>/repos/<name>
 ```
+
+Claude and Codex artifacts are prepared before any write and applied as one rollback-capable
+transaction. Cleanup removes only files in the previous per-emitter inventory; sibling files are
+preserved. A foreign `AGENTS.md`, `CLAUDE.md`, or config is never overwritten.
+
+Codex requires the user to trust this exact workspace once before it loads the generated
+`.codex/config.toml`. Until then, the root `AGENTS.md` remains the visible setup guide but projected
+MCP servers and read-only OKF permissions are intentionally inactive.
 
 Each entitled okf bucket is cloned/fast-forwarded into `~/merovingian/<ns>/repos/<name>` and
 symlinked to `context/<bucket>` in the workspace; the real store path also goes into
