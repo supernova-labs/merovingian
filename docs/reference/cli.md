@@ -189,8 +189,9 @@ Writes into the cwd:
 - `.claude/skills/<name>/*` — the library skills this identity carries, materialized from the
   manifest (ADR 0012).
 - `.claude/agents/<name>.md` — the library agents of the visible purposes.
-- `AGENTS.md`, `.codex/config.toml`, `.agents/skills/<name>/*`, `.codex/agents/<name>.toml` —
-  the equivalent Codex-native projection.
+- `AGENTS.md`, `.agents/skills/<name>/*` and the Codex-native agent projection:
+  `.codex/config.toml` declares each `[agents.<name>]`, whose `config_file` references
+  `.codex/agents/<name>.toml`.
 - `.merovingian/build.json` — per-emitter ownership and explicit degradation records.
 - `context/<bucket>` — symlinks to the entitled okf repos (cloned/pulled into the central store).
 

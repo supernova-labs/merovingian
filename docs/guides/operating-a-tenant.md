@@ -215,9 +215,9 @@ It materializes into the cwd:
 | `.claude/skills/<name>/*` | This person's slice of the tenant library — skill content materialized from the manifest. |
 | `.claude/agents/<name>.md` | Library agents of the visible purposes. |
 | `AGENTS.md` | Codex workspace instructions compiled from the same scoped manifest. |
-| `.codex/config.toml` | Codex MCPs and permission profile (mode 0600). |
+| `.codex/config.toml` | Codex agent registry, MCPs and permission profile (mode 0600). |
 | `.agents/skills/<name>/*` | Codex-native materialized skills. |
-| `.codex/agents/<name>.toml` | Codex-native purpose subagents. |
+| `.codex/agents/<name>.toml` | Codex-native purpose role config referenced by `[agents.<name>]`. |
 | `.merovingian/build.json` | Per-emitter ownership and degradation stamp (mode 0600). |
 | `context/<bucket>` | Symlinks to the entitled okf repos (cloned/pulled into the central store `~/merovingian/<ns>/repos`). |
 

@@ -53,9 +53,9 @@ two machine roots above:
   .claude/skills/<name>/…
   .claude/agents/<name>.md
   AGENTS.md                       # Codex scoped instructions
-  .codex/config.toml              # Codex MCPs + permissions (0600)
+  .codex/config.toml              # Codex agents registry + MCPs + permissions (0600)
   .agents/skills/<name>/…
-  .codex/agents/<name>.toml
+  .codex/agents/<name>.toml       # role config referenced by config.toml
   .merovingian/build.json         # per-emitter ownership + degradations (0600)
   context/<bucket>                # symlink → ~/merovingian/<ns>/repos/<name>
 ```
