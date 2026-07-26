@@ -30,6 +30,12 @@ argument) maps onto the SurrealDB *database*, while the SurrealDB *namespace* is
 | --- | --- | --- |
 | `MEROVINGIAN_BACKEND` | `surreal` | `defaultBackend()` in `src/service/build-service.ts`: set to `stub` to select the offline `acme` fixture; any other value (or unset) reads the live DB in-process. A `--backend` flag overrides it. |
 
+## Update check
+
+| Var | Default | Controls |
+| --- | --- | --- |
+| `MEROVINGIAN_NO_UPDATE_CHECK` | *(unset)* | Set to any value to disable the passive new-version notice (`src/update-check.ts`). `CI` being set disables it too. The check consults the npm registry at most once per 24h (cache: `~/.merovingian/update-check.json`), is fail-silent, and prints a single stderr line after a command when a newer version exists. |
+
 ## JWT signing
 
 Read in `src/provider/surreal.ts` (`mintIdentityJwt`).

@@ -420,6 +420,15 @@ Run via `package.json` scripts (both bind their own port, log to stderr):
 `bun run console` (the standalone entrypoint) does not take a namespace argument — it defaults to
 `acme`. To pick a namespace, use the CLI form `merovingian console <ns>` instead.
 
+## Update notice
+
+After a command finishes, the CLI prints one stderr line if npm has a newer version
+(`↑ merovingian X.Y.Z available — bun add -g @supernova-labs/merovingian@latest`). The registry is
+consulted at most once per 24h (cached in `~/.merovingian/update-check.json`), concurrently with the
+command's own work, and any failure (offline, timeout) silently skips the notice. Never shown for
+`mcp` (stdout is the stdio protocol), `console`, or `help`. Opt out with
+`MEROVINGIAN_NO_UPDATE_CHECK=1` (also off when `CI` is set).
+
 ## Global exit behavior
 
 `bin/merovingian.ts` catches any thrown error, prints its message to stderr, and exits `1`. The

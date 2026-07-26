@@ -20,6 +20,7 @@ import { deployPlan, deployApply } from "./commands/deploy.ts";
 import { init } from "./commands/init.ts";
 import { libraryUpdate, renderLibraryUpdate } from "./commands/library.ts";
 import { planIsEmpty } from "./graph/plan.ts";
+import { startUpdateCheck, notifyUpdate } from "./update-check.ts";
 import type { Backend } from "./service/build-service.ts";
 
 const USAGE = `merovingian — build CLI (stub + surreal)
@@ -182,7 +183,16 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
 export async function main(argv = process.argv.slice(2)): Promise<void> {
   const parsed = parseArgs(argv);
+  // overlaps the command's own work; prints (stderr) only after it finishes
+  const update = startUpdateCheck(parsed.command);
+  try {
+    await run(parsed);
+  } finally {
+    await notifyUpdate(update);
+  }
+}
 
+async function run(parsed: ParsedArgs): Promise<void> {
   if (parsed.command === "help") {
     console.log(USAGE);
     return;
