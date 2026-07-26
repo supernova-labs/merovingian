@@ -22,6 +22,8 @@ describe("isNewer", () => {
     expect(isNewer("0.3.0-beta.1", "0.2.0")).toBe(false);
     expect(isNewer("banana", "0.2.0")).toBe(false);
     expect(isNewer("0.3", "0.2.0")).toBe(false);
+    expect(isNewer("0.3.", "0.2.0")).toBe(false); // Number("") is 0 — must not pass as 0.3.0
+    expect(isNewer("1.2.3.4", "0.2.0")).toBe(false);
   });
 });
 
@@ -79,6 +81,13 @@ describe("latestVersion (cache-or-fetch)", () => {
     await writeFile(file, JSON.stringify(stale));
     expect(await latestVersion(file, NOW, fetcher(null))).toBe(null);
     expect(JSON.parse(await readFile(file, "utf8"))).toEqual(stale);
+  });
+
+  test("future-dated cache (clock change) → not fresh, refetches", async () => {
+    const file = await freshFile();
+    await writeFile(file, JSON.stringify({ checkedAt: new Date(NOW + 60 * 60 * 1000).toISOString(), latest: "0.2.5" }));
+    expect(await latestVersion(file, NOW, fetcher("0.3.0"))).toBe("0.3.0");
+    expect(JSON.parse(await readFile(file, "utf8")).latest).toBe("0.3.0");
   });
 
   test("corrupt cache → treated as missing, refetches", async () => {

@@ -22,11 +22,12 @@ interface Cache {
   latest: string;
 }
 
-/** Strict-ish semver "a > b" — good for our x.y.z releases; anything unparseable is "not newer". */
+/** Strict semver "a > b" — good for our x.y.z releases; anything unparseable is "not newer". */
 export function isNewer(a: string, b: string): boolean {
+  const SEMVER = /^\d+\.\d+\.\d+$/;
+  if (!SEMVER.test(a) || !SEMVER.test(b)) return false;
   const pa = a.split(".").map(Number);
   const pb = b.split(".").map(Number);
-  if (pa.length !== 3 || pb.length !== 3 || [...pa, ...pb].some(Number.isNaN)) return false;
   for (let i = 0; i < 3; i++) {
     if (pa[i]! !== pb[i]!) return pa[i]! > pb[i]!;
   }
@@ -70,7 +71,9 @@ export async function latestVersion(
   fetcher: () => Promise<string | null> = fetchLatest,
 ): Promise<string | null> {
   const cached = await readCache(file);
-  if (cached && now - Date.parse(cached.checkedAt) < TTL_MS) return cached.latest;
+  // future-dated checkedAt (clock change) = corrupt: refetch instead of staying "fresh" forever
+  const age = cached ? now - Date.parse(cached.checkedAt) : NaN;
+  if (cached && age >= 0 && age < TTL_MS) return cached.latest;
   const latest = await fetcher();
   if (!latest) return null;
   await mkdir(join(file, ".."), { recursive: true });
