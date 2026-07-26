@@ -216,7 +216,10 @@ export function planGraph(desired: GraphState, current: GraphState): GraphPlan {
     return changes;
   });
   diffKind(plan, "marketplace", asMap(desired.def.marketplaces), asMap(current.def.marketplaces), (d, c) => [
-    scalar("bindings", JSON.stringify(d), JSON.stringify(c)),
+    scalar("claude.source", d.claude?.source ?? "∅", c.claude?.source ?? "∅"),
+    scalar("claude.name", d.claude?.name ?? "∅", c.claude?.name ?? "∅"),
+    scalar("codex.source", d.codex?.source ?? "∅", c.codex?.source ?? "∅"),
+    scalar("codex.name", d.codex?.name ?? "∅", c.codex?.name ?? "∅"),
   ]);
 
   // decision records (ADR 0013): content as a hash scalar; an ACCEPTED record whose

@@ -165,6 +165,27 @@ describe("planGraph", () => {
     expect(planIsEmpty(planGraph(mk(["a", "b"]), mk(["b", "a"])))).toBe(true);
   });
 
+  test("marketplace binding object order does not create phantom drift", () => {
+    const desired = state({
+      marketplaces: {
+        guild: {
+          claude: { source: "acme/guild", name: "guild" },
+          codex: { source: "acme/guild", name: "guild" },
+        },
+      },
+    });
+    const current = state({
+      marketplaces: {
+        guild: {
+          claude: { name: "guild", source: "acme/guild" },
+          codex: { name: "guild", source: "acme/guild" },
+        },
+      },
+    });
+
+    expect(planIsEmpty(planGraph(desired, current))).toBe(true);
+  });
+
   test("responsible edge: create, delete, and role update keyed by (user,purpose,scope)", () => {
     const desired = state({}, [{ user: "u", purpose: "p", role: "owner" }, { user: "u", purpose: "q", scope: "nord", role: "member" }]);
     const current = state({}, [{ user: "u", purpose: "p", role: "member" }, { user: "u", purpose: "r", role: "member" }]);
