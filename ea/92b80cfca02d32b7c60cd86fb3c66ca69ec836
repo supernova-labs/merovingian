@@ -1,0 +1,21 @@
+src/graph/plan.ts
+  s_1538ec2899e471::t_1b3dd628e73f52 219-222
+test/plan.test.ts
+  s_1538ec2899e471::t_1b3dd628e73f52 168-188
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "ea92b80cfca02d32b7c60cd86fb3c66ca69ec836",
+  "prompts": {},
+  "sessions": {
+    "s_1538ec2899e471": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f9ec9-e3ec-7163-a1b8-1cedffcba0da",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
