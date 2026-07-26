@@ -1,0 +1,29 @@
+docs/reference/env-vars.md
+  s_208d3200a73d1e::t_0d69479bd45c70 33-38
+docs/reference/cli.md
+  s_208d3200a73d1e::t_e0f4f45d0cc45f 423-431
+test/update-check.test.ts
+  s_208d3200a73d1e::t_2cd84a605b4581 1-89
+src/update-check.ts
+  s_208d3200a73d1e::t_011ce15ccc6c9d 67-71,74
+  s_208d3200a73d1e::t_e35a9c71f1852c 1-66,72-73,75-93
+src/cli.ts
+  s_208d3200a73d1e::t_c99cb78a8c1ac8 186-193,195
+  s_208d3200a73d1e::t_3fa1ccad6ff265 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "b3547ea40e634a085e1a8daa9cf3ff05eacf8e15",
+  "prompts": {},
+  "sessions": {
+    "s_208d3200a73d1e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1f4896b-2430-4652-b964-f3f355b52786",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
