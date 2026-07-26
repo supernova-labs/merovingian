@@ -305,15 +305,19 @@ function runGolden(get: GetManifest) {
         expect(existsSync(join(target, f))).toBe(true);
       }
       expect(readFileSync(join(target, ".claude/agents/delivery.md"), "utf8")).toContain("delivery persona");
-      expect(readFileSync(join(target, ".codex/agents/delivery.toml"), "utf8")).toContain(
-        'description = "The acme delivery persona',
-      );
+      const codexAgent = readFileSync(join(target, ".codex/agents/delivery.toml"), "utf8");
+      expect(codexAgent).toContain('developer_instructions = "# delivery');
+      expect(codexAgent).not.toContain("\nname = ");
+      expect(codexAgent).not.toContain("\ndescription = ");
       const settings = JSON.parse(readFileSync(join(target, ".claude", "settings.local.json"), "utf8"));
       expect([...settings.permissions.additionalDirectories].sort()).toEqual(
         [join(STORE, "kb-method"), join(STORE, "kb-projects")].sort(),
       );
       const codexConfig = readFileSync(join(target, ".codex", "config.toml"), "utf8");
       expect(codexConfig).toContain('default_permissions = "merovingian"');
+      expect(codexConfig).toContain('[agents."delivery"]');
+      expect(codexConfig).toContain('description = "The acme delivery persona');
+      expect(codexConfig).toContain('config_file = "agents/delivery.toml"');
       expect(codexConfig).toContain(`${JSON.stringify(join(STORE, "kb-method"))} = "read"`);
       expect(codexConfig).not.toContain("mcp.example.dev/sse");
       expect(degradations).toEqual([
