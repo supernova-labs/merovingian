@@ -87,7 +87,9 @@ function runGolden(get: GetManifest) {
     test("root sees the shell agent (library) AND the ambient skills; externals span guild", async () => {
       const m = await get("ada");
       expect(m.libraryAgents.map((a) => a.name)).toContain("core"); // shell: root purpose visible
-      expect(m.librarySkills.map((s) => s.name)).toEqual(expect.arrayContaining(["journal", "friction"])); // always on
+      expect(m.librarySkills.map((s) => s.name)).toEqual(
+        expect.arrayContaining(["journal", "friction", "pending", "update-workspace"]),
+      ); // always on
       // the only EXTERNAL content in the tree: the audit skill + the sales agent
       expect(m.plugins.sort()).toEqual(["compliance@guild", "sales-advisor@guild"].sort());
       expect(m.marketplaces).toEqual({
@@ -112,7 +114,9 @@ function runGolden(get: GetManifest) {
     });
     test("gets content library skills + agent (NOT the root shell), zero externals", async () => {
       const m = await get("ben");
-      expect(m.librarySkills.map((s) => s.name)).toEqual(["edit", "friction", "journal", "pending", "write"]);
+      expect(m.librarySkills.map((s) => s.name)).toEqual([
+        "edit", "friction", "journal", "pending", "update-workspace", "write",
+      ]);
       expect(m.libraryAgents.map((a) => a.name)).toEqual(["content"]);
       // scoped workspace never gets the root shell persona
       expect(m.libraryAgents.map((a) => a.name)).not.toContain("core");
@@ -144,7 +148,9 @@ function runGolden(get: GetManifest) {
       const m = await get("cleo");
       // delivery has no skills — the persona still loads via its agent (agentByPurpose)
       expect(m.libraryAgents.map((a) => a.name)).toEqual(["delivery"]);
-      expect(m.librarySkills.map((s) => s.name)).toEqual(["friction", "journal", "pending"]);
+      expect(m.librarySkills.map((s) => s.name)).toEqual([
+        "friction", "journal", "pending", "update-workspace",
+      ]);
       expect(m.plugins).toEqual([]);
       expect(m.marketplaces).toEqual({});
     });
@@ -307,14 +313,16 @@ function runGolden(get: GetManifest) {
       const target = tmp();
       const { files, degradations } = await emit(m, target);
       // Common stamp + equivalent Claude/Codex native surfaces.
-      expect(files.length).toBe(16);
+      expect(files.length).toBe(18);
       for (const f of [
         "CLAUDE.md", ".mcp.json", ".claude/settings.local.json", ".merovingian/build.json",
         ".claude/skills/journal/SKILL.md", ".claude/skills/journal/format.md",
-        ".claude/skills/friction/SKILL.md", ".claude/skills/pending/SKILL.md", ".claude/agents/delivery.md",
+        ".claude/skills/friction/SKILL.md", ".claude/skills/pending/SKILL.md",
+        ".claude/skills/update-workspace/SKILL.md", ".claude/agents/delivery.md",
         "AGENTS.md", ".codex/config.toml", ".codex/agents/delivery.toml",
         ".agents/skills/journal/SKILL.md", ".agents/skills/journal/format.md",
         ".agents/skills/friction/SKILL.md", ".agents/skills/pending/SKILL.md",
+        ".agents/skills/update-workspace/SKILL.md",
       ]) {
         expect(existsSync(join(target, f))).toBe(true);
       }
@@ -357,13 +365,42 @@ function runGolden(get: GetManifest) {
         );
       }
       const stamp = JSON.parse(readFileSync(join(target, ".merovingian", "build.json"), "utf8"));
-      expect(stamp.schemaVersion).toBe(2);
+      expect(stamp.schemaVersion).toBe(3);
       expect(stamp.namespace).toBe("acme");
       expect(stamp.user).toBe("cleo");
+      expect(stamp.requestedPurposes).toEqual([]);
       expect(stamp.assignments).toEqual([{ purpose: "delivery", scope: "north", role: "member" }]);
       expect(stamp.builders.claude.files).toContain(".claude/agents/delivery.md");
       expect(stamp.builders.codex.files).toContain(".codex/agents/delivery.toml");
       expect(stamp.builders.codex.degradations).toEqual(degradations);
+      expect(readFileSync(join(target, ".claude/skills/update-workspace/SKILL.md"), "utf8")).toBe(
+        readFileSync(join(target, ".agents/skills/update-workspace/SKILL.md"), "utf8"),
+      );
+    });
+
+    test("records a narrowed purpose request without replacing it with visible descendants", async () => {
+      const target = tmp();
+      await emit(await get("ada", ["growth"]), target, undefined, { requestedPurposes: ["growth"] });
+      const stamp = JSON.parse(readFileSync(join(target, ".merovingian", "build.json"), "utf8"));
+      expect(stamp.schemaVersion).toBe(3);
+      expect(stamp.requestedPurposes).toEqual(["growth"]);
+    });
+
+    test("accepts a schema 2 ownership receipt and promotes it on the next emit", async () => {
+      const target = tmp();
+      await emit(await get("cleo"), target);
+      const stampPath = join(target, ".merovingian", "build.json");
+      const old = JSON.parse(readFileSync(stampPath, "utf8"));
+      old.schemaVersion = 2;
+      delete old.requestedPurposes;
+      writeFileSync(stampPath, JSON.stringify(old, null, 2) + "\n");
+
+      await emit(await get("ben"), target, undefined, { requestedPurposes: ["content"] });
+      const upgraded = JSON.parse(readFileSync(stampPath, "utf8"));
+      expect(upgraded.schemaVersion).toBe(3);
+      expect(upgraded.requestedPurposes).toEqual(["content"]);
+      expect(existsSync(join(target, ".claude/agents/delivery.md"))).toBe(false);
+      expect(existsSync(join(target, ".codex/agents/delivery.toml"))).toBe(false);
     });
 
     test("re-emit removes library content the manifest no longer carries (no stale)", async () => {

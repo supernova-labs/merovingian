@@ -117,9 +117,14 @@ convention ([ADR 0012](../decisions/consolidadas/0012-library-do-tenant-e-distri
   throws: `library skill "<name>": unsafe file path "<rel>"`.
 
 `merovingian init` seeds the library with copies of the Source templates (`shell` agent +
-`journal`, `friction`, `pending`, `route` skills) and separately creates an active, tenant-owned
-`workspace.md` with generic guardrails. `merovingian library update` refreshes only template-owned
-skill/agent files and never touches `workspace.md` — see the [CLI reference](./cli.md).
+`journal`, `friction`, `pending`, `update-workspace`, `route` skills) and separately creates an
+active, tenant-owned `workspace.md` with generic guardrails. `merovingian library update` refreshes
+only template-owned skill/agent files and never touches `workspace.md` — see the
+[CLI reference](./cli.md).
+
+`update-workspace` is ambient in new tenants because it is useful to every member but runs only on
+explicit request. Existing tenants must both copy the template with `library update --yes` and add
+its name to `ambient.skills`; copying an unreferenced library directory does not deploy it.
 
 ---
 

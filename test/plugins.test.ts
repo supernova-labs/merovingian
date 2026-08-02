@@ -6,9 +6,10 @@ import {
   codexPluginRequirements,
   inspectCodexPlugins,
   pluginsSync,
+  readBuildStamp,
   type CodexRunner,
 } from "../src/commands/plugins.ts";
-import type { BuildStamp } from "../src/projection/emit.ts";
+import type { BuildStamp, BuildStampV2 } from "../src/projection/emit.ts";
 
 const roots: string[] = [];
 afterAll(() => {
@@ -17,9 +18,10 @@ afterAll(() => {
 
 function stamp(): BuildStamp {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     namespace: "acme",
     user: "ada",
+    requestedPurposes: [],
     assignments: [],
     builders: {
       common: { version: 1, files: [".merovingian/build.json"] },
@@ -40,7 +42,7 @@ function stamp(): BuildStamp {
   };
 }
 
-function workspace(value = stamp()): string {
+function workspace(value: unknown = stamp()): string {
   const root = mkdtempSync(join(tmpdir(), "merovingian-plugins-"));
   roots.push(root);
   mkdirSync(join(root, ".merovingian"));
@@ -49,6 +51,21 @@ function workspace(value = stamp()): string {
 }
 
 describe("Codex plugin reconciliation", () => {
+  test("reads both current and schema 2 multi-harness receipts", async () => {
+    expect((await readBuildStamp(workspace())).schemaVersion).toBe(3);
+    const current = stamp();
+    const { requestedPurposes: _requestedPurposes, ...withoutSelection } = current;
+    const old: BuildStampV2 = { ...withoutSelection, schemaVersion: 2 };
+    expect((await readBuildStamp(workspace(old))).schemaVersion).toBe(2);
+    expect(codexPluginRequirements(old).map((item) => item.nativeId)).toEqual(["review@codex-company"]);
+  });
+
+  test("rejects a schema 3 receipt without its purpose selection", async () => {
+    const current = stamp();
+    const { requestedPurposes: _requestedPurposes, ...invalid } = current;
+    await expect(readBuildStamp(workspace(invalid))).rejects.toThrow(/multi-harness build stamp/);
+  });
+
   test("maps logical requirements through the Codex marketplace binding", () => {
     expect(codexPluginRequirements(stamp())).toEqual([
       {

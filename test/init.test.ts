@@ -40,7 +40,7 @@ describe("init scaffolding", () => {
     expect(validateGraph(definition, users)).toEqual([]); // deployable
     expect(definition.namespace).toBe("acme");
     expect(definition.purposes.map((p) => p.id)).toEqual(["acme"]);
-    expect(definition.ambient.skills).toEqual(["journal", "friction", "pending"]);
+    expect(definition.ambient.skills).toEqual(["journal", "friction", "pending", "update-workspace"]);
     expect(definition.ambient.instructions).toBe(baselineWorkspaceInstructions("acme").trim());
     expect(users.ada!.assignments).toEqual([{ purpose: "acme", role: "owner" }]);
     expect(users.ada!.github).toBe("ada-gh");
@@ -55,6 +55,7 @@ describe("init scaffolding", () => {
       "library/skills/journal/format.md",
       "library/skills/journal/context-gaps.md",
       "library/skills/friction/SKILL.md",
+      "library/skills/update-workspace/SKILL.md",
       "library/skills/route/SKILL.md",
     ]) {
       expect(existsSync(join(dir, f))).toBe(true);
@@ -62,6 +63,19 @@ describe("init scaffolding", () => {
     // seeds are exact copies of the templates
     const templates = readTemplateLibrary();
     expect(readFileSync(join(dir, "library/skills/journal/SKILL.md"), "utf8")).toBe(templates["skills/journal/SKILL.md"]!);
+    expect(readFileSync(join(dir, "library/skills/update-workspace/SKILL.md"), "utf8")).toBe(
+      templates["skills/update-workspace/SKILL.md"]!,
+    );
+    const fixtureSkill = readFileSync(
+      join(import.meta.dir, "../fixtures/example/library/skills/update-workspace/SKILL.md"),
+      "utf8",
+    );
+    expect(fixtureSkill).toBe(templates["skills/update-workspace/SKILL.md"]!);
+    expect(fixtureSkill).toContain("currentuser.json");
+    expect(fixtureSkill).toContain("uncommitted or staged changes");
+    expect(fixtureSkill).toContain("Ask one explicit confirmation");
+    expect(fixtureSkill).toContain("bun add -g @supernova-labs/merovingian@latest");
+    expect(fixtureSkill).toContain("Never repair generated `CLAUDE.md`, `AGENTS.md`");
     // the baseline declares NO marketplace — a fresh tenant is fully self-contained
     const { definition } = loadGraphFile(join(dir, "graph.yaml"));
     expect(definition.marketplaces).toEqual({});

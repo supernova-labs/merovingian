@@ -93,12 +93,13 @@ target dir exists and is non-empty. `--owner` and `--github` are required. Sourc
 Files written:
 
 - `graph.yaml` — a minimal, valid, **fully self-contained** graph (ADR 0012): root purpose with
-  `agent: shell` and `skills: [route]`, ambient `[journal, friction, pending]`, no `marketplaces:` section —
+  `agent: shell` and `skills: [route]`, ambient
+  `[journal, friction, pending, update-workspace]`, no `marketplaces:` section —
   every skill/agent resolves from the seeded library by convention.
 - `library/` — the **seeded tenant library**: copies of the Source templates, the tenant's to
   evolve: `agents/shell.md`, `skills/journal/{SKILL.md,format.md,context-gaps.md}`,
   `skills/friction/{SKILL.md,format.md}`, `skills/pending/SKILL.md`,
-  `skills/route/SKILL.md`, plus tenant-owned
+  `skills/update-workspace/SKILL.md`, `skills/route/SKILL.md`, plus tenant-owned
   `workspace.md` with global guardrails. The latter reaches every member and must contain no
   secrets or audience-specific context.
 - `.claude/settings.json` — the committed repo config: the `merovingian` marketplace + the
@@ -197,7 +198,9 @@ Writes into the cwd:
 - `AGENTS.md`, `.agents/skills/<name>/*` and the Codex-native agent projection:
   `.codex/config.toml` declares each `[agents.<name>]`, whose `config_file` references
   `.codex/agents/<name>.toml`.
-- `.merovingian/build.json` — per-emitter ownership and explicit degradation records.
+- `.merovingian/build.json` — schema-3 per-emitter ownership, explicit degradation records, and
+  `requestedPurposes` (`[]` means full entitlement; a non-empty array preserves the original
+  normalized `--purposes` request).
 - `context/<bucket>` — symlinks to the entitled okf repos (cloned/pulled into the central store).
 
 > **Ownership semantics:** emit removes stale files only when they appear in the previous
@@ -224,6 +227,18 @@ cd ~/workspaces/ada-acme     # an empty folder you own — NOT the tenant repo
 merovingian build acme
 merovingian build acme --purposes content
 ```
+
+The ambient `update-workspace` skill uses this receipt to reproduce the same build later. Invoke
+it explicitly as `/update-workspace` in Claude or `$update-workspace` in Codex (also discoverable
+through Codex's `/skills` picker). It checks the active identity and dirty `context/` repos, shows
+the planned global CLI update and rebuild, and asks once before changing the machine. Schema-2
+receipts remain readable by the CLI, but the skill asks for the old purpose selection rather than
+guessing or silently widening to full entitlement. A successful new build promotes the receipt to
+schema 3.
+
+The skill leaves plugin reconciliation explicit, does not edit generated files by hand, and does
+not remove stale context symlinks. A denied context mount makes the refresh partial and is reported
+as such. Start a new agent session after it completes so rebuilt instructions and capabilities load.
 
 ### `reset [--graph <path>]`
 
@@ -406,6 +421,11 @@ exist in `src/init/templates/library/` — so tenant-authored skills/agents/file
 untouched even with `--yes`.
 Source: `src/commands/library.ts`, `src/init/templates.ts`.
 
+Template additions are copied by `--yes` but are not activated automatically in an existing
+tenant's graph. To adopt `update-workspace`, update the admin CLI, run `library update --yes`, add
+`update-workspace` to `ambient.skills`, run `deploy apply`, and have members build once. Subsequent
+refreshes can use the skill itself.
+
 Output renders one line per template path:
 
 ```
@@ -454,6 +474,9 @@ consulted at most once per 24h (cached in `~/.merovingian/update-check.json`), c
 command's own work, and any failure (offline, timeout) silently skips the notice. Never shown for
 `mcp` (stdout is the stdio protocol), `console`, `help`, or `version`. Opt out with
 `MEROVINGIAN_NO_UPDATE_CHECK=1` (also off when `CI` is set).
+
+This notice is passive. In a workspace where the ambient library skill is active, an explicit
+`/update-workspace` (Claude) or `$update-workspace` (Codex) performs the guarded update and rebuild.
 
 ## Global exit behavior
 

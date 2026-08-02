@@ -78,6 +78,12 @@ scoped manifest. Tenant admins maintain shared context and operating defaults in
 in `CLAUDE.md` and `AGENTS.md`. A tenant on its own database declares it once in
 `merovingian.toml` — every command finds the right server from anywhere.
 
+New tenants also carry the ambient `update-workspace` skill. When a member explicitly invokes
+`/update-workspace` in Claude or `$update-workspace` in Codex, it checks identity, purpose scope,
+and dirty context repos, asks once, then updates the global CLI and rebuilds the same projection.
+It is the manual precursor to the planned automatic freshness checks in
+[#31](https://github.com/supernova-labs/merovingian/issues/31), not a session-start hook.
+
 **Contributing / running from a checkout:** `bun install`, then `bun bin/merovingian.ts <command>`
 (the test tenant lives in `fixtures/example/`; `bun run db:up` starts the dev SurrealDB).
 

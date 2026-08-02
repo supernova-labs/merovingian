@@ -24,7 +24,7 @@ export function baselineSettings(): TenantSettings {
   };
 }
 
-/** A minimal, schema-valid tenant graph: a root shell purpose + the owner + ambient FFF.
+/** A minimal, schema-valid tenant graph: a root shell purpose + the owner + ambient operations.
  *  Fully self-contained (ADR 0012): every skill/agent resolves from the seeded library/
  *  by convention — no marketplace, no external repo needed. External plugins, when the
  *  tenant wants them, are added as `marketplaces:` + explicit `plugin@marketplace` refs. */
@@ -35,9 +35,9 @@ export function baselineGraphYaml(tenant: string, owner: string, github: string)
 namespace: ${tenant}
 
 # ambient: system skills, always on (governance is NOT here — it's repo tooling, ADR 0010).
-# journal/friction/pending resolve from library/skills/<name>/ — seeded by init, yours to evolve.
+# journal/friction/pending/update-workspace resolve from library/skills/<name>/ — seeded by init, yours to evolve.
 ambient:
-  skills: [journal, friction, pending]
+  skills: [journal, friction, pending, update-workspace]
 
 tools: {}
 
@@ -99,6 +99,10 @@ plugin** when prompted — that's a per-machine trust gate; it can't be pre-appr
 architect agent and the \`merovingian\`, \`tenant-admin\`, and \`drain\` skills are available: start
 with \`merovingian\`, use \`tenant-admin\` for access/workspace operations, and \`drain\` for the
 periodic governance pass.
+
+In a generated member workspace, invoke \`/update-workspace\` in Claude or \`$update-workspace\`
+in Codex to refresh the global CLI, rebuild the same projection, and fast-forward its context repos.
+The skill performs a safety preflight and asks before changing the machine.
 
 ## Layout
 

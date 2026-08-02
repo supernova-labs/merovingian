@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import pkg from "../package.json";
 import { parseArgs } from "../src/cli.ts";
+import { normalizeRequestedPurposes } from "../src/commands/build.ts";
 
 describe("version command", () => {
   test("accepts the command and conventional flag aliases", () => {
@@ -26,5 +27,14 @@ describe("version command", () => {
       expect(stdout).toBe(`merovingian ${pkg.version}\n`);
       expect(stderr).toBe("");
     }
+  });
+});
+
+describe("build purpose receipt", () => {
+  test("normalizes the requested purpose roots without expanding them", () => {
+    expect(normalizeRequestedPurposes(undefined)).toEqual([]);
+    expect(normalizeRequestedPurposes([" growth ", "content", "growth", ""])).toEqual([
+      "growth", "content",
+    ]);
   });
 });

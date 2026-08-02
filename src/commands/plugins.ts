@@ -9,7 +9,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
-import type { BuildStamp } from "../projection/emit.ts";
+import type { ReadableBuildStamp } from "../projection/emit.ts";
 
 const execFileAsync = promisify(execFile);
 const STAMP_PATH = ".merovingian/build.json";
@@ -65,7 +65,7 @@ function sourceKey(value: string): string {
     .replace(/\/$/, "");
 }
 
-export function codexPluginRequirements(stamp: BuildStamp): CodexPluginRequirement[] {
+export function codexPluginRequirements(stamp: ReadableBuildStamp): CodexPluginRequirement[] {
   return stamp.plugins.flatMap((entry) => {
     if (!entry.codex) return [];
     const at = entry.id.lastIndexOf("@");
@@ -80,25 +80,29 @@ export function codexPluginRequirements(stamp: BuildStamp): CodexPluginRequireme
   });
 }
 
-export async function readBuildStamp(workspace = process.cwd()): Promise<BuildStamp> {
+export async function readBuildStamp(workspace = process.cwd()): Promise<ReadableBuildStamp> {
   const path = join(resolve(workspace), STAMP_PATH);
   if (!existsSync(path)) {
     throw new Error(`no ${STAMP_PATH} found — run merovingian build first`);
   }
-  let stamp: BuildStamp;
+  let stamp: ReadableBuildStamp;
   try {
-    stamp = JSON.parse(await readFile(path, "utf8")) as BuildStamp;
+    stamp = JSON.parse(await readFile(path, "utf8")) as ReadableBuildStamp;
   } catch {
     throw new Error(`${STAMP_PATH} is not valid JSON`);
   }
-  if (stamp.schemaVersion !== 2 || !Array.isArray(stamp.plugins)) {
+  if (
+    ![2, 3].includes(stamp.schemaVersion) ||
+    !Array.isArray(stamp.plugins) ||
+    (stamp.schemaVersion === 3 && !Array.isArray(stamp.requestedPurposes))
+  ) {
     throw new Error(`${STAMP_PATH} is not a multi-harness build stamp — run merovingian build again`);
   }
   return stamp;
 }
 
 export async function inspectCodexPlugins(
-  stamp: BuildStamp,
+  stamp: ReadableBuildStamp,
   runner: CodexRunner = defaultRunner,
 ): Promise<CodexPluginStatus> {
   const required = codexPluginRequirements(stamp);

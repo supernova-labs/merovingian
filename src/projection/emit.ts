@@ -25,7 +25,8 @@ export { buildAgentsMd, buildCodexConfig } from "./emit-codex.ts";
 import type { SurrealAccess } from "./emit-claude.ts";
 
 const STAMP_PATH = ".merovingian/build.json";
-const STAMP_SCHEMA = 2;
+const STAMP_SCHEMA = 3;
+const SUPPORTED_STAMP_SCHEMAS = new Set([2, STAMP_SCHEMA]);
 const BUILDER_VERSION = 1;
 
 interface BuilderStamp {
@@ -34,8 +35,7 @@ interface BuilderStamp {
   degradations?: Degradation[];
 }
 
-export interface BuildStamp {
-  schemaVersion: number;
+interface BuildStampData {
   namespace: string;
   user: string;
   assignments: Array<{ purpose: string; scope: string | null; role: string }>;
@@ -46,6 +46,19 @@ export interface BuildStamp {
     codex?: { source: string; name: string };
   }>;
 }
+
+/** The current workspace receipt. An empty selection means full entitlement. */
+export interface BuildStamp extends BuildStampData {
+  schemaVersion: 3;
+  requestedPurposes: string[];
+}
+
+/** Schema 2 predates purpose-selection persistence but remains readable. */
+export interface BuildStampV2 extends BuildStampData {
+  schemaVersion: 2;
+}
+
+export type ReadableBuildStamp = BuildStamp | BuildStampV2;
 
 interface LegacyStamp {
   namespace?: string;
@@ -62,6 +75,11 @@ interface Snapshot {
 export interface EmitResult {
   files: string[];
   degradations: Degradation[];
+}
+
+export interface EmitOpts {
+  /** The normalized --purposes selection. Empty means full entitlement. */
+  requestedPurposes?: string[];
 }
 
 function safeRelativePath(path: string): string {
@@ -101,19 +119,23 @@ async function filesUnder(root: string, prefix: string): Promise<string[]> {
 }
 
 async function previousOwnership(targetDir: string): Promise<{
-  stamp?: BuildStamp | LegacyStamp;
+  stamp?: ReadableBuildStamp | LegacyStamp;
   owned: Set<string>;
 }> {
   const stampAbsolute = join(targetDir, STAMP_PATH);
   if (!existsSync(stampAbsolute)) return { owned: new Set() };
-  let stamp: BuildStamp | LegacyStamp;
+  let stamp: ReadableBuildStamp | LegacyStamp;
   try {
-    stamp = JSON.parse(await readFile(stampAbsolute, "utf8")) as BuildStamp | LegacyStamp;
+    stamp = JSON.parse(await readFile(stampAbsolute, "utf8")) as ReadableBuildStamp | LegacyStamp;
   } catch {
     throw new Error(`${STAMP_PATH} is not valid JSON — refusing to guess generated-file ownership`);
   }
 
-  if ("schemaVersion" in stamp && stamp.schemaVersion === STAMP_SCHEMA && "builders" in stamp) {
+  if (
+    "schemaVersion" in stamp &&
+    SUPPORTED_STAMP_SCHEMAS.has(stamp.schemaVersion) &&
+    "builders" in stamp
+  ) {
     const owned = new Set<string>([STAMP_PATH]);
     for (const builder of Object.values(stamp.builders)) {
       for (const path of builder.files) owned.add(safeRelativePath(path));
@@ -191,7 +213,12 @@ function gitRootContaining(targetDir: string): string | undefined {
   }
 }
 
-function stampFor(m: Manifest, artifacts: Artifact[], degradations: Degradation[]): BuildStamp {
+function stampFor(
+  m: Manifest,
+  artifacts: Artifact[],
+  degradations: Degradation[],
+  requestedPurposes: string[],
+): BuildStamp {
   const builders = Object.fromEntries(
     (["common", "claude", "codex"] as BuilderName[]).map((name) => {
       const builderDegradations = degradations.filter((d) => d.builder === name);
@@ -210,6 +237,7 @@ function stampFor(m: Manifest, artifacts: Artifact[], degradations: Degradation[
     schemaVersion: STAMP_SCHEMA,
     namespace: m.namespace,
     user: m.user.id,
+    requestedPurposes: [...requestedPurposes],
     assignments: m.assignments.map((a) => ({
       purpose: a.purpose,
       scope: a.scope ?? null,
@@ -314,7 +342,12 @@ async function applyTransaction(
   await pruneEmptyParents(targetDir, stale);
 }
 
-export async function emit(m: Manifest, targetDir: string, access?: SurrealAccess): Promise<EmitResult> {
+export async function emit(
+  m: Manifest,
+  targetDir: string,
+  access?: SurrealAccess,
+  opts: EmitOpts = {},
+): Promise<EmitResult> {
   const target = resolve(targetDir);
   if (Object.keys(m.toolEnv).length) {
     const gitRoot = gitRootContaining(target);
@@ -333,7 +366,7 @@ export async function emit(m: Manifest, targetDir: string, access?: SurrealAcces
   const stamp = stampFor(m, [
     ...artifacts,
     { builder: "common", path: STAMP_PATH, content: "" },
-  ], degradations);
+  ], degradations, opts.requestedPurposes ?? []);
   artifacts.push({
     builder: "common",
     path: STAMP_PATH,

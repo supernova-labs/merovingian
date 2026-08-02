@@ -9,7 +9,7 @@ namespace: acme
 # ambient: system skills, no agent, always on. (governance is NOT ambient — it's
 # repo tooling installed by `merovingian init`, not a graph skill. See ADR 0010.)
 ambient:
-  skills: [journal, friction, pending]
+  skills: [journal, friction, pending, update-workspace]
 
 # marketplaces: EXTERNAL channels only (optional). Local content lives in library/.
 marketplaces:

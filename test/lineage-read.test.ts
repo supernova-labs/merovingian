@@ -86,7 +86,9 @@ async function manifestVia(db: Awaited<ReturnType<typeof connectSurreal>>, userI
       expect(await ids("SELECT record::id(id) AS id FROM tool")).toEqual(["tracker"]);
       expect(await ids("SELECT record::id(id) AS id FROM agent")).toEqual(["delivery"]);
       // ...plus the ambient skills (every workspace carries them)
-      expect(await ids("SELECT record::id(id) AS id FROM skill")).toEqual(["friction", "journal", "pending"]);
+      expect(await ids("SELECT record::id(id) AS id FROM skill")).toEqual([
+        "friction", "journal", "pending", "update-workspace",
+      ]);
       // no plugin in her slice → no marketplace row
       expect(await ids("SELECT record::id(id) AS id FROM marketplace")).toEqual([]);
       // decision domains: only the ones owned within reach (delivery decides: scope)
@@ -135,7 +137,9 @@ async function manifestVia(db: Awaited<ReturnType<typeof connectSurreal>>, userI
         const [ids] = await healed.query<[{ id: string }[]]>("SELECT record::id(id) AS id FROM bucket");
         expect(ids.map((r) => r.id).sort()).toEqual(["clients", "kb-method", "kb-projects"]); // ...but the backfill did
         const [skills] = await healed.query<[{ id: string }[]]>("SELECT record::id(id) AS id FROM skill");
-        expect(skills.map((r) => r.id).sort()).toEqual(["friction", "journal", "pending"]); // ambient restored too
+        expect(skills.map((r) => r.id).sort()).toEqual([
+          "friction", "journal", "pending", "update-workspace",
+        ]); // ambient restored too
       } finally {
         await healed.close();
       }

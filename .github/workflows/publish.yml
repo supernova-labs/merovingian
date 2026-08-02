@@ -63,6 +63,7 @@ jobs:
           missing=""
           for r in package.json bin/merovingian.ts surreal/schema.surql surreal/data.surql \
                    src/init/templates/library/skills/journal/SKILL.md src/server/console.html \
+                   src/init/templates/library/skills/update-workspace/SKILL.md \
                    fixtures/example/graph.yaml; do
             echo "$FILES" | grep -qx "$r" || missing="$missing $r"
           done
