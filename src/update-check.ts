@@ -38,7 +38,7 @@ export function isNewer(a: string, b: string): boolean {
  *  and the process is a long-running server), console never exits, help should
  *  stay instant and side-effect-free. */
 export function checksUpdates(command: string): boolean {
-  return command !== "mcp" && command !== "console" && command !== "help";
+  return command !== "mcp" && command !== "console" && command !== "help" && command !== "version";
 }
 
 function optedOut(env = process.env): boolean {

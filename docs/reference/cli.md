@@ -42,6 +42,7 @@ See [`build-vs-deploy`](../concepts/build-vs-deploy.md) for the conceptual split
 
 | Command | Reads graph | Positional | Key flags |
 |---|---|---|---|
+| `version` | — | — | `--version`/`-v` aliases |
 | `init <tenant>` | writes one | `<tenant>` | `--owner <id>` `--github <login>` |
 | `namespace add <ns> <url>` | — | `<ns>` `<url>` | — |
 | `login <ns> [user]` | — | `<ns>` `[user]` | `--backend` |
@@ -65,6 +66,7 @@ the equals form (`--graph=P`).
 
 | Flag | Applies to | Meaning |
 |---|---|---|
+| `--version`, `-v` | global | Print the installed CLI version and exit without checking npm for updates. `merovingian version` is equivalent. |
 | `--graph <path>` | `reset`, `deploy plan`, `deploy apply`, `library update` | Path to the `graph.yaml`. Default: `./graph.yaml` in the cwd. |
 | `--owner <id>` | `init` | Graph id of the founding owner (required). |
 | `--github <login>` | `init` | GitHub login of the founding owner (required). |
@@ -450,7 +452,7 @@ After a command finishes, the CLI prints one stderr line if npm has a newer vers
 (`↑ merovingian X.Y.Z available — bun add -g @supernova-labs/merovingian@latest`). The registry is
 consulted at most once per 24h (cached in `~/.merovingian/update-check.json`), concurrently with the
 command's own work, and any failure (offline, timeout) silently skips the notice. Never shown for
-`mcp` (stdout is the stdio protocol), `console`, or `help`. Opt out with
+`mcp` (stdout is the stdio protocol), `console`, `help`, or `version`. Opt out with
 `MEROVINGIAN_NO_UPDATE_CHECK=1` (also off when `CI` is set).
 
 ## Global exit behavior

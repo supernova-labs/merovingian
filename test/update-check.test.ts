@@ -28,10 +28,11 @@ describe("isNewer", () => {
 });
 
 describe("checksUpdates", () => {
-  test("mcp (stdout = protocol), console (never exits) and help are excluded", () => {
+  test("mcp (stdout = protocol), console (never exits), help and version are excluded", () => {
     expect(checksUpdates("mcp")).toBe(false);
     expect(checksUpdates("console")).toBe(false);
     expect(checksUpdates("help")).toBe(false);
+    expect(checksUpdates("version")).toBe(false);
   });
   test("member-facing commands are included", () => {
     for (const c of ["login", "build", "graph", "deploy", "passwd"]) {
