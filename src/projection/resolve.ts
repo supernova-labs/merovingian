@@ -10,7 +10,7 @@
 //      assignment carries a scope, stamp env.SCOPE (generation, not enforcement).
 //   5. plugins = pluginByPurpose for visible purposes + the ambient plugin.
 //   6. tools = union of tools across visible purposes.
-//   7. ambient skills (journal/friction) always present (via ambient plugin).
+//   7. ambient skills always present (from config; baseline includes workspace upkeep).
 //
 // The parent never expands the child: projection starts from the *assumed*
 // purpose, never from privilege above it.

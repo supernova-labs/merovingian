@@ -32,15 +32,28 @@ export interface BuildOpts {
   backend?: Backend;
 }
 
+export function normalizeRequestedPurposes(purposes: string[] | undefined): string[] {
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+  for (const purpose of purposes ?? []) {
+    const id = purpose.trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    normalized.push(id);
+  }
+  return normalized;
+}
+
 export async function build(namespace: string, opts: BuildOpts = {}): Promise<Manifest> {
   const session = await readSession(namespace);
   const storeRoot = opts.storeRoot ?? repoStore(namespace);
   const remote = await remoteOptsFor(namespace);
+  const requestedPurposes = normalizeRequestedPurposes(opts.purposes);
 
   const { service, close } = await buildServiceFor(namespace, { backend: opts.backend, storeRoot, asUser: session.user, ...remote });
   let manifest: Manifest;
   try {
-    manifest = await service.getManifest(session.user, { purposes: opts.purposes });
+    manifest = await service.getManifest(session.user, { purposes: requestedPurposes });
   } finally {
     await close();
   }
@@ -60,7 +73,7 @@ export async function build(namespace: string, opts: BuildOpts = {}): Promise<Ma
   }
 
   const target = opts.targetDir ?? process.cwd();
-  const { files, degradations } = await emit(manifest, target, access);
+  const { files, degradations } = await emit(manifest, target, access, { requestedPurposes });
 
   // clone/pull the entitled okf repos and symlink them into ./context.
   const okf = await materializeOkf(manifest, target);

@@ -1,6 +1,6 @@
 // `merovingian init <tenant> --owner <id> --github <login>` — scaffold a new tenant
 // repo (roadmap II.2 + ADR 0012). Files-only: writes a minimal-but-valid graph.yaml,
-// SEEDS the library (journal/friction/pending/route/shell — copies, the tenant's to
+// SEEDS the library (journal/friction/pending/update-workspace/route/shell — copies, the tenant's to
 // evolve) + a tenant-owned workspace.md that library update never manages,
 // the committed .claude/settings.json (governance plugin via the merovingian
 // marketplace), README + .gitignore, then `git init`. Does NOT provision the db —

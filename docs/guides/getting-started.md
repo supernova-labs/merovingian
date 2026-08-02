@@ -133,6 +133,11 @@ live database you deployed in step 2 — `surreal` is the default backend.
 Re-running the build removes stale files from each emitter's prior inventory and preserves foreign
 siblings. Try the `--purposes content` narrowing above and watch both library slices shrink.
 
+The fixture also projects the ambient `update-workspace` skill. Invoke `/update-workspace` in
+Claude or `$update-workspace` in Codex only when you want it to act. It verifies the active user,
+preserves the build receipt's original purpose selection, refuses dirty context repos, and asks
+before updating the global CLI and rebuilding. Start a new session after a successful refresh.
+
 > **Expect okf warnings with the fixture.** The `acme` example's `okf-repo` buckets point at
 > `acme-labs/*` repos that don't exist on GitHub. `build` still emits the workspace files, but prints
 > `⚠ context/<bucket> not mounted (...)` for each unreachable repo — the projection degrades cleanly,

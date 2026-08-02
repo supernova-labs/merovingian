@@ -72,12 +72,13 @@ cd acme
 ```
 
 This creates the `acme/` **subfolder** with `graph.yaml` (a minimal valid graph: a root shell
-purpose with `agent: shell` + `skills: [route]`, ambient `[journal, friction, pending]`, the owner),
+purpose with `agent: shell` + `skills: [route]`, ambient
+`[journal, friction, pending, update-workspace]`, the owner),
 `.claude/settings.json` (the `merovingian` marketplace + the `governance` plugin), `README.md`,
 `.gitignore`, **and the seeded `library/`** — copies of the Source templates, yours to evolve:
 `agents/shell.md`, `skills/journal/{SKILL.md,format.md,context-gaps.md}`,
 `skills/friction/{SKILL.md,format.md}`, `skills/pending/SKILL.md`,
-`skills/route/SKILL.md`, plus a tenant-owned
+`skills/update-workspace/SKILL.md`, `skills/route/SKILL.md`, plus a tenant-owned
 `workspace.md` with global guardrails — then runs `git init`. `--owner`
 and `--github` are both required. The tenant is **fully self-contained** (ADR 0012): every baseline
 skill/agent resolves from the library by convention — no `marketplaces:` section, no external
@@ -221,7 +222,7 @@ It materializes into the cwd:
 | `.codex/config.toml` | Codex agent registry, MCPs and permission profile (mode 0600). |
 | `.agents/skills/<name>/*` | Codex-native materialized skills. |
 | `.codex/agents/<name>.toml` | Codex-native purpose role config referenced by `[agents.<name>]`. |
-| `.merovingian/build.json` | Per-emitter ownership and degradation stamp (mode 0600). |
+| `.merovingian/build.json` | Schema-3 ownership/degradation stamp plus the original `requestedPurposes` selection (mode 0600). |
 | `context/<bucket>` | Symlinks to the entitled okf repos (cloned/pulled into the central store `~/merovingian/<ns>/repos`). |
 
 > Stale generated content from a broader entitlement is removed from both harness inventories,
@@ -230,6 +231,14 @@ It materializes into the cwd:
 
 Open that folder in Claude Code or Codex and the projected workspace is live. Rebuild any time the graph
 changes — `build` is a projection, safe to re-run.
+
+New tenants include the ambient `update-workspace` skill. Members invoke `/update-workspace` in
+Claude or `$update-workspace` in Codex; it validates the receipt and active identity, stops on dirty
+context repos, asks once, updates the Bun-global CLI, and rebuilds with the same purpose selection.
+It never broadens a schema-2 workspace by guessing: the first run asks the member for the old
+selection or explicit permission to use full entitlement. Context mounts are fast-forwarded by the
+normal build path, and any denied mount is reported as a partial refresh. Begin a new session after
+completion so the regenerated roots and capabilities are reloaded.
 
 ## 8. Verify enforcement (optional)
 
@@ -317,6 +326,11 @@ audits the history, `resolved_through` carries each local resolution's trace).
 Occasionally, `merovingian library update` to refresh the seeded library files from newer Source
 templates (audit-first; `--yes` applies) — and a **governance pass** (§10) to drain what
 accumulated in the inbox and the decision log back into structure and jurisprudence.
+
+For an existing tenant adopting `update-workspace`: update the admin CLI, run
+`merovingian library update --yes`, add `update-workspace` to `ambient.skills`, deploy that graph,
+then ask members for one final manual build. The skill is available for later refreshes; it does
+not install itself into an already-built workspace.
 
 Never `reset` a live tenant — it wipes the structural tables with no plan and no gates. There is
 no case for it outside dev/test; `deploy apply` is the only reconciliation verb, first run

@@ -51,8 +51,10 @@ Emitted by `build`: `CLAUDE.md` (index), `.mcp.json` (MCP servers), `.claude/set
 (external marketplaces/plugins, `additionalDirectories`, env — git-ignored),
 `.claude/skills/` + `.claude/agents/`; and the Codex-native `AGENTS.md`, `.codex/config.toml`,
 `.agents/skills/` + `.codex/agents/`. `.merovingian/build.json` records exact ownership per
-emitter. It carries no reusable Merovingian credential — only a *token source* telling system MCPs
-how to fetch a fresh scoped JWT. Trusts nothing on its own; its access is decided by the DB.
+emitter plus the purpose roots requested for the projection, allowing a guarded rebuild without
+scope inference. It carries no reusable Merovingian credential — only a *token source* telling
+system MCPs how to fetch a fresh scoped JWT. Trusts nothing on its own; its access is decided by
+the DB.
 
 ### The stdio MCPs (`src/mcp/`)
 

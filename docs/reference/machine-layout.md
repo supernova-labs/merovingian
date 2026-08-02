@@ -56,7 +56,7 @@ two machine roots above:
   .codex/config.toml              # Codex agents registry + MCPs + permissions (0600)
   .agents/skills/<name>/…
   .codex/agents/<name>.toml       # role config referenced by config.toml
-  .merovingian/build.json         # per-emitter ownership + degradations (0600)
+  .merovingian/build.json         # schema 3: ownership + degradations + requested purposes (0600)
   context/<bucket>                # symlink → ~/merovingian/<ns>/repos/<name>
 ```
 
@@ -74,3 +74,14 @@ symlinked to `context/<bucket>` in the workspace; the real store path also goes 
 with the user's `gh` credentials (the permission boundary — fail-closed on no access) and
 **sequentially** (parallel `gh`/git races the credential helper). Source: `src/store/okf.ts`,
 `src/projection/emit.ts`.
+
+## Build receipt
+
+The mode-0600 `.merovingian/build.json` receipt is local operational metadata, not tenant desired
+state. Schema 3 adds `requestedPurposes`: an empty array records a full-entitlement build, while a
+non-empty array retains the normalized purpose roots passed to `--purposes` before the resolver
+expands descendants. This lets the ambient `update-workspace` skill reproduce the projection.
+
+The CLI reads both schemas 2 and 3 for ownership and plugin reconciliation. Because schema 2 did
+not record the request, the skill asks the human to supply it or explicitly choose full entitlement;
+it never derives authority from generated Markdown. Any successful current build writes schema 3.

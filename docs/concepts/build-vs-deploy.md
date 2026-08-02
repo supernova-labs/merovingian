@@ -42,7 +42,9 @@ a **pure projection of the global definition onto a scoped target** (purpose × 
 - **tools** = union of tools across visible purposes, resolved against the tool registry.
 
 `--purposes a,b` can *narrow* a build to a subset (each expanded to descendants), bounded by
-entitlement — it can only ever subtract, never grant.
+entitlement — it can only ever subtract, never grant. The normalized request itself is retained in
+the local build receipt so a later refresh can reproduce the same selection instead of confusing
+it with the expanded set of visible descendants.
 
 **Writes** (`src/projection/emit.ts`, one Manifest → both native harness layouts)
 
@@ -54,8 +56,10 @@ entitlement — it can only ever subtract, never grant.
   library for Claude Code.
 - `AGENTS.md` (with the same tenant-wide instructions) + `.codex/config.toml` + `.agents/skills/<name>/*` +
   `.codex/agents/<name>.toml` — the equivalent Codex projection.
-- `.merovingian/build.json` — per-emitter inventory and explicit degradation records. Stale
-  generated files are removed without deleting unowned siblings.
+- `.merovingian/build.json` — schema-3 per-emitter inventory, explicit degradation records, and
+  `requestedPurposes`. `[]` means the user requested full entitlement; a non-empty list is the
+  original narrowed request. Schema-2 receipts remain readable and are promoted by the next build.
+  Stale generated files are removed without deleting unowned siblings.
 
 Role does **not** change the workspace: owner and member of the same purpose get the same files.
 Role only gates accountability (governance/deploy/decide), not access.
