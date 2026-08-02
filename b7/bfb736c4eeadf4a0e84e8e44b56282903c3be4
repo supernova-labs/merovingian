@@ -1,0 +1,30 @@
+test/cli.test.ts
+  s_e9212fd854f7ba::t_ee6b3d93140535 1-30
+src/cli.ts
+  s_e9212fd854f7ba::t_ee6b3d93140535 26,31,62,137,209-210
+  s_e9212fd854f7ba::t_fb1d0495714ced 211-213
+docs/reference/cli.md
+  s_e9212fd854f7ba::t_ee6b3d93140535 45,69,455
+package.json
+  s_e9212fd854f7ba::t_ee6b3d93140535 3
+test/update-check.test.ts
+  s_e9212fd854f7ba::t_ee6b3d93140535 31,35
+src/update-check.ts
+  s_e9212fd854f7ba::t_ee6b3d93140535 41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "b7bfb736c4eeadf4a0e84e8e44b56282903c3be4",
+  "prompts": {},
+  "sessions": {
+    "s_e9212fd854f7ba": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fbf17-6bcc-7003-8a3d-f3c3c0f252b3",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
