@@ -9,6 +9,7 @@ import { parseGraph, type TenantLibrary } from "../src/graph/load-graph.ts";
 import { validateGraph } from "../src/graph/plan.ts";
 
 const LIB: TenantLibrary = {
+  workspace: "\n  Keep the internal spacing.\n\n  - Ask when unsure.\n\n",
   skills: {
     journal: {
       "SKILL.md": "---\nname: journal\ndescription: Record the session\n---\n\n# journal\nrecord the session",
@@ -65,6 +66,10 @@ users:
 describe("parseGraph (contract v2)", () => {
   const { definition, users } = parseGraph(YAML, LIB);
 
+  test("library/workspace.md becomes normalized tenant-wide ambient instructions", () => {
+    expect(definition.ambient.instructions).toBe("Keep the internal spacing.\n\n  - Ask when unsure.");
+  });
+
   test("catalog entries are external plugin refs; uncatalogued names resolve from the library", () => {
     expect(definition.skillCatalog.audit).toEqual({ source: "plugin", plugin: "compliance", marketplace: "guild" });
     expect(definition.skillCatalog.journal).toEqual({ source: "library", files: LIB.skills.journal! });
@@ -118,6 +123,15 @@ describe("parseGraph (contract v2)", () => {
       env: { PERPLEXITY_API_KEY: "${PERPLEXITY_API_KEY}" },
       keySource: "company",
     });
+  });
+});
+
+describe("tenant-wide workspace instructions", () => {
+  const minimal = "namespace: a\npurposes: []\n";
+
+  test("missing or whitespace-only workspace.md means no ambient instructions", () => {
+    expect(parseGraph(minimal).definition.ambient).toEqual({ skills: [] });
+    expect(parseGraph(minimal, { workspace: " \n\t ", skills: {}, agents: {} }).definition.ambient).toEqual({ skills: [] });
   });
 });
 

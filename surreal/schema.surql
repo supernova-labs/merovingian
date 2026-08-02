@@ -21,11 +21,13 @@ REMOVE FIELD IF EXISTS agentMarketplace ON purpose;
 -- record users (só root/apply). Com isso, build/graph rodam COMO A PESSOA
 -- (conexão por senha) e o banco entrega exatamente a fatia dela.
 
--- singleton da namespace (ambient skills — sempre on, todo workspace recebe;
+-- singleton da namespace (ambient skills + instruções tenant-wide — sempre on,
+-- todo workspace recebe;
 -- por isso legível por qualquer identidade autenticada)
 DEFINE TABLE OVERWRITE config SCHEMAFULL
   PERMISSIONS FOR select WHERE $auth FOR create, update, delete NONE;
 DEFINE FIELD OVERWRITE ambient ON config TYPE array<string>;
+DEFINE FIELD OVERWRITE instructions ON config TYPE option<string>;
 
 DEFINE TABLE OVERWRITE purpose SCHEMAFULL
   PERMISSIONS

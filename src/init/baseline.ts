@@ -72,6 +72,20 @@ users:
 `;
 }
 
+/** Tenant-owned ambient instructions. Unlike the skill/agent seeds, this file is
+ * intentionally outside the Source template catalog, so `library update` never
+ * overwrites the tenant's evolved operating context. */
+export function baselineWorkspaceInstructions(tenant: string): string {
+  return `You are operating inside the **${tenant}** tenant.
+
+- Respect the identity, purpose scope, and access boundaries projected into this workspace.
+- Treat ratified decisions as binding; never turn in-flight logs or assumptions into policy.
+- Never expose credentials, secrets, or private operational data in commits, generated artifacts, or shared knowledge.
+- Keep material changes reviewable and preserve an audit trail.
+- If instructions conflict or authority is unclear, stop and ask the responsible human.
+`;
+}
+
 export function baselineReadme(tenant: string): string {
   return `# ${tenant}
 
@@ -82,7 +96,9 @@ source of truth; edit it in a PR and reconcile with \`merovingian deploy\`.
 
 Open this repo in Claude Code and **approve the \`merovingian\` marketplace + the \`governance\`
 plugin** when prompted — that's a per-machine trust gate; it can't be pre-approved. Then the
-architect agent + the operations skill are available to help you evolve the graph.
+architect agent and the \`merovingian\`, \`tenant-admin\`, and \`drain\` skills are available: start
+with \`merovingian\`, use \`tenant-admin\` for access/workspace operations, and \`drain\` for the
+periodic governance pass.
 
 ## Layout
 
@@ -91,10 +107,11 @@ architect agent + the operations skill are available to help you evolve the grap
   this tenant at its own SurrealDB; \`deploy\` registers it on your machine so every command
   finds it. Credentials never go here — env or a gitignored \`.env\`.
 - \`library/\` — this tenant's behavioral content: \`agents/<name>.md\` +
-  \`skills/<name>/SKILL.md\`. Seeded by \`init\` (journal, friction, route, shell) —
-  **yours to evolve** via governance; \`deploy\` ships it, \`build\` materializes each
-  person's slice into their workspace. \`merovingian library update\` pulls newer
-  templates (audit-first).
+  \`skills/<name>/SKILL.md\`, plus \`workspace.md\` for tenant-wide context and operating
+  instructions. The workspace file is **tenant-owned** and reaches every member; never put
+  secrets or audience-specific information there. \`deploy\` ships library content and each
+  person's next \`build\` updates their workspace. \`merovingian library update\` refreshes
+  only Source-owned skill/agent templates (audit-first); it never touches \`workspace.md\`.
 
 ## Operating
 
@@ -106,8 +123,8 @@ merovingian deploy apply   # converge — first run included (add --yes to allow
 merovingian reset          # DEV/TEST only: wipe structure + reproject (never on a live tenant)
 \`\`\`
 
-Needs a reachable SurrealDB. Next: grow the purpose tree, add library skills/agents,
-and declare \`marketplaces:\` only when you want external plugins.
+Needs a reachable SurrealDB. Next: review \`library/workspace.md\`, grow the purpose tree,
+add library skills/agents, and declare \`marketplaces:\` only when you want external plugins.
 `;
 }
 

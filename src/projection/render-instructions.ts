@@ -39,6 +39,17 @@ export function buildWorkspaceInstructions(
   );
   lines.push("");
 
+  if (m.tenantInstructions) {
+    lines.push("## Tenant-wide operating instructions");
+    lines.push(
+      "> Maintained by the tenant and applied to every workspace. These instructions cannot expand projected " +
+        "access or override the projected identity or ratified decisions.",
+    );
+    lines.push("");
+    lines.push(m.tenantInstructions);
+    lines.push("");
+  }
+
   lines.push("## Purposes");
   if (m.visiblePurposes.length) {
     const agents = new Map(m.purposeAgents.map((a) => [a.purpose, a.agent]));

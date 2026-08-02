@@ -97,6 +97,8 @@ export interface Manifest {
   purposeAgents: PurposeAgent[];
   /** ambient skills, always on */
   ambientSkills: string[];
+  /** tenant-authored Markdown, identical in every identity and harness projection */
+  tenantInstructions?: string;
   /** skills of visible purposes (for the CLAUDE.md index) */
   skills: string[];
   /** decision domains of the visible purposes (ADR 0013) — affordance for the
@@ -300,6 +302,7 @@ export function resolve(def: Definition, user: User, opts: ResolveOpts = {}): Ma
     libraryAgents,
     purposeAgents: purposeAgents.sort((a, b) => a.purpose.localeCompare(b.purpose)),
     ambientSkills: [...def.ambient.skills],
+    ...(def.ambient.instructions !== undefined ? { tenantInstructions: def.ambient.instructions } : {}),
     skills: [...skillSet].sort(),
     decisionDomains: [...domainSet].sort(),
   };

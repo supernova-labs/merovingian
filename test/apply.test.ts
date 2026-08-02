@@ -62,9 +62,30 @@ async function edgeIds(db: Surreal): Promise<string[]> {
   });
 
   test("T.2 config is a single row keyed on the namespace", async () => {
-    const [rows] = await db.query<[{ id: string }[]]>("SELECT record::id(id) AS id FROM config");
+    const [rows] = await db.query<[{ id: string; instructions: string | null }[]]>(
+      "SELECT record::id(id) AS id, instructions FROM config",
+    );
     expect(rows.length).toBe(1);
     expect(rows[0]!.id).toBe("acme");
+    expect(rows[0]!.instructions).toContain("fictional **acme** tenant");
+  });
+
+  test("T.2b tenant instructions update and clear through the config singleton", async () => {
+    const { def, users } = clone();
+    def.ambient.instructions = "New tenant-wide context";
+    const changed = await applyGraph(db, def, users, {});
+    expect(changed.plan.update).toContainEqual({
+      kind: "config",
+      id: "ambient",
+      changes: [{ field: "instructions", from: expect.any(String), to: expect.any(String) }],
+    });
+    const [updated] = await db.query<[{ instructions: string }[]]>("SELECT instructions FROM config:acme");
+    expect(updated[0]!.instructions).toBe("New tenant-wide context");
+
+    delete def.ambient.instructions;
+    await applyGraph(db, def, users, {});
+    const [cleared] = await db.query<[{ instructions: string | null }[]]>("SELECT instructions FROM config:acme");
+    expect(cleared[0]!.instructions ?? null).toBeNull();
   });
 
   test("T.3 edge scope=NONE — deleting one edge leaves the same-user/purpose sibling", async () => {

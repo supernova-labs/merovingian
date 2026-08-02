@@ -23,7 +23,7 @@ import { buildServiceFor } from "../src/service/build-service.ts";
 import { reset } from "../src/commands/reset.ts";
 import { surrealConfig, surrealReachable } from "../src/provider/surreal.ts";
 import { stubProviderFor } from "../src/provider/stub.ts";
-import { buildSettings, buildMcp, emit } from "../src/projection/emit.ts";
+import { buildAgentsMd, buildClaudeMd, buildSettings, buildMcp, emit } from "../src/projection/emit.ts";
 import { resolveToolEnv, resolve } from "../src/projection/resolve.ts";
 import type { Definition, User } from "../src/provider/types.ts";
 import { renderGraph } from "../src/commands/graph.ts";
@@ -32,6 +32,7 @@ import type { Manifest } from "../src/projection/resolve.ts";
 const STORE = "/STORE";
 const TEST_DB = "acme_test";
 const EXAMPLE_YAML = join(import.meta.dir, "../fixtures/example/graph.yaml");
+const TENANT_INSTRUCTIONS = readFileSync(join(import.meta.dir, "../fixtures/example/library/workspace.md"), "utf8").trim();
 
 type GetManifest = (userId: string, purposes?: string[]) => Promise<Manifest>;
 
@@ -52,6 +53,19 @@ function getterFor(backend: "stub" | "surreal"): GetManifest {
 
 // ---- the shared assertions, parameterized over the backend's manifest getter ----
 function runGolden(get: GetManifest) {
+  describe("tenant-wide instructions", () => {
+    test("are identical across identities and purpose-narrowed projections", async () => {
+      const [root, member, narrowed] = await Promise.all([
+        get("ada"),
+        get("cleo"),
+        get("ada", ["delivery"]),
+      ]);
+      expect(root.tenantInstructions).toBe(TENANT_INSTRUCTIONS);
+      expect(member.tenantInstructions).toBe(TENANT_INSTRUCTIONS);
+      expect(narrowed.tenantInstructions).toBe(TENANT_INSTRUCTIONS);
+    });
+  });
+
   describe("ada (owner @ root)", () => {
     test("sees the whole tree", async () => {
       const m = await get("ada");
@@ -329,8 +343,19 @@ function runGolden(get: GetManifest) {
         },
       ]);
       const agentsMd = readFileSync(join(target, "AGENTS.md"), "utf8");
+      const claudeMd = readFileSync(join(target, "CLAUDE.md"), "utf8");
       expect(agentsMd).toContain("Trust this workspace when Codex asks");
       expect(agentsMd).toContain("legacy SSE is not supported");
+      for (const rootInstructions of [claudeMd, agentsMd]) {
+        expect(rootInstructions.match(/## Tenant-wide operating instructions/g)).toHaveLength(1);
+        expect(rootInstructions).toContain(TENANT_INSTRUCTIONS);
+        expect(rootInstructions.indexOf("## Delegation")).toBeLessThan(
+          rootInstructions.indexOf("## Tenant-wide operating instructions"),
+        );
+        expect(rootInstructions.indexOf("## Tenant-wide operating instructions")).toBeLessThan(
+          rootInstructions.indexOf("## Purposes"),
+        );
+      }
       const stamp = JSON.parse(readFileSync(join(target, ".merovingian", "build.json"), "utf8"));
       expect(stamp.schemaVersion).toBe(2);
       expect(stamp.namespace).toBe("acme");
@@ -494,6 +519,8 @@ describe("multi-marketplace (synthetic def)", () => {
         codex: { source: "org/mkt-2", name: "mkt-2" },
       },
     });
+    expect(buildClaudeMd(m)).not.toContain("Tenant-wide operating instructions");
+    expect(buildAgentsMd(m)).not.toContain("Tenant-wide operating instructions");
   });
 });
 

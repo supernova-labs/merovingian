@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { scaffoldTenant } from "../src/commands/init.ts";
 import { loadGraphFile } from "../src/graph/load-graph.ts";
 import { validateGraph } from "../src/graph/plan.ts";
-import { MEROVINGIAN_MARKETPLACE } from "../src/init/baseline.ts";
+import { MEROVINGIAN_MARKETPLACE, baselineWorkspaceInstructions } from "../src/init/baseline.ts";
 import { readTemplateLibrary } from "../src/init/templates.ts";
 
 const roots: string[] = [];
@@ -23,12 +23,13 @@ afterAll(() => {
 });
 
 describe("init scaffolding", () => {
-  test("writes the four files", async () => {
+  test("writes the baseline files", async () => {
     const dir = join(tmp(), "demo");
     const res = await scaffoldTenant("demo", { owner: "ada", github: "ada-gh", targetDir: dir, noGit: true });
     expect(res.dir).toBe(dir);
-    for (const f of ["graph.yaml", ".claude/settings.json", "README.md", ".gitignore"]) {
+    for (const f of ["graph.yaml", ".claude/settings.json", "README.md", ".gitignore", "library/workspace.md"]) {
       expect(existsSync(join(dir, f))).toBe(true);
+      expect(res.files).toContain(f);
     }
   });
 
@@ -40,6 +41,7 @@ describe("init scaffolding", () => {
     expect(definition.namespace).toBe("acme");
     expect(definition.purposes.map((p) => p.id)).toEqual(["acme"]);
     expect(definition.ambient.skills).toEqual(["journal", "friction", "pending"]);
+    expect(definition.ambient.instructions).toBe(baselineWorkspaceInstructions("acme").trim());
     expect(users.ada!.assignments).toEqual([{ purpose: "acme", role: "owner" }]);
     expect(users.ada!.github).toBe("ada-gh");
   });
@@ -64,6 +66,17 @@ describe("init scaffolding", () => {
     const { definition } = loadGraphFile(join(dir, "graph.yaml"));
     expect(definition.marketplaces).toEqual({});
     expect(definition.agentByPurpose.seeded!.source).toBe("library");
+  });
+
+  test("seeds tenant-owned global guardrails outside the Source template catalog", async () => {
+    const dir = join(tmp(), "guardrails");
+    await scaffoldTenant("guardrails", { owner: "ada", github: "ada-gh", targetDir: dir, noGit: true });
+    const workspace = readFileSync(join(dir, "library/workspace.md"), "utf8");
+    expect(workspace).toBe(baselineWorkspaceInstructions("guardrails"));
+    expect(workspace).toContain("access boundaries");
+    expect(workspace).toContain("ratified decisions");
+    expect(workspace).toContain("credentials, secrets");
+    expect(readTemplateLibrary()).not.toHaveProperty("workspace.md");
   });
 
   test("settings.json is lean — marketplace + plugin only, NO token/env (guards the leak)", async () => {

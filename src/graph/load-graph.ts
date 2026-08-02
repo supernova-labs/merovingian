@@ -131,6 +131,8 @@ const GraphSchema = z.object({
 
 /** The tenant library, listed: name -> files (skills) / content (agents). */
 export interface TenantLibrary {
+  /** tenant-wide Markdown from library/workspace.md */
+  workspace?: string;
   /** skill name -> relative path -> content ("SKILL.md" expected) */
   skills: Record<string, Record<string, string>>;
   /** agent name -> markdown content */
@@ -138,6 +140,13 @@ export interface TenantLibrary {
 }
 
 const EMPTY_LIBRARY: TenantLibrary = { skills: {}, agents: {} };
+
+/** Empty/whitespace-only workspace instructions are equivalent to no instructions.
+ * Internal Markdown whitespace stays byte-for-byte intact. */
+function normalizeWorkspaceInstructions(content: string | undefined): string | undefined {
+  const normalized = content?.trim();
+  return normalized ? normalized : undefined;
+}
 
 /** Recursively read a skill folder into a relPath -> content map. */
 function readFileTree(root: string, prefix = ""): Record<string, string> {
@@ -156,6 +165,11 @@ export function loadLibrary(tenantDir: string): TenantLibrary {
   const root = join(tenantDir, "library");
   if (!existsSync(root)) return EMPTY_LIBRARY;
   const lib: TenantLibrary = { skills: {}, agents: {} };
+  const workspaceFile = join(root, "workspace.md");
+  if (existsSync(workspaceFile)) {
+    const workspace = normalizeWorkspaceInstructions(readFileSync(workspaceFile, "utf8"));
+    if (workspace !== undefined) lib.workspace = workspace;
+  }
   const agentsDir = join(root, "agents");
   if (existsSync(agentsDir)) {
     for (const f of readdirSync(agentsDir)) {
@@ -254,6 +268,7 @@ export interface LoadedGraph {
 export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBRARY, decisions: TenantDecisions = {}): LoadedGraph {
   const g = GraphSchema.parse(parseYaml(yamlText));
   const warnings: string[] = [];
+  const workspaceInstructions = normalizeWorkspaceInstructions(library.workspace);
 
   // external catalog (authored) …
   const skillCatalog: Record<string, SkillRef> = {};
@@ -324,7 +339,10 @@ export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBR
 
   const definition: Definition = {
     namespace: g.namespace,
-    ambient: { skills: g.ambient.skills },
+    ambient: {
+      skills: g.ambient.skills,
+      ...(workspaceInstructions !== undefined ? { instructions: workspaceInstructions } : {}),
+    },
     purposes,
     buckets,
     toolCatalog: g.tools,

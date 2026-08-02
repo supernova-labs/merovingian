@@ -9,8 +9,8 @@
     {
       "name": "governance",
       "source": "./plugin",
-      "description": "The architect agent + operations skills for governing a Merovingian tenant — read the graph, plan/apply deploys, scaffold new tenants, drain the learning inbox and the decision log, promote jurisprudence.",
-      "version": "0.4.1",
+      "description": "The architect agent + operations skills for administering and governing a Merovingian tenant — author desired state, manage members and workspaces, plan/apply deploys, troubleshoot runtime, and drain learning into structure and jurisprudence.",
+      "version": "0.5.0",
       "author": {
         "name": "Luis Novo"
       }

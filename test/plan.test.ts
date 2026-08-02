@@ -7,6 +7,7 @@ import { describe, test, expect } from "bun:test";
 import { join } from "node:path";
 import { desiredState, planGraph, planIsEmpty, validateGraph, type GraphState, type Edge } from "../src/graph/plan.ts";
 import { loadDecisions, loadGraphFile } from "../src/graph/load-graph.ts";
+import { configDoc } from "../src/graph/records.ts";
 import { reset } from "../src/commands/reset.ts";
 import { SurrealProvider, surrealConfig, surrealReachable, connectSurreal } from "../src/provider/surreal.ts";
 import type { Definition, User } from "../src/provider/types.ts";
@@ -163,6 +164,36 @@ describe("planGraph", () => {
   test("set diff ignores order (no false drift)", () => {
     const mk = (tools: string[]) => state({ purposes: [{ id: "a", parent: null, reason: "r", decides: [], owns: [], reads: [], skills: [], tools }] });
     expect(planIsEmpty(planGraph(mk(["a", "b"]), mk(["b", "a"])))).toBe(true);
+  });
+
+  test("tenant instructions create/change/remove as hashes without leaking content", () => {
+    const mk = (instructions?: string) => state({
+      ambient: { skills: [], ...(instructions !== undefined ? { instructions } : {}) },
+    });
+
+    const added = planGraph(mk("private tenant context"), mk());
+    const changed = planGraph(mk("new private context"), mk("old private context"));
+    const removed = planGraph(mk(), mk("old private context"));
+
+    for (const plan of [added, changed, removed]) {
+      expect(plan.update).toHaveLength(1);
+      expect(plan.update[0]!.kind).toBe("config");
+      expect(plan.update[0]!.changes[0]!.field).toBe("instructions");
+      expect(JSON.stringify(plan)).not.toContain("private context");
+    }
+    expect(added.update[0]!.changes[0]!.from).toBe("∅");
+    expect(added.update[0]!.changes[0]!.to).toMatch(/^[a-f0-9]{8}$/);
+    expect(changed.update[0]!.changes[0]!.from).toMatch(/^[a-f0-9]{8}$/);
+    expect(changed.update[0]!.changes[0]!.to).toMatch(/^[a-f0-9]{8}$/);
+    expect(removed.update[0]!.changes[0]!.to).toBe("∅");
+  });
+
+  test("config records persist instructions only when present", () => {
+    expect(configDoc("t", { skills: ["journal"], instructions: "tenant rules" }).content).toEqual({
+      ambient: ["journal"],
+      instructions: "tenant rules",
+    });
+    expect(configDoc("t", { skills: [] }).content).toEqual({ ambient: [] });
   });
 
   test("marketplace binding object order does not create phantom drift", () => {

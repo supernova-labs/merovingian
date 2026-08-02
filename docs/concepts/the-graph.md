@@ -92,7 +92,11 @@ checking refs against it would false-fail on tools that exist but aren't yet cat
 
 **Ambient** skills are the exception to purpose-scoping: a small set (e.g. `journal`, `friction`)
 that loads in *every* workspace, with no agent, because they belong to the system rather than any one
-purpose.
+purpose. The tenant can also author ambient context and operating defaults in
+`library/workspace.md`; unlike a skill, that Markdown is always embedded directly in both root
+instruction files. It reaches every authenticated member, so it must be concise and contain no
+secrets or purpose-specific information
+([ADR 0018](../decisions/consolidadas/0018-instrucoes-globais-do-tenant.md)).
 
 ## User, Assignment, and Scope: who is where
 

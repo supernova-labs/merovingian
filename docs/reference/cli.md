@@ -91,11 +91,14 @@ target dir exists and is non-empty. `--owner` and `--github` are required. Sourc
 Files written:
 
 - `graph.yaml` — a minimal, valid, **fully self-contained** graph (ADR 0012): root purpose with
-  `agent: shell` and `skills: [route]`, ambient `[journal, friction]`, no `marketplaces:` section —
+  `agent: shell` and `skills: [route]`, ambient `[journal, friction, pending]`, no `marketplaces:` section —
   every skill/agent resolves from the seeded library by convention.
 - `library/` — the **seeded tenant library**: copies of the Source templates, the tenant's to
   evolve: `agents/shell.md`, `skills/journal/{SKILL.md,format.md,context-gaps.md}`,
-  `skills/friction/{SKILL.md,format.md}`, `skills/route/SKILL.md`.
+  `skills/friction/{SKILL.md,format.md}`, `skills/pending/SKILL.md`,
+  `skills/route/SKILL.md`, plus tenant-owned
+  `workspace.md` with global guardrails. The latter reaches every member and must contain no
+  secrets or audience-specific context.
 - `.claude/settings.json` — the committed repo config: the `merovingian` marketplace + the
   `governance@merovingian` plugin (repo tooling, ADR 0010).
 - `README.md`, `.gitignore`.
@@ -105,7 +108,7 @@ merovingian init acme --owner ada --github ada-gh
 ```
 
 Refresh the seeded library files from newer Source templates later with
-[`library update`](#library-update---graph-path---yes).
+[`library update`](#library-update---graph-path---yes). It never manages `workspace.md`.
 
 ### `namespace add <namespace> <url>`
 
@@ -345,6 +348,9 @@ Read-only audit: validate the yaml → diff the desired graph against live Surre
 existence check of referenced repos. Nothing is applied. Source: `src/commands/deploy.ts`,
 `src/graph/plan.ts`, `src/graph/external-check.ts`.
 
+Desired state includes `library/workspace.md`. Its content appears only as a short
+`config.instructions` hash in the plan; the full review remains the tenant-repo diff.
+
 The **external `gh` check** (okf-repo bucket repos + marketplace repos) is skipped — not failed — if
 `gh` is not installed or not authenticated. The deterministic Surreal diff is the spine; the gh
 check is a bonus signal and never affects the exit code.
@@ -394,6 +400,8 @@ Authoring command (runs in the tenant repo — it locates the repo via the graph
 tenant's **seeded** library files from the Source templates, audit-first: without `--yes` it only
 shows the diff; with `--yes` it overwrites. It considers **template-owned paths only** — files that
 exist in `src/init/templates/library/` — so tenant-authored skills/agents/files are never touched.
+`library/workspace.md` is created separately by `init`, is never a template-owned path, and remains
+untouched even with `--yes`.
 Source: `src/commands/library.ts`, `src/init/templates.ts`.
 
 Output renders one line per template path:

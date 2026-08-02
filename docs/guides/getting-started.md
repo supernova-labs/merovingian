@@ -2,7 +2,8 @@
 
 Run Merovingian end-to-end, locally, using the bundled `acme` example tenant against a local
 SurrealDB. About 5 minutes. Everything here uses fixture data (`fixtures/example/graph.yaml` + its
-sibling `fixtures/example/library/`) — no real tenant.
+sibling `fixtures/example/library/`, including synthetic tenant-wide `workspace.md` instructions)
+— no real tenant.
 
 For standing up a **real** tenant, read [`operating-a-tenant`](./operating-a-tenant.md) instead.
 This guide is a first-run tour.
@@ -116,6 +117,11 @@ in the build output) — `.merovingian/build.json`, and symlinks `context/<bucke
 ```bash
 bun bin/merovingian.ts build acme --purposes content --backend stub
 ```
+
+Open `CLAUDE.md` and `AGENTS.md`: both contain the same `Tenant-wide operating instructions`
+section sourced from `fixtures/example/library/workspace.md`. The section survives purpose
+narrowing because it is ambient; tenant admins propagate edits with `deploy apply`, followed by a
+new build on each machine.
 
 On first use, open the generated folder as the Codex workspace and accept its trust prompt. Codex
 intentionally ignores project-local `.codex/config.toml` until that exact workspace is trusted, so

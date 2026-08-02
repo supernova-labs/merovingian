@@ -211,6 +211,7 @@ interface BucketRow {
 }
 interface ConfigRow {
   ambient: string[];
+  instructions?: string | null;
 }
 interface MarketplaceRow {
   id: RecordId;
@@ -342,9 +343,13 @@ export class SurrealProvider implements DefinitionProvider {
             };
     }
 
+    const instructions = cfg.instructions?.trim();
     return {
       namespace: this.namespace,
-      ambient: { skills: cfg.ambient ?? [] },
+      ambient: {
+        skills: cfg.ambient ?? [],
+        ...(instructions ? { instructions } : {}),
+      },
       purposes,
       buckets,
       toolCatalog,

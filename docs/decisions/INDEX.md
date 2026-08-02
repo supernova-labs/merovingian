@@ -23,6 +23,7 @@ de cada uma está em `fermentacao/` (em discussão) ou `consolidadas/` (fechadas
 | 0015 | SIGNIN por senha antes do service | 🟢 Consolidada | `consolidadas/` | cada pessoa com a própria senha (argon2 em `credential`, runtime); o banco emite o token (KEY nunca sai); coexiste com JWT externo → service vira sucessor, não pré-requisito; condição: banco em rede privada (impl. entregue 2026-07-24) |
 | 0016 | O grafo também é dado | 🟢 Consolidada | `consolidadas/` | FOR select estrutural pela régua de lineage (0014) + `readers`/`ambient` derivados → build/graph rodam COMO a pessoa (senha), zero credencial de sistema em máquina de membro; regra nova: nunca subquery em permission (não roda com perms do caller — achado 2026-07-25); invariante: paridade byte-a-byte do manifest (impl. entregue 2026-07-25) |
 | 0017 | Projeção multi-harness | 🟢 Consolidada | `consolidadas/` | um manifest neutro → emitters Claude + Codex no mesmo workspace; sessão raiz chama agentes de propósito como subagentes; ownership por arquivo, aplicação transacional e degradação explícita (impl. entregue 2026-07-26) |
+| 0018 | Instruções globais do tenant | 🟢 Consolidada | `consolidadas/` | `library/workspace.md` tenant-owned → `config` → Manifest neutro → mesma seção em `CLAUDE.md` e `AGENTS.md`; alcance tenant-wide, sem segredos (impl. entregue 2026-08-01) |
 
 🟢 consolidada (lastro) · 🟡 superseded (history, aponta pro sucessor) · 🔵 fermentação (aberta)
 
@@ -44,6 +45,12 @@ Vivem no `0009` (o único ativo de peso), todos **roadmap**, não bloqueantes:
 
 ## Histórico de curadoria
 
+- **2026-08-01** — Nasce e é implementada a `0018` (consolidada): tenant admins passam a
+  autorar contexto e instruções globais em `library/workspace.md`. O deploy persiste o
+  fragmento no singleton `config`, o Manifest o carrega como conteúdo ambiente e o renderer
+  comum o injeta em `CLAUDE.md` e `AGENTS.md`. O arquivo nasce no `init`, pertence ao tenant e
+  fica explicitamente fora do alcance de `library update`; ausência é compatível e todo
+  usuário autenticado recebe o mesmo texto.
 - **2026-07-26** — Nasce e é implementada a `0017` (consolidada, issue #17): o build
   passa a ser multi-harness por default — uma fatia/manifest neutro, emitters nativos de
   Claude e Codex no mesmo workspace e aplicação transacional. A sessão principal abre

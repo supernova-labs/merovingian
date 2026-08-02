@@ -4,7 +4,7 @@ Two operations act on the one graph. They point in opposite directions and touch
 
 ```
    build   :  global definition  ──project──▶  scoped workspace (files)   [per person]
-   deploy  :  graph.yaml (desired) ─converge─▶  SurrealDB structure         [per tenant]
+   deploy  :  graph.yaml + library (desired) ─converge─▶  SurrealDB structure [per tenant]
 ```
 
 Neither one crosses into the other's territory. `build` never writes the database; `deploy` never
@@ -37,6 +37,8 @@ a **pure projection of the global definition onto a scoped target** (purpose × 
   resolves through the catalog to *either* an external `plugin@marketplace` (→ `enabledPlugins`)
   *or* tenant-library content, carried in the manifest as `librarySkills`/`libraryAgents` **with
   the file content included** (ADR 0012).
+- **tenant instructions** = the normalized `library/workspace.md` fragment, carried unchanged in
+  every identity's Manifest, including builds narrowed with `--purposes` (ADR 0018).
 - **tools** = union of tools across visible purposes, resolved against the tool registry.
 
 `--purposes a,b` can *narrow* a build to a subset (each expanded to descendants), bounded by
@@ -44,13 +46,13 @@ entitlement — it can only ever subtract, never grant.
 
 **Writes** (`src/projection/emit.ts`, one Manifest → both native harness layouts)
 
-- `CLAUDE.md` — the human/agent-readable index of the workspace.
+- `CLAUDE.md` — the human/agent-readable index, including tenant-wide operating instructions.
 - `.mcp.json` — the MCP servers, by name (tools + the system `inbox`/`surreal-data` MCPs).
 - `.claude/settings.local.json` — marketplaces, enabled plugins, `additionalDirectories`, env.
   (`settings.local.json`, not `settings.json`: generated, disposable, git-ignored by convention.)
 - `.claude/skills/<name>/*` + `.claude/agents/<name>.md` — the person's slice of the tenant
   library for Claude Code.
-- `AGENTS.md` + `.codex/config.toml` + `.agents/skills/<name>/*` +
+- `AGENTS.md` (with the same tenant-wide instructions) + `.codex/config.toml` + `.agents/skills/<name>/*` +
   `.codex/agents/<name>.toml` — the equivalent Codex projection.
 - `.merovingian/build.json` — per-emitter inventory and explicit degradation records. Stale
   generated files are removed without deleting unowned siblings.
@@ -72,8 +74,9 @@ Role only gates accountability (governance/deploy/decide), not access.
 `deploy` treats `graph.yaml` **plus the tenant library** as desired state and converges the
 database toward it, the way a declarative infra tool converges cloud resources. Library content is
 not a side-channel: skill files persist into `skill` records (`{ source: "library", files }`) and
-agent prompts into the `agent` table, so `build` can materialize a person's slice without ever
-reading the tenant repo (ADR 0012).
+agent prompts into the `agent` table, while `library/workspace.md` persists into the tenant-wide
+`config.instructions` field. `build` can therefore materialize a person's slice and common root
+instructions without ever reading the tenant repo (ADRs 0012/0018).
 
 ### `deploy plan` — audit (read-only)
 
@@ -87,7 +90,8 @@ reading the tenant repo (ADR 0012).
    arrays diff order-blind; command args diff as an ordered sequence. **Content diffs as hashes**:
    library skill files diff as a file-name set plus a per-changed-file sha256-8 scalar (e.g.
    `files.SKILL.md: 6ecffe0c → e0bd1151`), and library agent content as a single `content` hash
-   scalar — never full text. The plan only proves drift; the reviewable full diff is the
+   scalar. Tenant-wide instructions also diff as one `config.instructions` sha256-8 scalar — never
+   full text. The plan only proves drift; the reviewable full diff is the
    tenant-repo PR.
 3. **external check**: does each referenced GitHub repo (kb / marketplace) exist? (manual
    checklist, best-effort).

@@ -1,8 +1,9 @@
 # Merovingian documentation
 
 Merovingian models an organization as a **graph of purposes**: `build` projects each person a scoped
-Claude Code and Codex workspace, `deploy` reconciles a `graph.yaml` into SurrealDB. This is the full
-documentation set. New here? Read [concepts/overview.md](./concepts/overview.md) first.
+Claude Code and Codex workspace, while `deploy` reconciles `graph.yaml`, tenant library content,
+global workspace instructions, and ratified decisions into SurrealDB. This is the full documentation
+set. New here? Read [concepts/overview.md](./concepts/overview.md) first.
 
 The docs are organized by what you're trying to do (a [Diátaxis](https://diataxis.fr) split):
 
@@ -13,7 +14,7 @@ The docs are organized by what you're trying to do (a [Diátaxis](https://diatax
 | [overview](./concepts/overview.md) | The 1-page mental model: Source vs tenant, the two operations, the lifecycle. |
 | [the-graph](./concepts/the-graph.md) | purpose · bucket · scope · skill · tool · user + assignment · decision domains — the model. |
 | [build-vs-deploy](./concepts/build-vs-deploy.md) | Projection vs reconciliation — what each reads, writes, and never touches. |
-| [architecture](./concepts/architecture.md) | The data flow `graph.yaml → Definition → Manifest → workspace`; the provider & service seams. |
+| [architecture](./concepts/architecture.md) | The data flow `graph.yaml + library → Definition → Manifest → workspace`; the provider & service seams. |
 | [enforcement](./concepts/enforcement.md) | The security model: `generation ≠ enforcement`; scoped JWT identity + SurrealDB PERMISSIONS. |
 | [topology](./concepts/topology.md) | The runtime pieces — CLI, service, MCPs, SurrealDB — what runs where and holds what. |
 

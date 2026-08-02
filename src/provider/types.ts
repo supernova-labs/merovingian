@@ -39,6 +39,8 @@ export interface Bucket {
 /** The ambient capabilities every instance inherits. */
 export interface Ambient {
   skills: string[];
+  /** Tenant-authored Markdown projected into every workspace root instruction file. */
+  instructions?: string;
 }
 
 /** A tool (pipe) in the registry: how to run it + where its credential comes from.

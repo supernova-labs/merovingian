@@ -50,12 +50,15 @@ describe("library update", () => {
     rmSync(join(dir, "library/skills/route"), { recursive: true, force: true });
     mkdirSync(join(dir, "library/skills/my-own"), { recursive: true });
     writeFileSync(join(dir, "library/skills/my-own/SKILL.md"), "# mine\n");
+    writeFileSync(join(dir, "library/workspace.md"), "# tenant-owned\n\nNever overwrite this.\n");
 
     const r = await libraryUpdate({ graph: join(dir, "graph.yaml"), yes: true });
     expect(r.add).toEqual(["skills/route/SKILL.md"]);
     expect(existsSync(join(dir, "library/skills/route/SKILL.md"))).toBe(true);
     // the tenant's own skill is invisible to the command
     expect([...r.add, ...r.overwrite, ...r.unchanged]).not.toContain("skills/my-own/SKILL.md");
+    expect([...r.add, ...r.overwrite, ...r.unchanged]).not.toContain("workspace.md");
     expect(readFileSync(join(dir, "library/skills/my-own/SKILL.md"), "utf8")).toBe("# mine\n");
+    expect(readFileSync(join(dir, "library/workspace.md"), "utf8")).toBe("# tenant-owned\n\nNever overwrite this.\n");
   });
 });
