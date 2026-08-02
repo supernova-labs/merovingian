@@ -244,9 +244,16 @@ export function planGraph(desired: GraphState, current: GraphState): GraphPlan {
     scalar("content", hash8(d.content), hash8(c.content)),
   ]);
 
-  // config singleton: ambient skills (set)
+  // config singleton: ambient skills (set) + tenant-wide instructions (hash only;
+  // the tenant-repo PR is the reviewable content diff).
   const ambChange = set("skills", desired.def.ambient.skills, current.def.ambient.skills);
-  if (ambChange) plan.update.push({ kind: "config", id: "ambient", changes: [ambChange] });
+  const instructionsChange = scalar(
+    "instructions",
+    desired.def.ambient.instructions === undefined ? "∅" : hash8(desired.def.ambient.instructions),
+    current.def.ambient.instructions === undefined ? "∅" : hash8(current.def.ambient.instructions),
+  );
+  const configChanges = [ambChange, instructionsChange].filter((x): x is FieldChange => x !== null);
+  if (configChanges.length) plan.update.push({ kind: "config", id: "ambient", changes: configChanges });
 
   // users (name, github)
   diffKind(plan, "user", strMap2(desired.users), strMap2(current.users), (d, c) => [

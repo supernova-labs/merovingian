@@ -8,8 +8,9 @@ infrastructure. One declarative source, two operations, one enforced backend.
 - **The Source** is this engine: the TypeScript + Bun code that reads a graph, projects
   workspaces, and reconciles a database. It is tenant-agnostic.
 - **A tenant** is one organization's `graph.yaml` (its purposes, buckets, people, tool/skill
-  catalog) plus its `library/` (first-party skill and agent prompts, [ADR
-  0012](../decisions/consolidadas/0012-library-do-tenant-e-distribuicao-hibrida.md)) plus the
+  catalog) plus its `library/` (first-party skill and agent prompts, plus tenant-wide
+  `workspace.md` instructions; [ADRs 0012](../decisions/consolidadas/0012-library-do-tenant-e-distribuicao-hibrida.md)
+  and [0018](../decisions/consolidadas/0018-instrucoes-globais-do-tenant.md)) plus the
   SurrealDB database that structure lives in. The tenant is *data*; the Source is *code*. This repo
   carries a synthetic tenant, `acme`, under `fixtures/example/` — for tests and the offline stub
   only.
@@ -35,8 +36,8 @@ The graph model itself (purposes, buckets, assignments, the 5 primitives) is des
 - **`build`** — *projection*. Given a person, project the workspace they are entitled to: the
   purposes they can see (their assigned purposes + descendants), the knowledge buckets they may
   read/own, the skills/tools/agent that load — external plugins *and* their slice of the tenant
-  library, materialized into native Claude Code and Codex layouts — and the row-level scope on
-  sensitive data. Output is a folder containing `CLAUDE.md` + `.claude/**` and
+  library, tenant-wide root instructions materialized identically for Claude Code and Codex — and
+  the row-level scope on sensitive data. Output is a folder containing `CLAUDE.md` + `.claude/**` and
   `AGENTS.md` + `.agents/**` + `.codex/**`, plus MCP/config files and a build stamp. See
   [build-vs-deploy.md](./build-vs-deploy.md).
 - **`deploy`** — *reconciliation*. The graph **and the library content** are desired state;
@@ -54,7 +55,7 @@ identity. A workspace's scope is only real because the database honors it — se
 ## The lifecycle at a glance
 
 1. **Author** the graph — edit `graph.yaml` and/or `library/` in the tenant repo (`init` scaffolds
-   both, seeding the library from the Source templates).
+   both, seeding Source templates plus a tenant-owned `workspace.md`).
 2. **Deploy** — `deploy plan` audits drift, `deploy apply` converges SurrealDB structure (a virgin
    db included — the first run is just apply). `reset` is the blunt dev/test wipe (structural
    tables + reproject); never on a live tenant.

@@ -1,8 +1,9 @@
 # `graph.yaml` reference
 
 The `graph.yaml` is a tenant's **desired state** — the single source of truth for its
-purpose-graph. Together with its sibling `library/` folder (contract v2, [ADR
-0012](../decisions/consolidadas/0012-library-do-tenant-e-distribuicao-hibrida.md)) and `decisions/`
+purpose-graph. Together with its sibling `library/` folder (contract v2, [ADRs
+0012](../decisions/consolidadas/0012-library-do-tenant-e-distribuicao-hibrida.md) and
+[0018](../decisions/consolidadas/0018-instrucoes-globais-do-tenant.md)) and `decisions/`
 folder ([ADR 0013](../decisions/consolidadas/0013-dominio-de-decisoes-log-e-jurisprudencia.md)), it
 declares everything: `build` projects it into scoped workspaces; `deploy` reconciles it — structure
 **and** content — with SurrealDB. This is the authoritative schema: every field, its type, whether
@@ -89,6 +90,7 @@ convention ([ADR 0012](../decisions/consolidadas/0012-library-do-tenant-e-distri
 <tenant-repo>/
   graph.yaml
   library/
+    workspace.md                    # tenant-wide context/instructions; optional, tenant-owned
     agents/<name>.md               # one markdown file per agent persona
     skills/<name>/SKILL.md         # one folder per skill (+ any supporting files)
     skills/<name>/format.md        # supporting files travel with the skill
@@ -97,6 +99,10 @@ convention ([ADR 0012](../decisions/consolidadas/0012-library-do-tenant-e-distri
 - **Resolution is by name.** Any skill name referenced by `purpose.skills` / `ambient.skills` that
   is **not** in the `skills:` catalog resolves to `library/skills/<name>/SKILL.md`. Any purpose
   `agent:` without an `@` resolves to `library/agents/<name>.md`.
+- **`workspace.md` is ambient by convention.** Non-empty Markdown is trimmed only at its outer
+  boundary, folded into `Definition.ambient.instructions`, persisted as `config.instructions`, and
+  delivered unchanged to every identity. Missing, empty, or whitespace-only means no global
+  instructions; no `graph.yaml` key is required.
 - **The library is desired state.** `parseGraph` folds the referenced content into the
   `Definition`; `deploy` persists it into the database (skill records `{ source: "library",
   files }`, agent metadata + instructions into the `agent` table); `build` materializes each
@@ -104,12 +110,16 @@ convention ([ADR 0012](../decisions/consolidadas/0012-library-do-tenant-e-distri
   `.agents/skills` + `.codex/agents`. A member never needs to read the tenant repo.
 - **Only referenced names fold in.** An unreferenced `library/skills/<x>/` folder is dormant — it
   is not deployed and not materialized.
+- **Global means every authenticated tenant member.** Keep `workspace.md` concise and free of
+  credentials, secrets, private topology, or purpose-specific information. It cannot grant access
+  or supersede the generated identity and ratified decisions.
 - **File paths are sandboxed.** A library skill file path containing `..` or starting with `/`
   throws: `library skill "<name>": unsafe file path "<rel>"`.
 
 `merovingian init` seeds the library with copies of the Source templates (`shell` agent +
-`journal`, `friction`, `route` skills); `merovingian library update` refreshes those seeded files
-later — see the [CLI reference](./cli.md).
+`journal`, `friction`, `pending`, `route` skills) and separately creates an active, tenant-owned
+`workspace.md` with generic guardrails. `merovingian library update` refreshes only template-owned
+skill/agent files and never touches `workspace.md` — see the [CLI reference](./cli.md).
 
 ---
 

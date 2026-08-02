@@ -7,22 +7,21 @@ Merovingian is a pipeline of pure transforms with the IO pushed to the edges. Tw
 ## The build data flow
 
 ```
-graph.yaml + library/  ──load──▶  Definition  ──resolve(user)──▶  Manifest  ──emit(dir)──▶  workspace files
- (tenant repo)                (in-memory model)    │ pure               │ pure               CLAUDE.md
-                                                   │                    │                    .mcp.json
-                              DefinitionProvider ──┘                    │                    settings.local.json
-                              (Stub | Surreal)                          │                    .claude/skills+agents
-                                                                        │                    .merovingian/build.json
-                                                                        └── the tested seam
+tenant repo                         in-memory                                      workspace
+graph.yaml + library/  ──load──▶  Definition  ──resolve(user)──▶  Manifest  ──emit──▶ CLAUDE.md + AGENTS.md
+  ├ workspace.md (global)              ▲              pure              │            harness configs
+  ├ skills/**                           │                                │            skills + agents
+  └ agents/**               DefinitionProvider                          │            build stamp
+                              (Stub | Surreal)                           └── the tested seam
 ```
 
 - **`Definition`** (`src/provider/types.ts`) — the whole tenant model for one namespace: purposes,
   buckets, tool catalog, skill catalog (external plugin refs *and* folded-in library content,
-  ADR 0012), agent-by-purpose, marketplaces, ambient.
+  ADR 0012), agent-by-purpose, marketplaces, and ambient skills/instructions (ADR 0018).
 - **`resolve(def, user, opts) → Manifest`** (`src/projection/resolve.ts`) — **pure, no IO**. Projects
   the global definition onto one identity: visible purposes, buckets, tools, plugins, library
-  skills/agents (content included), scope stamps. Because it's pure it is trivially golden-testable
-  and indifferent to where the `Definition` came from.
+  skills/agents and tenant-wide instructions (content included), scope stamps. Because it's pure it
+  is trivially golden-testable and indifferent to where the `Definition` came from.
 - **`emit(manifest, dir, access?) → files`** (`src/projection/emit.ts`) — prepares Claude Code and
   Codex native artifacts from the same neutral manifest, validates ownership, and applies them as
   one rollback-capable transaction. Stale cleanup follows exact per-emitter inventories. The only
@@ -80,7 +79,7 @@ in Remote mode secrets are resolved server-side and only the resolved values tra
 
 The `Manifest` (`src/projection/resolve.ts`) is a plain value: namespace, user, assignments, visible
 purposes, okf mounts, surreal mounts, tools/toolMounts, plugins, marketplaces,
-librarySkills/libraryAgents (content included), skills. Everything
+librarySkills/libraryAgents and `tenantInstructions` (content included), skills. Everything
 upstream (load, provider, resolve) produces it; everything downstream (emit, the files) consumes it.
 That is why it is the assertion target: it isolates the projection logic from both the source
 (stub/surreal) and the sink (filesystem).

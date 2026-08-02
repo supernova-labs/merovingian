@@ -12,9 +12,9 @@ Two operations, one graph:
   row-level scope on sensitive data. `build = projection of the global definition onto a scoped target
   (Purpose × Scope × Human)`.
 - **`deploy`** — *reconciliation*. The desired state is a `graph.yaml` **plus a `library/`** of
-  first-party skill/agent prompts, both in the tenant repo (ADR 0012); `deploy plan` diffs them
-  against the live SurrealDB (content as short hashes), `deploy apply` converges — structure-only,
-  idempotent, referrer-safe on delete.
+  first-party skill/agent prompts and tenant-wide `workspace.md` instructions, all in the tenant
+  repo (ADRs 0012/0018); `deploy plan` diffs them against the live SurrealDB (content as short
+  hashes), `deploy apply` converges — structure-only, idempotent, referrer-safe on delete.
 
 Enforcement is the **backend's** job, not the build's: sensitive data carries record-level
 SurrealDB PERMISSIONS keyed on a scoped JWT identity. *Generation ≠ enforcement* — the build
@@ -55,6 +55,7 @@ Then the whole happy path — scaffold, converge, log in, project:
 ```bash
 merovingian init acme --owner ada --github ada-gh   # scaffold the tenant repo (./acme)
 cd acme
+# review library/workspace.md — it reaches every member and must never contain secrets
 merovingian deploy apply        # converge — bootstraps the virgin db (plan = read-only audit)
 merovingian login acme ada
 
@@ -72,7 +73,9 @@ a team setup).
 
 Open the workspace in Claude Code or Codex and the projection is live. One build emits each
 harness's native root instructions, skills, subagents, MCPs and permission config from the same
-scoped manifest. A tenant on its own database declares it once in
+scoped manifest. Tenant admins maintain shared context and operating defaults in
+`library/workspace.md`; after `deploy apply`, every member's next build includes the same section
+in `CLAUDE.md` and `AGENTS.md`. A tenant on its own database declares it once in
 `merovingian.toml` — every command finds the right server from anywhere.
 
 **Contributing / running from a checkout:** `bun install`, then `bun bin/merovingian.ts <command>`
@@ -105,8 +108,9 @@ Default backend is `surreal` (the live db); `--backend stub` runs the offline `a
 
 Governance runs as a **Claude Code plugin** installed in the tenant repo (this repo carries the
 marketplace at `.claude-plugin/` + `plugin/`). `init` wires a tenant's `.claude/settings.json` to
-enable it. The plugin's skills invoke this CLI. Governance auth = git ACL of the tenant repo +
-Surreal credentials — not a graph edge (the graph is domain-only).
+enable it. It ships the `architect` agent plus the `merovingian` start-here, `tenant-admin`
+operations, and `drain` governance skills; they invoke this CLI. Governance auth = git ACL of the
+tenant repo + Surreal credentials — not a graph edge (the graph is domain-only).
 
 ## Testing
 
@@ -122,7 +126,7 @@ Golden green on **both backends** proves the stub isn't throwaway and the projec
 ## Architecture
 
 ```
-graph/       load-graph (yaml → Definition) · plan (validate + diff) · apply (converge) · records
+graph/       load-graph (yaml + library → Definition) · plan (validate + diff) · apply (converge) · records
 provider/    DefinitionProvider (async) — StubProvider (fixture) | SurrealProvider (caminho B)
 projection/  resolve (graph + assignment → Manifest, pure) · emit (Manifest → workspace files)
 service/     BuildService boundary: getManifest(identity) → scoped Manifest (Local | Remote/HTTP)

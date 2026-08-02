@@ -10,11 +10,15 @@ Members work; the ambient `journal`/`friction` tools append what they learn and 
 snagged to the tenant's **inbox**, and `register-decision` appends the calls they made with no
 policy behind them to the **decision log**. This skill is the other half of both loops:
 governance reads what accumulated, synthesizes it into tensions **with the human**, and returns
-the agreed ones as changes to the structure (`graph.yaml`), the behavior (`library/`) or the
+the agreed ones as changes to the structure (`graph.yaml`), the behavior (`library/`, including
+tenant-wide `library/workspace.md` when appropriate) or the
 jurisprudence (`decisions/` — ratified records). Friction in → structure out; decisions in →
 policy out.
 
 Human-triggered, never scheduled. Runs **inside the tenant repo** (the folder with `graph.yaml`).
+Routine onboarding, password rotation, workspace refreshes, and one-off authentication/build
+failures belong to the `tenant-admin` skill. Bring them into a drain only when accumulated evidence
+shows a structural or tenant-wide tension.
 
 ## Preconditions
 
@@ -47,6 +51,8 @@ Root sees every friction — that synoptic view is half the drain's value (three
 frictions in three purposes are ONE systemic tension). But resolution is subsidiarity:
 
 - **Yours** — structural/global (graph, library, engine, cross-purpose): keep it in the pass.
+  If the answer is context or an operating default for every member, its destination is
+  `library/workspace.md`; scoped behavior remains in a skill or agent.
 - **Theirs** — operational inside one purpose (its kb, its flows, its data): re-scope it down
   and DON'T act on it:
   ```bash
@@ -67,7 +73,7 @@ Group **by theme across entries**, not entry-by-entry. A tension is:
 - its evidence — the `inbox:<id>`s behind it (keep them: they feed `--ids` later, and the human
   may ask for the raw text);
 - a candidate answer: a graph change (purpose/bucket/assignment), a library change (skill/agent
-  prompt), a missing tool, or a conscious no-op.
+  prompt), a tenant-wide `library/workspace.md` change, a missing tool, or a conscious no-op.
 
 Few and strong beats many and shallow. One loud friction can be a tension; five journals brushing
 the same wall definitely are.
@@ -85,7 +91,8 @@ as drained: seen, destination given). **Never** dump all tensions and proposals 
 The normal change loop (the `merovingian` operations skill has the details): edit `graph.yaml`
 and/or `library/` → `merovingian deploy plan` → the human sees the diff → `merovingian deploy
 apply` (deletions need `--yes`, only after the human saw the plan). Several tensions can land in
-one plan/apply.
+one plan/apply. Use `library/workspace.md` only when every tenant member should receive the text;
+it is projected into both managed root files and must never carry secrets.
 
 ## Step 4b — promote decisions into jurisprudence
 

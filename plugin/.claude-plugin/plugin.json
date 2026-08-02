@@ -1,7 +1,7 @@
 {
   "name": "governance",
-  "version": "0.4.1",
-  "description": "Architect agent + operations skills for governing a Merovingian tenant — plan/apply deploys, scaffold tenants, evolve the purpose-graph, drain the learning inbox and the decision log, promote jurisprudence.",
+  "version": "0.5.0",
+  "description": "Architect agent + operations skills for administering and governing a Merovingian tenant — author desired state, manage members and workspaces, plan/apply deploys, troubleshoot runtime, and drain learning into structure and jurisprudence.",
   "author": {
     "name": "Luis Novo"
   },
@@ -12,6 +12,8 @@
     "claude-code",
     "merovingian",
     "governance",
+    "tenant-admin",
+    "operations",
     "agent",
     "ai"
   ]

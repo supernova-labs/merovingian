@@ -72,11 +72,13 @@ cd acme
 ```
 
 This creates the `acme/` **subfolder** with `graph.yaml` (a minimal valid graph: a root shell
-purpose with `agent: shell` + `skills: [route]`, ambient `[journal, friction]`, the owner),
+purpose with `agent: shell` + `skills: [route]`, ambient `[journal, friction, pending]`, the owner),
 `.claude/settings.json` (the `merovingian` marketplace + the `governance` plugin), `README.md`,
 `.gitignore`, **and the seeded `library/`** — copies of the Source templates, yours to evolve:
 `agents/shell.md`, `skills/journal/{SKILL.md,format.md,context-gaps.md}`,
-`skills/friction/{SKILL.md,format.md}`, `skills/route/SKILL.md` — then runs `git init`. `--owner`
+`skills/friction/{SKILL.md,format.md}`, `skills/pending/SKILL.md`,
+`skills/route/SKILL.md`, plus a tenant-owned
+`workspace.md` with global guardrails — then runs `git init`. `--owner`
 and `--github` are both required. The tenant is **fully self-contained** (ADR 0012): every baseline
 skill/agent resolves from the library by convention — no `marketplaces:` section, no external
 repos. It refuses if the target dir exists and is non-empty. (Source: `src/commands/init.ts`,
@@ -84,7 +86,8 @@ repos. It refuses if the target dir exists and is non-empty. (Source: `src/comma
 
 Later, pull newer Source templates into the seeded files with `merovingian library update`
 (audit-first; `--yes` applies; only template-owned paths are touched — see the
-[CLI reference](../reference/cli.md#library-update---graph-path---yes)).
+[CLI reference](../reference/cli.md#library-update---graph-path---yes)). The command never touches
+`library/workspace.md`; review that file before the first deploy because every member receives it.
 
 From here on, authoring commands run **inside this repo**.
 
@@ -297,7 +300,8 @@ audits the history, `resolved_through` carries each local resolution's trace).
 ## Recurring loop, once you're live
 
 1. Edit `graph.yaml` **and/or `library/`** in the tenant repo (in a PR — structure and prompts
-   version together, atomically).
+   version together, atomically). Use `library/workspace.md` only for concise instructions safe
+   for every member; use scoped skills, agents, or buckets for narrower information.
 2. `merovingian deploy plan` — review the diff (exit `1` = drift, `2` = invalid). Content changes
    show as per-file hash scalars (e.g. `files.SKILL.md: 6ecffe0c → e0bd1151`) — the reviewable full
    diff is the PR itself.
@@ -305,7 +309,8 @@ audits the history, `resolved_through` carries each local resolution's trace).
    tables + PERMISSIONS on every apply (regenerated, idempotent); a removed bucket **never drops**
    its tables — the plan prints a note and the data stays until removed manually.
 4. Affected people re-run `merovingian build <ns>` in their workspace folder — that is also how
-   library content updates propagate.
+   library content updates propagate. A `workspace.md` edit affects everyone and rewrites the
+   managed tenant section in both root instruction files.
 5. After a clean apply, **commit** — the diff is the change record (the architect agent does this
    unprompted).
 

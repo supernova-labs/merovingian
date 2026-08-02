@@ -18,7 +18,7 @@ from the yaml). Substitute `bun /path/to/merovingian/bin/merovingian.ts` if you 
 
 ```bash
 # 1. Edit graph.yaml (a purpose, bucket, tool, skill, user, assignment) AND/OR library/
-#    (a skill's SKILL.md, an agent's prompt) — the same loop covers both.
+#    (a skill's SKILL.md, an agent's prompt, or tenant-wide workspace.md) — one loop covers all.
 
 # 2. Plan — see exactly what would change, field-level. Read-only.
 merovingian deploy plan
@@ -45,7 +45,7 @@ than you intended, your edit was wrong — fix the yaml, don't force the apply.
 ```
 
 Kinds: `purpose`, `bucket`, `tool`, `skill`, `marketplace`, `agent` (library agent content),
-`config` (the ambient singleton), `user`, and `responsible` (a user→purpose assignment edge).
+`config` (ambient skills + tenant instructions), `user`, and `responsible` (a user→purpose assignment edge).
 Set-valued fields (`owns`, `reads`, `skills`, `tools`, `decides`, `tables`) diff order-blind;
 command `args` diff as an ordered sequence.
 
@@ -58,6 +58,8 @@ single `content` hash:
            files.SKILL.md: 6ecffe0c → e0bd1151
 ~ change  agent shell
            content: 41f0c1d2 → 9ab4e77c
+~ change  config ambient
+           instructions: 6ecffe0c → e0bd1151
 ```
 
 The plan only proves drift; the reviewable full diff is the tenant-repo PR.
@@ -169,6 +171,12 @@ plan` (the change shows as a hash scalar), `deploy apply`, commit — one PR car
 *and* the behavior atomically. Propagation is the normal loop: affected people re-`build` and their
 `.claude/skills/` / `.claude/agents/` are rebuilt with the new content.
 
+For context or operating defaults that truly apply to **every** member and purpose, edit
+`library/workspace.md` instead. It is normalized, stored in the ambient config, and embedded in
+both `CLAUDE.md` and `AGENTS.md`. Missing or whitespace-only means disabled. Never put credentials,
+private topology, or purpose-specific information there: every authenticated tenant user receives
+the same text. The file is tenant-owned and `merovingian library update --yes` never touches it.
+
 ## Access is role-blind (ADR 0008)
 
 `owner` vs `member` gates **accountability, not access** — both roles project the same workspace for
@@ -179,8 +187,9 @@ not reach for `owner` to grant more access, because it grants none.
 
 Structure (and library content) changed in Surreal; workspaces are stale. Everyone affected re-runs
 `merovingian build <ns>` in their workspace folder to re-project — the build wipes and rebuilds
-their `.claude/skills/` + `.claude/agents/` slice. `build` is a projection — safe to re-run any
-time.
+their harness-native library slice and rewrites the managed root instructions. A
+`library/workspace.md` change affects everyone, so every member must rebuild. `build` is a
+projection — safe to re-run any time.
 
 ## Related
 

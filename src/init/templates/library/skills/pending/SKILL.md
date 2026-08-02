@@ -33,9 +33,12 @@ start, not mid-task. The human invokes the cleanup; you do it with them.
    - **Structural / beyond your reach** — engine, graph, another branch of the
      tree? Leave it: say so, and note it for the root drain (re-scoping beyond
      your reach is root's move). If it was born mis-scoped to you, `rescope` it
-     up as far as your reach allows. **A skill/agent prompt is ALWAYS structural**
-     — your `.claude/` copy is a projection the next build overwrites; the real
-     one is desired state in the tenant repo's `library/`, governance's to edit.
+     up as far as your reach allows. **A skill/agent prompt or tenant-wide
+     instruction is ALWAYS structural**
+     — your harness copy is a projection the next build overwrites; the real source is
+     desired state in the tenant repo's `library/`, governance's to edit. Never edit generated
+     `CLAUDE.md` or `AGENTS.md`: propose `library/workspace.md` to the root drain when the change
+     truly applies to every tenant member.
    - **Partially yours** — the friction asks for an operational fix AND a
      structural one? **Split it**: do your half now, `resolve` the friction with
      your half's trace, and register the remainder as a NEW atomic friction
@@ -48,7 +51,8 @@ start, not mid-task. The human invokes the cleanup; you do it with them.
      step's text, where it lands, what it references). Governance ratifies a
      ready proposal instead of investigating a complaint. Propose ≠ apply: the
      real file is desired state in the tenant repo's `library/`, and only
-     governance edits it.
+     governance edits it. For a global instruction, propose the exact Markdown fragment and why
+     its audience is the entire tenant rather than one purpose.
 
 4. **Journal the pass** (journal skill, `origin` = the purpose you acted in): what
    was resolved (with traces), what was left and why. The root drain reads this.

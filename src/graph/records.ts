@@ -5,7 +5,7 @@
 // so callers can hand the content straight to `.content()` without re-compacting.
 
 import { RecordId } from "surrealdb";
-import type { AgentRef, Bucket, DecisionDef, Definition, Purpose, SkillRef, ToolDef, User } from "../provider/types.ts";
+import type { AgentRef, Ambient, Bucket, DecisionDef, Definition, Purpose, SkillRef, ToolDef, User } from "../provider/types.ts";
 
 /** Drop keys whose value is undefined (they become NONE on write). */
 export function compact<T extends Record<string, unknown>>(obj: T): T {
@@ -148,8 +148,11 @@ export function agentRefString(a: AgentRef | undefined): string | undefined {
 }
 
 /** The config singleton — keyed on the NAMESPACE (not "ambient"). */
-export function configDoc(namespace: string, ambient: string[]): RecordDoc {
-  return { recordId: new RecordId("config", namespace), content: { ambient } };
+export function configDoc(namespace: string, ambient: Ambient): RecordDoc {
+  return {
+    recordId: new RecordId("config", namespace),
+    content: compact({ ambient: ambient.skills, instructions: ambient.instructions }),
+  };
 }
 
 export function bucketDoc(b: Bucket, readers: string[] = []): RecordDoc {
@@ -202,7 +205,7 @@ export function structuralRecords(def: Definition, users: Record<string, User>):
   for (const [name, s] of Object.entries(def.skillCatalog))
     docs.push(skillDoc(name, s, readers.skill.get(name), ambientSkills.has(name)));
   for (const [id, d] of Object.entries(def.decisionCatalog ?? {})) docs.push(decisionDoc(id, d));
-  docs.push(configDoc(def.namespace, def.ambient.skills));
+  docs.push(configDoc(def.namespace, def.ambient));
   for (const b of def.buckets) docs.push(bucketDoc(b, readers.bucket.get(b.id)));
   const lin = lineageOf(def.purposes);
   for (const p of def.purposes) docs.push(purposeDoc(p, def.agentByPurpose[p.id], lin.get(p.id) ?? [p.id]));
