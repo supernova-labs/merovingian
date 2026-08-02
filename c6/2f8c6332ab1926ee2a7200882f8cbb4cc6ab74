@@ -1,0 +1,79 @@
+test/golden.test.ts
+  s_e9212fd854f7ba::t_f80d32d6b14ecb 90-92,117-119,151-153,316,320-321,325,368,371,376-403
+test/plugins.test.ts
+  s_e9212fd854f7ba::t_f80d32d6b14ecb 9,12,21,24,45,54-62
+  s_e9212fd854f7ba::t_4dfa6e9a0aeab9 63-68
+test/lineage-read.test.ts
+  s_e9212fd854f7ba::t_f80d32d6b14ecb 89-91,140-142
+docs/reference/graph-yaml.md
+  s_e9212fd854f7ba::t_e46d5f82e3113b 120
+  s_e9212fd854f7ba::t_ae8565606f737f 121-123
+  s_e9212fd854f7ba::t_067d7cbed5f0fa 124-127
+package.json
+  s_e9212fd854f7ba::t_067d7cbed5f0fa 3
+README.md
+  s_e9212fd854f7ba::t_067d7cbed5f0fa 81-86
+src/commands/init.ts
+  s_e9212fd854f7ba::t_31676738d45a5a 3
+src/commands/build.ts
+  s_e9212fd854f7ba::t_31676738d45a5a 36-46,51,56,76
+  s_e9212fd854f7ba::t_4dfa6e9a0aeab9 35
+test/library-update.test.ts
+  s_e9212fd854f7ba::t_f80d32d6b14ecb 50,56-57
+docs/guides/getting-started.md
+  s_e9212fd854f7ba::t_067d7cbed5f0fa 136-140
+test/init.test.ts
+  s_e9212fd854f7ba::t_f80d32d6b14ecb 43,58,66-68
+  s_e9212fd854f7ba::t_4dfa6e9a0aeab9 69-78
+src/projection/emit.ts
+  s_e9212fd854f7ba::t_31676738d45a5a 28-29,38,50-62,80-84,122,127,129,134-138,216-221,240,345-350,369
+fixtures/example/library/skills/update-workspace/SKILL.md
+  s_e9212fd854f7ba::t_31676738d45a5a 1-61
+src/init/baseline.ts
+  s_e9212fd854f7ba::t_31676738d45a5a 27,38,40,103-105
+  s_e9212fd854f7ba::t_a507abbfbab17b 106
+docs/reference/cli.md
+  s_e9212fd854f7ba::t_067d7cbed5f0fa 96-97,102,201-203,231-242,424-428,478-479
+  s_e9212fd854f7ba::t_601229a77f6bfc 480
+src/projection/resolve.ts
+  s_e9212fd854f7ba::t_e46d5f82e3113b 13
+test/cli.test.ts
+  s_e9212fd854f7ba::t_4dfa6e9a0aeab9 5,32-38
+  s_e9212fd854f7ba::t_2250a6154da6a9 39-40
+src/init/templates/library/skills/update-workspace/SKILL.md
+  s_e9212fd854f7ba::t_31676738d45a5a 1-61
+docs/guides/operating-a-tenant.md
+  s_e9212fd854f7ba::t_e46d5f82e3113b 75-76,81
+  s_e9212fd854f7ba::t_067d7cbed5f0fa 225,235-242,330-333
+  s_e9212fd854f7ba::t_f4b13d7688a80f 334
+fixtures/example/graph.yaml
+  s_e9212fd854f7ba::t_31676738d45a5a 12
+docs/concepts/build-vs-deploy.md
+  s_e9212fd854f7ba::t_067d7cbed5f0fa 45-47,59-62
+docs/reference/machine-layout.md
+  s_e9212fd854f7ba::t_067d7cbed5f0fa 59,77-87
+.github/workflows/publish.yml
+  s_e9212fd854f7ba::t_067d7cbed5f0fa 66
+src/commands/plugins.ts
+  s_e9212fd854f7ba::t_31676738d45a5a 12,68,83,88,90,105
+  s_e9212fd854f7ba::t_4dfa6e9a0aeab9 94-98
+docs/concepts/topology.md
+  s_e9212fd854f7ba::t_ae8565606f737f 55-57
+  s_e9212fd854f7ba::t_e46d5f82e3113b 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "c62f8c6332ab1926ee2a7200882f8cbb4cc6ab74",
+  "prompts": {},
+  "sessions": {
+    "s_e9212fd854f7ba": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fbf17-6bcc-7003-8a3d-f3c3c0f252b3",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
