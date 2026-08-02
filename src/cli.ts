@@ -23,10 +23,12 @@ import { pluginsSync } from "./commands/plugins.ts";
 import { planIsEmpty } from "./graph/plan.ts";
 import { startUpdateCheck, notifyUpdate } from "./update-check.ts";
 import type { Backend } from "./service/build-service.ts";
+import pkg from "../package.json";
 
 const USAGE = `merovingian — build CLI (stub + surreal)
 
 Usage:
+  merovingian --version                              print the installed CLI version
   merovingian init <tenant> --owner <id> --github <login>   scaffold a tenant repo (graph + seeded library, in ./<tenant>/)
   merovingian namespace add <namespace> <url>      register a namespace served by a remote service
   merovingian login <namespace> [user]             authenticate (gh if remote; <user> if local)
@@ -57,7 +59,7 @@ Runtime commands (build/graph/console/…) take a namespace (selects the db / st
 `;
 
 export interface ParsedArgs {
-  command: "namespace" | "login" | "graph" | "build" | "reset" | "data" | "passwd" | "inbox" | "decisions" | "console" | "deploy" | "init" | "library" | "plugins" | "mcp" | "help";
+  command: "namespace" | "login" | "graph" | "build" | "reset" | "data" | "passwd" | "inbox" | "decisions" | "console" | "deploy" | "init" | "library" | "plugins" | "mcp" | "help" | "version";
   namespace?: string;
   user?: string;
   url?: string;
@@ -132,6 +134,7 @@ function asBackend(v: string | undefined): Backend {
 export function parseArgs(argv: string[]): ParsedArgs {
   const [cmd, ...rest] = argv;
   if (!cmd || cmd === "help" || cmd === "--help" || cmd === "-h") return { command: "help" };
+  if (cmd === "version" || cmd === "--version" || cmd === "-v") return { command: "version" };
   if (cmd === "namespace") {
     // namespace add <ns> <url>
     if (rest[0] !== "add") throw new Error(`usage: merovingian namespace add <namespace> <url>`);
@@ -200,6 +203,11 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
 async function run(parsed: ParsedArgs): Promise<void> {
   if (parsed.command === "help") {
     console.log(USAGE);
+    return;
+  }
+
+  if (parsed.command === "version") {
+    console.log(`merovingian ${pkg.version}`);
     return;
   }
 
