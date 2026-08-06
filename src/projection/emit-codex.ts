@@ -67,6 +67,8 @@ export function buildCodexConfig(m: Manifest, access?: SurrealAccess): CodexConf
   }
   lines.push(
     "",
+    "[permissions]",
+    "",
     "[permissions.merovingian]",
     'description = "Merovingian workspace plus read-only projected OKF stores."',
     'extends = ":workspace"',

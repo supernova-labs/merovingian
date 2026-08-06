@@ -337,6 +337,7 @@ function runGolden(get: GetManifest) {
       );
       const codexConfig = readFileSync(join(target, ".codex", "config.toml"), "utf8");
       expect(codexConfig).toContain('default_permissions = "merovingian"');
+      expect(codexConfig).toContain("\n[permissions]\n\n[permissions.merovingian]\n");
       expect(codexConfig).toContain('[agents."delivery"]');
       expect(codexConfig).toContain('description = "The acme delivery persona');
       expect(codexConfig).toContain('config_file = "agents/delivery.toml"');
