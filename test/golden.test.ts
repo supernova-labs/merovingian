@@ -74,6 +74,16 @@ function runGolden(get: GetManifest) {
       expect(m.visiblePurposes).toContain("method");
       expect(m.visiblePurposes.length).toBe(9);
     });
+    test("marks owned okf repos writable and read-only repos readable", async () => {
+      const m = await get("ada");
+      expect(Object.fromEntries(m.okf.map((o) => [o.bucket, o.writable]))).toEqual({
+        "kb-company": true,
+        "kb-content": true,
+        "kb-infra": true,
+        "kb-method": true,
+        "kb-projects": true,
+      });
+    });
     test("mounts every okf repo and every surreal bucket", async () => {
       const m = await get("ada");
       expect(m.okf.map((o) => o.repo).sort()).toEqual(
@@ -108,6 +118,11 @@ function runGolden(get: GetManifest) {
       expect(m.okf.map((o) => o.repo).sort()).toEqual(
         ["acme-labs/kb-company", "acme-labs/kb-content", "acme-labs/kb-method"].sort(),
       );
+      expect(Object.fromEntries(m.okf.map((o) => [o.bucket, o.writable]))).toEqual({
+        "kb-company": false,
+        "kb-content": true,
+        "kb-method": false,
+      });
     });
     test("sees NO sensitive surreal data", async () => {
       expect((await get("ben")).surreal).toEqual([]);
@@ -338,10 +353,12 @@ function runGolden(get: GetManifest) {
       const codexConfig = readFileSync(join(target, ".codex", "config.toml"), "utf8");
       expect(codexConfig).toContain('default_permissions = "merovingian"');
       expect(codexConfig).toContain("\n[permissions]\n\n[permissions.merovingian]\n");
+      expect(codexConfig).toContain('description = "Merovingian workspace plus projected OKF stores."');
       expect(codexConfig).toContain('[agents."delivery"]');
       expect(codexConfig).toContain('description = "The acme delivery persona');
       expect(codexConfig).toContain('config_file = "agents/delivery.toml"');
       expect(codexConfig).toContain(`${JSON.stringify(join(STORE, "kb-method"))} = "read"`);
+      expect(codexConfig).toContain(`${JSON.stringify(join(STORE, "kb-projects"))} = "write"`);
       expect(codexConfig).not.toContain("mcp.example.dev/sse");
       expect(degradations).toEqual([
         {

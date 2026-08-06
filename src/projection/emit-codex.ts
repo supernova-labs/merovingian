@@ -70,13 +70,15 @@ export function buildCodexConfig(m: Manifest, access?: SurrealAccess): CodexConf
     "[permissions]",
     "",
     "[permissions.merovingian]",
-    'description = "Merovingian workspace plus read-only projected OKF stores."',
+    'description = "Merovingian workspace plus projected OKF stores."',
     'extends = ":workspace"',
   );
   if (m.okf.length) {
     lines.push("");
     lines.push("[permissions.merovingian.filesystem]");
-    for (const mount of m.okf) lines.push(`${tomlString(mount.path)} = "read"`);
+    for (const mount of m.okf) {
+      lines.push(`${tomlString(mount.path)} = ${tomlString(mount.writable ? "write" : "read")}`);
+    }
   }
 
   const mcp = buildMcp(m, access);

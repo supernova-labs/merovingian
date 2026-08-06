@@ -27,7 +27,7 @@ export function buildWorkspaceInstructions(
     lines.push("## First use in Codex");
     lines.push(
       "Trust this workspace when Codex asks. Until it is trusted, Codex deliberately ignores " +
-        "the projected `.codex/config.toml`, including MCP servers and read-only OKF permissions.",
+        "the projected `.codex/config.toml`, including MCP servers and OKF filesystem permissions.",
     );
     lines.push("");
   }
@@ -72,8 +72,12 @@ export function buildWorkspaceInstructions(
   lines.push(m.tools.length ? m.tools.map((t) => `\`${t}\``).join(" · ") : "_(none)_");
   lines.push("");
 
-  lines.push("## Context (okf — read-only mounts)");
-  lines.push(m.okf.length ? m.okf.map((o) => `- \`${o.bucket}\` → \`${o.path}\``).join("\n") : "_(none)_");
+  lines.push("## Context (okf mounts)");
+  lines.push(
+    m.okf.length
+      ? m.okf.map((o) => `- \`${o.bucket}\` → \`${o.path}\` (${o.writable ? "write" : "read-only"})`).join("\n")
+      : "_(none)_",
+  );
   lines.push("");
 
   lines.push("## Data (surreal — via scoped MCP)");

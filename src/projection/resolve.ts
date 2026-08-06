@@ -24,6 +24,8 @@ export interface OkfMount {
   repo: string;
   /** absolute path in the central store -> goes into additionalDirectories */
   path: string;
+  /** whether the visible purpose projection may modify this bucket */
+  writable: boolean;
 }
 
 export interface SurrealMount {
@@ -208,7 +210,12 @@ export function resolve(def: Definition, user: User, opts: ResolveOpts = {}): Ma
     const b = bucketById.get(bid);
     if (!b) continue;
     if (b.backend === "okf-repo" && b.repo) {
-      okf.push({ bucket: b.id, repo: b.repo, path: repoDir(storeRoot, b.repo) });
+      okf.push({
+        bucket: b.id,
+        repo: b.repo,
+        path: repoDir(storeRoot, b.repo),
+        writable: visible.some((id) => byId.get(id)?.owns.includes(bid) ?? false),
+      });
     } else if (b.backend === "surreal") {
       // stamp format: "<rowScope field>:<assignment scope>" (e.g. "account:north").
       const sc = b.rowScope ? bucketScope(bid) : undefined;
