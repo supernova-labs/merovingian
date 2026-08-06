@@ -1,0 +1,37 @@
+src/projection/emit-codex.ts
+  s_20a5b82f1e508a::t_800e0d83a92c3b 73,80
+  s_20a5b82f1e508a::t_5cbc40a49a0ec2 79,81
+src/projection/render-instructions.ts
+  s_20a5b82f1e508a::t_5cbc40a49a0ec2 30,75-80
+docs/reference/machine-layout.md
+  s_20a5b82f1e508a::t_932bb657c881c8 69,73-77
+src/projection/resolve.ts
+  s_20a5b82f1e508a::t_5cbc40a49a0ec2 27-28,213-218
+docs/guides/getting-started.md
+  s_20a5b82f1e508a::t_88cd7584f7a21a 128
+package.json
+  s_20a5b82f1e508a::t_4d86c8c7ad8ffa 3
+docs/concepts/build-vs-deploy.md
+  s_20a5b82f1e508a::t_932bb657c881c8 31-32
+test/golden.test.ts
+  s_20a5b82f1e508a::t_800e0d83a92c3b 356
+  s_20a5b82f1e508a::t_5cbc40a49a0ec2 77-86,121-125,361
+docs/decisions/consolidadas/0017-projecao-multi-harness.md
+  s_20a5b82f1e508a::t_932bb657c881c8 116-121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "6baf2f1b1ef6f4ca340c1874fd95511ae6eaae88",
+  "prompts": {},
+  "sessions": {
+    "s_20a5b82f1e508a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd858-035e-78a1-b11c-76ee60560586",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
