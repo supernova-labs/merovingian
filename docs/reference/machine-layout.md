@@ -66,14 +66,15 @@ preserved. A foreign `AGENTS.md`, `CLAUDE.md`, or config is never overwritten.
 
 Codex requires the user to trust this exact workspace once before it loads the generated
 `.codex/config.toml`. Until then, the root `AGENTS.md` remains the visible setup guide but projected
-MCP servers and read-only OKF permissions are intentionally inactive.
+MCP servers and OKF filesystem permissions are intentionally inactive.
 
 Each entitled okf bucket is cloned/fast-forwarded into `~/merovingian/<ns>/repos/<name>` and
 symlinked to `context/<bucket>` in the workspace; the real store path also goes into
-`permissions.additionalDirectories` so the agent reads the real content through the link. Clones run
-with the user's `gh` credentials (the permission boundary — fail-closed on no access) and
-**sequentially** (parallel `gh`/git races the credential helper). Source: `src/store/okf.ts`,
-`src/projection/emit.ts`.
+`permissions.additionalDirectories` so the agent reaches the real content through the link. Codex
+grants `write` to mounts owned by a visible purpose and `read` to mounts that are only read by the
+projection. Clones run with the user's `gh` credentials (the permission boundary — fail-closed on
+no access) and **sequentially** (parallel `gh`/git races the credential helper). Source:
+`src/store/okf.ts`, `src/projection/resolve.ts`, `src/projection/emit.ts`.
 
 ## Build receipt
 

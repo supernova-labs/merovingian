@@ -113,10 +113,12 @@ implementar uma capacidade. A degradação nunca é silenciosa:
 - uma alternativa de transporte será modelada no grafo quando houver um caso concreto.
 
 O emitter Codex cria um perfil de permissões `merovingian` que estende o workspace e
-adiciona leitura somente para os paths absolutos dos bundles OKF daquela projeção. Esses
-paths nunca se tornam writable roots. No primeiro uso, o humano precisa confiar aquele
-workspace no Codex; até esse gate nativo ser aceito, o Codex ignora deliberadamente
-`.codex/config.toml`, incluindo MCPs e esse perfil.
+adiciona regras por path absoluto para os bundles OKF daquela projeção: `write` quando um
+propósito visível possui o bucket e `read` quando a projeção apenas o consome. Esses paths
+não são adicionados aos writable roots globais; o acesso continua limitado ao perfil e à
+fatia projetada. No primeiro uso, o humano precisa confiar aquele workspace no Codex; até
+esse gate nativo ser aceito, o Codex ignora deliberadamente `.codex/config.toml`, incluindo
+MCPs e esse perfil.
 
 O suporte oficial inicial cobre Codex CLI e Codex no app desktop. A extensão de IDE não
 faz parte desse contrato.

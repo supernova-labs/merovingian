@@ -28,7 +28,8 @@ a **pure projection of the global definition onto a scoped target** (purpose × 
 - **visible purposes** = each assigned purpose + its transitive descendants. The projection starts
   from the *assumed* purpose and never expands upward into privilege above it.
 - **buckets** = union of `owns ∪ reads` across visible purposes.
-- **okf-repo buckets** → `additionalDirectories` (a path in the central repo store).
+- **okf-repo buckets** → `additionalDirectories` (a path in the central repo store), with Codex
+  filesystem access set to `write` when a visible purpose owns the bucket and `read` otherwise.
 - **surreal buckets** → a data mount; a row-scoped bucket (`rowScope` set) reached only by *scoped*
   assignments is stamped `"<rowScope>:<value>"` (e.g. `account:north`; an unscoped granting path
   wins — broader access). This stamp is **generation, not enforcement** (see

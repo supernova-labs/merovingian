@@ -125,7 +125,7 @@ new build on each machine.
 
 On first use, open the generated folder as the Codex workspace and accept its trust prompt. Codex
 intentionally ignores project-local `.codex/config.toml` until that exact workspace is trusted, so
-its projected MCP servers and read-only OKF permissions are inactive before this one-time step.
+its projected MCP servers and OKF filesystem permissions are inactive before this one-time step.
 
 This guide builds from the `stub` backend (the offline fixture). Drop the flag to build against the
 live database you deployed in step 2 — `surreal` is the default backend.
