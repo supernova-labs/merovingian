@@ -1,0 +1,19 @@
+.github/workflows/publish.yml
+  s_20a5b82f1e508a::t_627a4f8484553f 30-39,108-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "597dfffed8097975439a4a16ffab309b3c41f1b8",
+  "prompts": {},
+  "sessions": {
+    "s_20a5b82f1e508a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd858-035e-78a1-b11c-76ee60560586",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
