@@ -1,0 +1,37 @@
+fixtures/example/library/skills/update-workspace/SKILL.md
+  s_20a5b82f1e508a::t_484549cfc96cdf 34-35,55-56
+test/okf.test.ts
+  s_20a5b82f1e508a::t_abe22b5c46fe26 1-82
+docs/guides/operating-a-tenant.md
+  s_20a5b82f1e508a::t_729dc8cf5bda8e 240-242
+docs/reference/cli.md
+  s_20a5b82f1e508a::t_d6b88b89406bbb 241-243
+src/commands/build.ts
+  s_20a5b82f1e508a::t_6cf00c91476631 84-86
+src/init/templates/library/skills/update-workspace/SKILL.md
+  s_20a5b82f1e508a::t_e5c33c43c0728a 34-35,55-56
+docs/guides/getting-started.md
+  s_20a5b82f1e508a::t_e5c33c43c0728a 146-149
+docs/decisions/consolidadas/0017-projecao-multi-harness.md
+  s_20a5b82f1e508a::t_729dc8cf5bda8e 159-161
+src/store/okf.ts
+  s_20a5b82f1e508a::t_3510b0a3750d4c 22,26-29,35-52,54,56-59,61-66,71,106,111,113,121,126
+  s_20a5b82f1e508a::t_edd739b90b528d 30-34,60
+  s_20a5b82f1e508a::t_6cf00c91476631 7-9,99-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "776ca6cb68d485966014995e90a2599d4966d202",
+  "prompts": {},
+  "sessions": {
+    "s_20a5b82f1e508a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd858-035e-78a1-b11c-76ee60560586",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
