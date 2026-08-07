@@ -1,0 +1,19 @@
+package.json
+  s_20a5b82f1e508a::t_d57bb1369d4720 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "6602649ccf7d59eb1597860434a69e7323fb982b",
+  "prompts": {},
+  "sessions": {
+    "s_20a5b82f1e508a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd858-035e-78a1-b11c-76ee60560586",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
