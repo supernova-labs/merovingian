@@ -36,14 +36,14 @@ function isFastForwardConflict(error: unknown): boolean {
  * build preserves the user's local content and reports that it is stale. */
 async function cleanDivergedCheckout(dir: string): Promise<boolean> {
   try {
-    const { stdout: status } = await run("git", ["-C", dir, "status", "--porcelain"]);
+    const { stdout: status } = await run("git", ["-C", dir, "status", "--porcelain", "--untracked-files=all"]);
     if (status.trim()) return false;
     await run("git", ["-C", dir, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
     try {
-      await run("git", ["-C", dir, "merge-base", "--is-ancestor", "HEAD", "@{u}"]);
-      return false;
+      const { stdout: base } = await run("git", ["-C", dir, "merge-base", "HEAD", "@{u}"]);
+      return Boolean(base.trim());
     } catch {
-      return true;
+      return false;
     }
   } catch {
     return false;

@@ -12,7 +12,7 @@ function git(cwd: string, ...args: string[]): string {
   return execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8" });
 }
 
-function divergentCheckout(dirty = false): { root: string; checkout: string } {
+function divergentCheckout(dirty = false, unrelated = false): { root: string; checkout: string } {
   const root = mkdtempSync(join(tmpdir(), "merovingian-okf-"));
   temporaryRoots.push(root);
   const remote = join(root, "remote.git");
@@ -46,6 +46,18 @@ function divergentCheckout(dirty = false): { root: string; checkout: string } {
   git(checkout, "commit", "-m", "local change");
   if (dirty) writeFileSync(join(checkout, "uncommitted.txt"), "keep me\n");
 
+  if (unrelated) {
+    const replacement = join(root, "replacement");
+    git(root, "init", "-b", "main", replacement);
+    git(replacement, "config", "user.name", "Test");
+    git(replacement, "config", "user.email", "test@example.com");
+    writeFileSync(join(replacement, "README.md"), "unrelated\n");
+    git(replacement, "add", "README.md");
+    git(replacement, "commit", "-m", "unrelated history");
+    git(replacement, "remote", "add", "origin", remote);
+    git(replacement, "push", "--force", "origin", "main");
+  }
+
   return { root, checkout };
 }
 
@@ -72,6 +84,16 @@ describe("okf materialization", () => {
 
   test("keeps a dirty divergent checkout unmounted", async () => {
     const { root, checkout } = divergentCheckout(true);
+    const result = await materializeOkf(manifestFor(checkout), join(root, "workspace"));
+
+    expect(result.mounted).toEqual([]);
+    expect(result.stale).toEqual([]);
+    expect(result.denied).toHaveLength(1);
+    expect(() => lstatSync(join(root, "workspace", "context", "events"))).toThrow();
+  });
+
+  test("keeps an unrelated history unmounted", async () => {
+    const { root, checkout } = divergentCheckout(false, true);
     const result = await materializeOkf(manifestFor(checkout), join(root, "workspace"));
 
     expect(result.mounted).toEqual([]);

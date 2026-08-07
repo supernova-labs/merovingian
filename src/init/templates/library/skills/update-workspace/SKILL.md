@@ -32,7 +32,7 @@ one explicit confirmation before running updates.
 Summarize the namespace, user, current CLI version, and purpose selection. State that the
 operation will install the latest global CLI, regenerate this directory, and let `build`
 fast-forward the entitled context repositories. A clean divergent checkout is kept mounted as
-stale content; dirty or inaccessible repositories remain unmounted. Ask one explicit confirmation before doing
+stale content; the preflight still stops before any update when it finds dirty context repos. Ask one explicit confirmation before doing
 any of those mutations. Native sandbox or permission prompts may still appear separately.
 
 ## Update
