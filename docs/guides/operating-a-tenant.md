@@ -237,8 +237,9 @@ Claude or `$update-workspace` in Codex; it validates the receipt and active iden
 context repos, asks once, updates the Bun-global CLI, and rebuilds with the same purpose selection.
 It never broadens a schema-2 workspace by guessing: the first run asks the member for the old
 selection or explicit permission to use full entitlement. Context mounts are fast-forwarded by the
-normal build path, and any denied mount is reported as a partial refresh. Begin a new session after
-completion so the regenerated roots and capabilities are reloaded.
+normal build path. A clean checkout whose branch diverged is kept mounted as stale content, while
+dirty or inaccessible mounts are denied; both cases are reported as a partial refresh. Begin a new
+session after completion so the regenerated roots and capabilities are reloaded.
 
 ## 8. Verify enforcement (optional)
 

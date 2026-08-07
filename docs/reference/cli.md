@@ -238,7 +238,9 @@ schema 3.
 
 The skill leaves plugin reconciliation explicit, does not edit generated files by hand, and does
 not remove stale context symlinks. A denied context mount makes the refresh partial and is reported
-as such. Start a new agent session after it completes so rebuilt instructions and capabilities load.
+as such. A clean but divergent checkout is mounted as stale and reported separately; dirty or
+inaccessible checkouts are not mounted. Start a new agent session after it completes so rebuilt
+instructions and capabilities load.
 
 ### `reset [--graph <path>]`
 

@@ -156,6 +156,9 @@ outro cache de estado.
   o wipe atual de `.claude/skills` e `.claude/agents`.
 - O primeiro build pode terminar com warnings corrigíveis (`plugins sync`) ou limitações
   auditáveis (SSE), sem cair em ciclos de bootstrap.
+- A materialização de OKF isola falhas por repositório: um checkout limpo cuja branch divergiu
+  do upstream permanece montado como stale e é reportado; checkouts sujos ou inacessíveis não
+  são montados, preservando a fronteira fail-closed.
 - O catálogo de agentes e os bindings de plugins ampliam o schema do grafo; a migração de
   frontmatter é compatível, mas deliberadamente temporária.
 - Configuração avançada por agente, extensão de IDE e transporte alternativo para SSE

@@ -81,6 +81,9 @@ export async function build(namespace: string, opts: BuildOpts = {}): Promise<Ma
   console.log(`built ${namespace} workspace for ${manifest.user.name} (${assignmentsLabel(manifest.assignments)})`);
   for (const f of files) console.log(`  ${f}`);
   for (const o of okf.mounted) console.log(`  context/${o.bucket} -> ${o.path}`);
+  for (const s of okf.stale) {
+    console.warn(`  ⚠ context/${s.bucket} mounted from stale checkout (${s.repo}): ${s.reason}`);
+  }
   for (const d of okf.denied) console.warn(`  ⚠ context/${d.bucket} not mounted (${d.repo}): ${d.reason}`);
   for (const degradation of degradations) {
     console.warn(
