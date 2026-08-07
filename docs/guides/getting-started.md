@@ -143,6 +143,10 @@ before updating the global CLI and rebuilding. Start a new session after a succe
 > `⚠ context/<bucket> not mounted (...)` for each unreachable repo — the projection degrades cleanly,
 > it doesn't fail. A real tenant whose KB repos exist gets them cloned/symlinked under `context/`.
 
+If a central checkout is clean but its local branch has diverged from upstream, `build` keeps that
+checkout mounted and reports it as stale instead of dropping the whole context. Dirty checkouts and
+repos that cannot be cloned or fetched remain unmounted.
+
 ## 7. See enforcement live (optional)
 
 The `clients` bucket in the fixture is `surreal`-backed and row-scoped — the apply in step 2

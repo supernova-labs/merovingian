@@ -31,7 +31,8 @@ one explicit confirmation before running updates.
 
 Summarize the namespace, user, current CLI version, and purpose selection. State that the
 operation will install the latest global CLI, regenerate this directory, and let `build`
-fast-forward the entitled context repositories. Ask one explicit confirmation before doing
+fast-forward the entitled context repositories. A clean divergent checkout is kept mounted as
+stale content; dirty or inaccessible repositories remain unmounted. Ask one explicit confirmation before doing
 any of those mutations. Native sandbox or permission prompts may still appear separately.
 
 ## Update
@@ -51,8 +52,8 @@ After confirmation:
 ## Report
 
 Read the new receipt and confirm schema 3, namespace, user, and `requestedPurposes`. Summarize
-the CLI version and context mounts from the build output. Treat any denied mount or failed pull
-as a partial refresh and name it; do not claim the workspace is fully current.
+the CLI version and context mounts from the build output. Treat any denied mount, stale checkout,
+or failed pull as a partial refresh and name it; do not claim the workspace is fully current.
 
 If the CLI update succeeded but the build failed, say explicitly that machine tooling changed
 while the workspace did not finish refreshing. Never repair generated `CLAUDE.md`, `AGENTS.md`,
