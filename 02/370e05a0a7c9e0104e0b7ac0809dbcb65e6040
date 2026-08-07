@@ -1,0 +1,28 @@
+test/okf.test.ts
+  s_20a5b82f1e508a::t_abd0f9211ae0ea 15,49-60,94-96
+  s_20a5b82f1e508a::t_df6e6a34ccbda2 97-99
+  s_20a5b82f1e508a::t_abfe9fb2ad4839 100-103
+src/init/templates/library/skills/update-workspace/SKILL.md
+  s_20a5b82f1e508a::t_359a2740bfd2cb 35
+fixtures/example/library/skills/update-workspace/SKILL.md
+  s_20a5b82f1e508a::t_359a2740bfd2cb 35
+src/store/okf.ts
+  s_20a5b82f1e508a::t_99a887acb5229a 39,46
+  s_20a5b82f1e508a::t_3467ae1e2bdd1b 43-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "02370e05a0a7c9e0104e0b7ac0809dbcb65e6040",
+  "prompts": {},
+  "sessions": {
+    "s_20a5b82f1e508a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd858-035e-78a1-b11c-76ee60560586",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
