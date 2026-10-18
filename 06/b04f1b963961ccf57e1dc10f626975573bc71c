@@ -1,0 +1,25 @@
+test/auth-error.test.ts
+  s_e7effeab5cddad::t_c390e44ce07c05 1-17
+src/catalog/session.ts
+  s_e7effeab5cddad::t_68090af98a3409 1-2,25
+src/provider/auth-error.ts
+  s_e7effeab5cddad::t_68090af98a3409 1-11
+src/commands/connection-diagnostic.ts
+  s_e7effeab5cddad::t_68090af98a3409 1-2,24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "06b04f1b963961ccf57e1dc10f626975573bc71c",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
