@@ -1,0 +1,77 @@
+test/journal.test.ts
+  s_e7effeab5cddad::t_4b3e44066c43ae 22,32,41,60-67
+  s_e7effeab5cddad::t_ae0750b09ade71 33,52-54
+  s_e7effeab5cddad::t_191f32c21cae55 49
+  s_e7effeab5cddad::t_c1fa34c2eaab1f 1-21,23-31,34-40,42-48,50-51,55-59,68
+src/cli.ts
+  s_e7effeab5cddad::t_a92b512b28374f 278
+  s_e7effeab5cddad::t_95999e6be9591b 41
+  s_e7effeab5cddad::t_22b9c0662d5649 277,282
+src/mcp/catalog.ts
+  s_e7effeab5cddad::t_a92b512b28374f 1-35
+src/provider/types.ts
+  s_e7effeab5cddad::t_4b3e44066c43ae 173-175
+  s_e7effeab5cddad::t_a92b512b28374f 171-172
+  s_e7effeab5cddad::t_f90ed382bae198 169
+  s_e7effeab5cddad::t_1ef003a877cd11 183
+src/catalog/catalog.ts
+  s_e7effeab5cddad::t_a92b512b28374f 1-47,49-89
+  s_e7effeab5cddad::t_9e90f7eb194e32 48
+src/graph/apply.ts
+  s_e7effeab5cddad::t_22b9c0662d5649 99
+  s_e7effeab5cddad::t_5ad8a7ed2c7ba1 80
+src/graph/domain.ts
+  s_e7effeab5cddad::t_22b9c0662d5649 41
+src/mcp/journal.ts
+  s_e7effeab5cddad::t_f90ed382bae198 25
+  s_e7effeab5cddad::t_191f32c21cae55 4,30-34,36
+  s_e7effeab5cddad::t_ae0750b09ade71 14
+  s_e7effeab5cddad::t_22b9c0662d5649 1-3,5-13,15-24,26-29,35,37-55
+src/catalog/session.ts
+  s_e7effeab5cddad::t_a92b512b28374f 1-33
+surreal/data.surql
+  s_e7effeab5cddad::t_191f32c21cae55 120-121
+  s_e7effeab5cddad::t_3c04a037c41900 108-119,122
+test/catalog.test.ts
+  s_e7effeab5cddad::t_77568293b76083 1-87
+test/catalog-surreal.test.ts
+  s_e7effeab5cddad::t_5ebc435c5de2ab 1-4,6-15,17-31,33-49
+  s_e7effeab5cddad::t_4b3e44066c43ae 16
+  s_e7effeab5cddad::t_a598edc6251adc 5,32
+docs/README.md
+  s_e7effeab5cddad::t_0b692564e30fbe 56-60
+docs/decisions/INDEX.md
+  s_e7effeab5cddad::t_45bb77582d08c7 28-29
+docs/decisions/consolidadas/0019-catalogo-e-journal.md
+  s_e7effeab5cddad::t_c22a5164bb7d15 1-55
+docs/reference/catalog-and-journal.md
+  s_e7effeab5cddad::t_974fc61b5386a2 1-80
+src/graph/load-graph.ts
+  s_e7effeab5cddad::t_1f33d789bedd5d 87-89,366-367
+src/graph/plan.ts
+  s_e7effeab5cddad::t_694e1e52ed8844 35,44,262-264,364
+src/graph/records.ts
+  s_e7effeab5cddad::t_d77010677e6000 191
+src/provider/stub.ts
+  s_e7effeab5cddad::t_8eb0a54a1b709f 44
+src/provider/surreal.ts
+  s_e7effeab5cddad::t_daa5470a939c23 364,383-384,397,399,402
+surreal/schema.surql
+  s_e7effeab5cddad::t_72e77a255d303d 123-125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c2f77be39b20729dbfbe415c737603a2279545a6",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
