@@ -1,4 +1,5 @@
-import { AuthenticationError, InternalError, NotAllowedError, NotFoundError } from "surrealdb";
+import { isIdentityAuthRefusal } from "../provider/auth-error.ts";
+import { NotFoundError } from "surrealdb";
 import type { SurrealConfig } from "../provider/surreal.ts";
 
 /** Deliberately never include the driver error/cause: it can contain URLs or secrets. */
@@ -20,9 +21,7 @@ export function connectionDiagnostic(
     // Even a path may contain a credential. Only expose protocol, host and port.
     if (["ws:", "wss:", "http:", "https:"].includes(url.protocol)) endpoint = url.origin;
   } catch { /* omit malformed URLs */ }
-  const refused = error instanceof AuthenticationError ||
-    (error instanceof NotAllowedError && (error.isInvalidAuth || error.isTokenExpired)) ||
-    (error instanceof InternalError && error.message === "No record was returned");
+  const refused = stage === "connect" && isIdentityAuthRefusal(error);
   const reason = refused ? "Authentication was refused" : error instanceof NotFoundError
     ? "Tenant or schema resource was not found" : stage === "connect"
     ? "Connection or authentication failed" : "Database operation failed";
