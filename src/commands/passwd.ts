@@ -1,3 +1,4 @@
+import { connectionDiagnostic } from "./connection-diagnostic.ts";
 // `merovingian passwd <namespace> <user>` — set (or rotate) a person's password for
 // the identity SIGNIN. Root/operator surface: connects with the system credential
 // (connectSurreal), verifies the user exists in the graph, and upserts the argon2
@@ -30,7 +31,10 @@ export async function passwd(namespace: string, userId: string, opts: PasswdOpts
   if (pass.length < 8) throw new Error("password too short (minimum 8 characters)");
 
   const cfg = surrealConfig(namespace, opts.surrealDb ? { db: opts.surrealDb } : {});
-  const db = await connectSurreal(cfg);
+  let db;
+  try { db = await connectSurreal(cfg); }
+  catch (error) { throw connectionDiagnostic(cfg, error, "operator", "connect", { source: "new password", password: pass }); }
+  let userMissing = false;
   try {
     // an older tenant db may predate the credential table — the runtime schema is
     // idempotent and never carries the signing key, so ensuring it here is safe.
@@ -39,11 +43,18 @@ export async function passwd(namespace: string, userId: string, opts: PasswdOpts
       "SELECT record::id(id) AS uid FROM user WHERE record::id(id) = $u",
       { u: userId },
     );
-    if (!rows[0]) throw new Error(`user "${userId}" not found in "${namespace}" — check the graph (deploy apply ships users)`);
+    if (!rows[0]) {
+      userMissing = true;
+      throw new Error("user not found — check the graph (deploy apply ships users)");
+    }
     await db.query(
       "UPSERT type::record('credential', $u) SET pass = crypto::argon2::generate($p)",
       { u: userId, p: pass },
     );
+  } catch (error) {
+    const diagnostic = connectionDiagnostic(cfg, error, "operator", "write", { source: "new password", password: pass });
+    if (userMissing) diagnostic.message = `user not found — check the graph (deploy apply ships users).\n${diagnostic.message}`;
+    throw diagnostic;
   } finally {
     await db.close();
   }

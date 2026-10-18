@@ -54,7 +54,26 @@ const dbUp = await surrealReachable(surrealConfig(TEST_NS));
   });
 
   test("rejects a user that is not in the graph", async () => {
-    await expect(login(TEST_NS, "nobody", { backend: "surreal", password: "synthetic-password" })).rejects.toThrow();
+    await expect(login(TEST_NS, "nobody", { backend: "surreal", password: "synthetic-password" })).rejects.toThrow(/Personal identity SIGNIN/);
+  });
+
+  test("passwd reports operator credential source and target without leaking the password", async () => {
+    const previous = process.env.SURREAL_PASS;
+    process.env.SURREAL_PASS = "wrong-synthetic-operator-password";
+    try {
+      let failure: Error | undefined;
+      try { await passwd(TEST_NS, "ada", { password: "synthetic-new-password" }); }
+      catch (error) { failure = error as Error; }
+      expect(failure).toBeDefined();
+      expect(failure!.message).toContain("root → namespace → database");
+      expect(failure!.message).toContain("SURREAL_PASS (environment)");
+      expect(failure!.message).toContain(TEST_NS);
+      expect(failure!.message).not.toContain("wrong-synthetic-operator-password");
+      expect(failure!.message).not.toContain("synthetic-new-password");
+    } finally {
+      if (previous === undefined) delete process.env.SURREAL_PASS;
+      else process.env.SURREAL_PASS = previous;
+    }
   });
 
   test("stub backend still rejects a namespace that is not a fixture", async () => {

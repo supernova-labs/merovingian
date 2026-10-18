@@ -14,7 +14,7 @@ import { restrictLegacyHistory } from "../history/retire.ts";
 
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { RecordId, Table, type Surreal } from "surrealdb";
+import { NotFoundError, RecordId, Table, type Surreal } from "surrealdb";
 import { SurrealProvider, provisioningSecret } from "../provider/surreal.ts";
 import type { Definition, User } from "../provider/types.ts";
 import { domainSchema } from "./domain.ts";
@@ -59,20 +59,38 @@ export function emptyDefinition(namespace: string): Definition {
   return { namespace, ambient: { skills: [] }, purposes: [], buckets: [], toolCatalog: {}, skillCatalog: {}, agentByPurpose: {}, marketplaces: {} };
 }
 
-/** Read the current graph out of Surreal; an unmigrated namespace reads as empty. */
+const STRUCTURAL_TABLES = ["config", "purpose", "bucket", "tool", "marketplace", "skill", "agent", "user", "responsible"] as const;
+const HISTORY_TABLES = ["credential", "journal", "inbox", "decision", "decision_log", "decision_domain"] as const;
+
+/** Administrative, read-only inspection. Never interpret a failed read as empty state. */
 export async function readCurrentState(db: Surreal, namespace: string): Promise<GraphState> {
-  const provider = new SurrealProvider(db, namespace);
-  let def: Definition;
+  const empty = (): GraphState => ({ def: emptyDefinition(namespace), users: {}, edges: [], configExists: false });
+  let tables: Record<string, unknown>;
   try {
-    def = await provider.getDefinition();
+    const [info] = await db.query<[{ tables: Record<string, unknown> }]>("INFO FOR DB");
+    if (!info?.tables || typeof info.tables !== "object") throw new Error("Unable to inspect database schema; no plan was inferred.");
+    tables = info.tables;
   } catch (e) {
-    // fresh/unmigrated db: config empty ("not migrated") OR the schema tables don't exist
-    // yet ("does not exist"). Either way the current state is empty → all-create.
-    if (e instanceof Error && (e.message.includes("not migrated") || e.message.includes("does not exist"))) {
-      return { def: emptyDefinition(namespace), users: {}, edges: [] };
-    }
+    // Only an explicitly absent database/namespace is evidence of a virgin target.
+    if (e instanceof NotFoundError && (e.databaseName !== undefined || e.namespaceName !== undefined)) return empty();
     throw e;
   }
+  const hasConfig = "config" in tables
+    ? (await db.query<[unknown[]]>("SELECT id FROM config LIMIT 1"))[0].length > 0
+    : false;
+  if (!hasConfig) {
+    // A schema-only database is safe to initialize; orphaned structure/history is not.
+    for (const table of [...STRUCTURAL_TABLES, ...HISTORY_TABLES]) {
+      if (!(table in tables)) continue;
+      const [rows] = await db.query<[unknown[]]>(`SELECT id FROM ${table} LIMIT 1`);
+      if (rows.length) throw new Error(`Incomplete database: config is missing but ${table} contains records. No plan was inferred. Verify the target and restore the missing configuration before deploying.`);
+    }
+    return empty();
+  }
+  const missing = STRUCTURAL_TABLES.filter((table) => !(table in tables));
+  if (missing.length) throw new Error(`Outdated or incomplete database schema: missing tables ${missing.join(", ")}. No plan was inferred. Verify the target and backup, then run merovingian deploy apply from the tenant repo to prepare the schema; review deletions before using --yes.`);
+  const provider = new SurrealProvider(db, namespace);
+  const def = await provider.getDefinition();
   const asg = await provider.listAssignments();
   const users: GraphState["users"] = {};
   const edges: Edge[] = [];
@@ -80,7 +98,7 @@ export async function readCurrentState(db: Surreal, namespace: string): Promise<
     users[r.user.id] = { name: r.user.name, ...(r.user.github !== undefined ? { github: r.user.github } : {}), ...(r.user.email !== undefined ? { email: r.user.email } : {}), ...(r.user.slackId !== undefined ? { slackId: r.user.slackId } : {}), ...(r.user.journalAdmin !== undefined ? { journalAdmin: r.user.journalAdmin } : {}) };
     edges.push({ user: r.user.id, purpose: r.purpose, ...(r.scope !== undefined ? { scope: r.scope } : {}), role: r.role });
   }
-  return { def, users, edges };
+  return { def, users, edges, configExists: true };
 }
 
 // ─── runtime referrer registry ───────────────────────────────────────────

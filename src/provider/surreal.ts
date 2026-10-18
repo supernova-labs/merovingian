@@ -23,7 +23,7 @@ export function envJwtSecret(): string | undefined {
 }
 
 /** The secret a tenant's identity DEFINE ACCESS is provisioned to trust (auth.surql).
- *  Prod: MEROVINGIAN_JWT_SECRET (private, held only by the build/auth service). The
+ *  Prod: MEROVINGIAN_JWT_SECRET (private, used only for initial provisioning). The
  *  public dev key is used ONLY when explicitly allowed — dev/test provisioning via
  *  `reset`. A real `deploy apply` with no secret THROWS rather than silently minting a
  *  tenant whose identities anyone reading this repo could forge — and it refuses the
@@ -37,18 +37,25 @@ export function provisioningSecret(allowDevKey: boolean): string {
           "  Generate one with `openssl rand -hex 32`. (The dev key exists for this repo's own test suite.)",
       );
     }
+    if (!allowDevKey && s.trim().length < 32) {
+      throw new Error(
+        "MEROVINGIAN_JWT_SECRET must contain at least 32 non-padding characters for real provisioning.\n" +
+          "  Generate a random private key with `openssl rand -hex 32`; length alone does not guarantee entropy.",
+      );
+    }
     return s;
   }
   if (allowDevKey) return DEV_JWT_SECRET;
   throw new Error(
     "MEROVINGIAN_JWT_SECRET is required to provision identity access on a real tenant.\n" +
       "  Generate a private secret (e.g. `openssl rand -hex 32`) and set it in the env — a gitignored\n" +
-      "  .env in the tenant repo works; it is shared only with the build/auth service that mints tokens.\n" +
+      "  .env in the tenant repo works. After provisioning, SIGNIN uses the key stored inside the database.\n" +
       "  (Dev/test uses `reset`, which permits the public dev key — never a real tenant.)",
   );
 }
 
 export interface SurrealConfig {
+  sources?: Partial<Record<"url" | "ns" | "db" | "username" | "password", string>>;
   url: string;
   username: string;
   password: string;
@@ -63,14 +70,24 @@ export interface SurrealConfig {
  *  repo's merovingian.toml by authoring commands) > the docker-compose default. */
 export function surrealConfig(tenant: string, overrides: Partial<SurrealConfig> = {}, home?: string): SurrealConfig {
   const env = process.env;
-  return {
-    url: env.SURREAL_URL ?? registeredSurrealUrl(tenant, home) ?? "ws://localhost:8020/rpc",
+  const registered = overrides.url === undefined && env.SURREAL_URL === undefined ? registeredSurrealUrl(tenant, home) : null;
+  const cfg = {
+    url: env.SURREAL_URL ?? registered ?? "ws://localhost:8020/rpc",
     username: env.SURREAL_USER ?? "root",
     password: env.SURREAL_PASS ?? "root",
     ns: env.SURREAL_NS ?? "merovingian",
     db: env.SURREAL_DB ?? tenant,
     ...overrides,
   };
+  const source = (key: keyof SurrealConfig, envKey: string, fallback: string) =>
+    overrides[key] !== undefined ? "explicit override" : env[envKey] !== undefined ? `${envKey} (environment)` : fallback;
+  return { ...cfg, sources: {
+    url: source("url", "SURREAL_URL", registered !== null ? "machine registry" : "local default"),
+    ns: source("ns", "SURREAL_NS", "default"),
+    db: source("db", "SURREAL_DB", "tenant argument"),
+    username: source("username", "SURREAL_USER", "development default"),
+    password: source("password", "SURREAL_PASS", "development default"),
+  } };
 }
 
 /** Reject if `p` doesn't settle within `ms` (the ws client has no connect timeout).

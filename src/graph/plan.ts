@@ -31,6 +31,8 @@ export interface Edge {
   role: "owner" | "member";
 }
 export interface GraphState {
+  /** False only when an administrative read verified that no config record exists. */
+  configExists?: boolean;
   def: Definition;
   users: Record<string, { name: string; github?: string; email?: string; slackId?: string; journalAdmin?: boolean }>;
   edges: Edge[];
@@ -228,7 +230,8 @@ export function planGraph(desired: GraphState, current: GraphState): GraphPlan {
     current.def.ambient.instructions === undefined ? "∅" : hash8(current.def.ambient.instructions),
   );
   const configChanges = [ambChange, instructionsChange].filter((x): x is FieldChange => x !== null);
-  if (configChanges.length) plan.update.push({ kind: "config", id: "ambient", changes: configChanges });
+  if (current.configExists === false) plan.create.push({ kind: "config", id: "ambient" });
+  else if (configChanges.length) plan.update.push({ kind: "config", id: "ambient", changes: configChanges });
 
   // users (name, github)
   diffKind(plan, "user", strMap2(desired.users), strMap2(current.users), (d, c) => [

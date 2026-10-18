@@ -1,3 +1,4 @@
+import { connectionDiagnostic } from "./connection-diagnostic.ts";
 import { writeJsonAtomic } from "../fs/atomic.ts";
 import { sessionFile } from "../paths.ts";
 import { stubProviderFor } from "../provider/stub.ts";
@@ -30,7 +31,10 @@ export async function login(namespace: string, userId?: string, opts: LoginOpts 
       // system credential on this machine — the connection is the scoped user itself.
       // The user table grants the OWN row (id = $auth, ADR 0016), so the person's
       // name reads back; other humans stay invisible.
-      const db = await connectWithToken(cfg, await signinIdentity(cfg, userId, pass));
+      const credential = { source: opts.password !== undefined ? "explicit password option" : "MEROVINGIAN_PASS (environment)", password: pass };
+      let db;
+      try { db = await connectWithToken(cfg, await signinIdentity(cfg, userId, pass)); }
+      catch (error) { throw connectionDiagnostic(cfg, error, "personal", "connect", credential); }
       try {
         const [me] = await db.query<[{ uid: string; name?: string }[]]>(
           "SELECT record::id(id) AS uid, name FROM user WHERE id = $auth",
@@ -38,6 +42,8 @@ export async function login(namespace: string, userId?: string, opts: LoginOpts 
         const row = me[0];
         if (!row?.uid) throw new Error("signin ok but $auth did not resolve — schema drift?");
         user = { id: row.uid, name: row.name ?? row.uid };
+      } catch (error) {
+        throw connectionDiagnostic(cfg, error, "personal", "read", credential);
       } finally {
         await db.close();
       }
