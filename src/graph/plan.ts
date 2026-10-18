@@ -32,7 +32,7 @@ export interface Edge {
 }
 export interface GraphState {
   def: Definition;
-  users: Record<string, { name: string; github?: string }>;
+  users: Record<string, { name: string; github?: string; email?: string; slackId?: string; journalAdmin?: boolean }>;
   edges: Edge[];
 }
 
@@ -41,7 +41,7 @@ export function desiredState(def: Definition, users: Record<string, User>): Grap
   const edges: Edge[] = [];
   const us: GraphState["users"] = {};
   for (const u of Object.values(users)) {
-    us[u.id] = { name: u.name, ...(u.github !== undefined ? { github: u.github } : {}) };
+    us[u.id] = { name: u.name, ...(u.github !== undefined ? { github: u.github } : {}), ...(u.email !== undefined ? { email: u.email } : {}), ...(u.slackId !== undefined ? { slackId: u.slackId } : {}), ...(u.journalAdmin !== undefined ? { journalAdmin: u.journalAdmin } : {}) };
     for (const a of u.assignments) {
       edges.push({ user: u.id, purpose: a.purpose, ...(a.scope !== undefined ? { scope: a.scope } : {}), role: a.role });
     }
@@ -100,15 +100,6 @@ export function validateGraph(def: Definition, users: Record<string, User>): str
     }
   }
 
-  // decision records: the folder (= domain) must be a declared decides: entry, the
-  // slug a safe record id, and a supersedes link must point at a real record.
-  const decisionIds = new Set(Object.keys(def.decisionCatalog ?? {}));
-  for (const [id, d] of Object.entries(def.decisionCatalog ?? {})) {
-    const slug = id.slice(d.domain.length + 1);
-    if (!BUCKET_ID.test(slug)) errors.push(`decision "${id}": slug is not safe (letters, digits, _ or -)`);
-    if (!domainOwner.has(d.domain)) errors.push(`decision "${id}": domain "${d.domain}" is not declared by any purpose (decides:)`);
-    if (d.supersedes && !decisionIds.has(d.supersedes)) errors.push(`decision "${id}": supersedes "${d.supersedes}" does not exist`);
-  }
 
   // tool kinds (zod refines authored graphs; re-asserted for synthetic Definitions)
   for (const [name, t] of Object.entries(def.toolCatalog)) {
@@ -222,22 +213,6 @@ export function planGraph(desired: GraphState, current: GraphState): GraphPlan {
     scalar("codex.name", d.codex?.name ?? "∅", c.codex?.name ?? "∅"),
   ]);
 
-  // decision records (ADR 0013): content as a hash scalar; an ACCEPTED record whose
-  // content changed is jurisprudence being rewritten — warn (supersede is the way).
-  diffKind(plan, "decision", asMap(desired.def.decisionCatalog ?? {}), asMap(current.def.decisionCatalog ?? {}), (d, c, id) => {
-    if (c.status === "accepted" && d.content !== c.content) {
-      plan.warnings.push(`decision "${id}" is accepted (immutable) — supersede it instead of editing`);
-    }
-    return [
-      scalar("domain", d.domain, c.domain),
-      scalar("status", d.status, c.status),
-      scalar("title", d.title, c.title),
-      scalar("supersedes", d.supersedes ?? "∅", c.supersedes ?? "∅"),
-      scalar("at", d.at ?? "∅", c.at ?? "∅"),
-      scalar("content", hash8(d.content), hash8(c.content)),
-    ];
-  });
-
   // library agent content (deduped by name; the purpose-level ref diffs above)
   diffKind(plan, "agent", libraryAgents(desired), libraryAgents(current), (d, c) => [
     scalar("description", d.description, c.description),
@@ -259,6 +234,9 @@ export function planGraph(desired: GraphState, current: GraphState): GraphPlan {
   diffKind(plan, "user", strMap2(desired.users), strMap2(current.users), (d, c) => [
     scalar("name", d.name, c.name),
     scalar("github", d.github ?? "∅", c.github ?? "∅"),
+    scalar("email", d.email ?? "∅", c.email ?? "∅"),
+    scalar("slackId", d.slackId ?? "∅", c.slackId ?? "∅"),
+    scalar("journalAdmin", String(d.journalAdmin ?? false), String(c.journalAdmin ?? false)),
   ]);
 
   // responsible edges (key = user|purpose|scope; role is the field)
@@ -358,7 +336,7 @@ function libraryAgents(st: GraphState): Map<string, { description: string; conte
 function asMap<T>(rec: Record<string, T>): Map<string, T> {
   return new Map(Object.entries(rec));
 }
-function strMap2(rec: Record<string, { name: string; github?: string }>): Map<string, { name: string; github?: string }> {
+function strMap2(rec: Record<string, { name: string; github?: string; email?: string; slackId?: string; journalAdmin?: boolean }>): Map<string, { name: string; github?: string; email?: string; slackId?: string; journalAdmin?: boolean }> {
   return new Map(Object.entries(rec));
 }
 function dupes(ids: string[]): string[] {

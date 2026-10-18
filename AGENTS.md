@@ -1,8 +1,8 @@
 # Merovingian — the Source
 
-Merovingian OS is a declarative engine that projects a tenant's purpose graph into
-identity-scoped agent workspaces (`build`) and reconciles that graph with the database
-(`deploy`). See `README.md` for the product model.
+Merovingian OS reconciles a tenant's purpose graph with SurrealDB and GitHub
+(`deploy`) and exposes an authenticated catalog and immutable personal Journal.
+Native plugins and tenant setup skills provide capabilities to clients. See `README.md` for the product model.
 
 ## Repository boundaries
 
@@ -16,10 +16,11 @@ identity-scoped agent workspaces (`build`) and reconciles that graph with the da
 
 - `src/graph/` — graph loading, planning, application, and records.
 - `src/provider/` — provider implementations (`Stub` and `Surreal`).
-- `src/projection/` — manifest resolution and workspace emission.
+- `src/projection/` — identity-scoped manifest resolution (no workspace emission).
 - `src/service/`, `src/server/`, and `src/mcp/` — runtime and integration surfaces.
 - `src/commands/` and `bin/` — CLI commands and entrypoints.
-- `src/init/` — project initialization.
+- `src/init/` — graph-only project initialization.
+- `src/catalog/`, `src/github/`, and `src/history/` — discovery, GitHub reconciliation, and historical archive/retirement.
 - `surreal/` — schema, domain tables, permissions, and authentication definitions.
 - `docs/decisions/` — ADRs and architectural rationale.
 - `docs/foundation/` — primitives and principles.

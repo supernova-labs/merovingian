@@ -1,5 +1,7 @@
 # ADR 0018 — Instruções globais do tenant como conteúdo ambiente da library
 
+> **Substituída parcialmente pela [ADR 0019](0019-catalogo-e-journal.md).** Distribuição por arquivos gerados substituída; persistência de instruções mantida.
+
 **Status:** Consolidada — implementação entregue em 2026-08-01: autoria em
 `library/workspace.md`, persistência no `config`, Manifest neutro e composição comum nos
 arquivos raiz de Claude e Codex.

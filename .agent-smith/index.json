@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "2.0",
+  "topology": "marketplace",
+  "targets": [
+    "claude"
+  ],
+  "canonicalPaths": {
+    "skills": "plugin/skills",
+    "index": ".agent-smith/index.json"
+  },
+  "lastUpdated": "2026-10-18T00:00:00Z",
+  "components": [
+    {
+      "id": "skill:merovingian",
+      "type": "skill",
+      "name": "merovingian",
+      "canonicalPath": "plugin/skills/merovingian/SKILL.md",
+      "plugin": "governance"
+    },
+    {
+      "id": "skill:tenant-admin",
+      "type": "skill",
+      "name": "tenant-admin",
+      "canonicalPath": "plugin/skills/tenant-admin/SKILL.md",
+      "plugin": "governance"
+    },
+    {
+      "id": "skill:drain",
+      "type": "skill",
+      "name": "drain",
+      "canonicalPath": "plugin/skills/drain/SKILL.md",
+      "plugin": "governance"
+    },
+    {
+      "id": "agent:architect",
+      "type": "agent",
+      "name": "architect",
+      "canonicalPath": "plugin/agents/architect.md",
+      "plugin": "governance"
+    }
+  ],
+  "adapters": [
+    {
+      "componentId": "skill:merovingian",
+      "harness": "claude",
+      "status": "shared",
+      "path": "plugin/skills/merovingian/SKILL.md"
+    },
+    {
+      "componentId": "skill:tenant-admin",
+      "harness": "claude",
+      "status": "shared",
+      "path": "plugin/skills/tenant-admin/SKILL.md"
+    },
+    {
+      "componentId": "skill:drain",
+      "harness": "claude",
+      "status": "shared",
+      "path": "plugin/skills/drain/SKILL.md"
+    },
+    {
+      "componentId": "agent:architect",
+      "harness": "claude",
+      "status": "native",
+      "path": "plugin/agents/architect.md"
+    }
+  ],
+  "gaps": [],
+  "marketplaces": [
+    {
+      "harness": "claude",
+      "manifestPath": ".claude-plugin/marketplace.json",
+      "plugins": [
+        {
+          "name": "governance",
+          "sourceType": "local",
+          "path": "plugin",
+          "managed": true
+        }
+      ]
+    }
+  ]
+}

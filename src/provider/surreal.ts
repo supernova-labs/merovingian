@@ -6,7 +6,7 @@ import { createHmac } from "node:crypto";
 import { Surreal, RecordId } from "surrealdb";
 import { registeredSurrealUrl } from "../transport.ts";
 import { parseAgentMarkdown } from "../graph/agent-content.ts";
-import type { DefinitionProvider, Definition, DecisionDef, Purpose, Bucket, User, ToolDef, SkillRef, AgentRef, AssignmentRow, Role } from "./types.ts";
+import type { DefinitionProvider, Definition, Purpose, Bucket, User, ToolDef, SkillRef, AgentRef, AssignmentRow, Role } from "./types.ts";
 
 /** The PUBLIC dev signing key — matches auth.surql's DEFINE ACCESS when a tenant is
  *  provisioned in dev/test. It is committed and world-readable ON PURPOSE: a token
@@ -225,11 +225,6 @@ interface SkillRow {
   files: Record<string, string> | null;
 }
 interface AgentRow { id: RecordId; description: string; content: string }
-interface DecisionRow {
-  id: RecordId; domain: string; status: DecisionDef["status"]; title: string;
-  content: string; supersedes: RecordId | null; at: unknown;
-}
-
 export class SurrealProvider implements DefinitionProvider {
   readonly namespace: string;
   constructor(private db: Surreal, namespace: string) {
@@ -244,7 +239,6 @@ export class SurrealProvider implements DefinitionProvider {
     const [marketplaceRows] = await this.db.query<[MarketplaceRow[]]>("SELECT * FROM marketplace");
     const [skillRows] = await this.db.query<[SkillRow[]]>("SELECT * FROM skill");
     const [agentRows] = await this.db.query<[AgentRow[]]>("SELECT * FROM agent");
-    const [decisionRows] = await this.db.query<[DecisionRow[]]>("SELECT * FROM decision");
 
     const cfg = cfgRows[0];
     if (!cfg) throw new Error(`namespace "${this.namespace}" not migrated (config empty). Run: merovingian deploy apply (from the tenant repo)`);
@@ -316,18 +310,6 @@ export class SurrealProvider implements DefinitionProvider {
       });
     }
 
-    const decisionCatalog: Record<string, DecisionDef> = {};
-    for (const d of decisionRows) {
-      decisionCatalog[idOf(d.id)] = {
-        domain: d.domain,
-        status: d.status,
-        title: d.title,
-        content: d.content,
-        ...(d.supersedes ? { supersedes: idOf(d.supersedes) } : {}),
-        ...(d.at != null ? { at: (d.at instanceof Date ? d.at : new Date(String(d.at))).toISOString() } : {}),
-      };
-    }
-
     // "@" is the discriminator the purpose record stores (see records.agentRefString).
     const agentByPurpose: Record<string, AgentRef> = {};
     for (const p of purposeRows) {
@@ -356,12 +338,11 @@ export class SurrealProvider implements DefinitionProvider {
       skillCatalog,
       agentByPurpose,
       marketplaces,
-      decisionCatalog,
     };
   }
 
   async resolveUser(userId: string): Promise<User> {
-    const [users] = await this.db.query<[{ id: RecordId; name: string; github: string | null }[]]>(
+    const [users] = await this.db.query<[{ id: RecordId; name: string; github: string | null; email: string | null; slackId: string | null; journalAdmin: boolean | null }[]]>(
       "SELECT * FROM type::record('user', $id)",
       { id: userId },
     );
@@ -380,6 +361,8 @@ export class SurrealProvider implements DefinitionProvider {
       id: idOf(u.id),
       name: u.name,
       ...(u.github ? { github: u.github } : {}),
+      ...(u.email ? { email: u.email } : {}),
+      ...(u.slackId ? { slackId: u.slackId } : {}), ...(u.journalAdmin !== undefined && u.journalAdmin !== null ? { journalAdmin: u.journalAdmin } : {}),
       assignments: edges.map((e) => ({
         purpose: idOf(e.out),
         ...(e.scope ? { scope: e.scope } : {}),
@@ -392,12 +375,12 @@ export class SurrealProvider implements DefinitionProvider {
     // One traversal of the responsible edge: every human→purpose at once, with
     // the linked user's name/github fetched via record-link dot-access.
     const [rows] = await this.db.query<
-      [{ uid: string; name: string; github: string | null; purpose: string; scope: string | null; role: Role | null }[]]
+      [{ uid: string; name: string; github: string | null; email: string | null; slackId: string | null; journalAdmin: boolean | null; purpose: string; scope: string | null; role: Role | null }[]]
     >(
-      "SELECT record::id(in) AS uid, in.name AS name, in.github AS github, record::id(out) AS purpose, scope, role FROM responsible",
+      "SELECT record::id(in) AS uid, in.name AS name, in.github AS github, in.email AS email, in.slackId AS slackId, in.journalAdmin AS journalAdmin, record::id(out) AS purpose, scope, role FROM responsible",
     );
     return rows.map((r) => ({
-      user: { id: r.uid, name: r.name, ...(r.github ? { github: r.github } : {}) },
+      user: { id: r.uid, name: r.name, ...(r.github ? { github: r.github } : {}), ...(r.email ? { email: r.email } : {}), ...(r.slackId ? { slackId: r.slackId } : {}), ...(r.journalAdmin !== undefined && r.journalAdmin !== null ? { journalAdmin: r.journalAdmin } : {}) },
       purpose: r.purpose,
       ...(r.scope ? { scope: r.scope } : {}),
       role: r.role ?? "member",

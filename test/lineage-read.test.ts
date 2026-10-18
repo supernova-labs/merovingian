@@ -1,5 +1,5 @@
 // ADR 0016 — "o grafo também é dado": the structural tables are SELECT-scoped by
-// lineage, so build/graph run AS the person (password connection) and the database
+// lineage, so catalog/graph run AS the person (password connection) and the database
 // hands the provider exactly their slice. The killer assertion is PARITY: the manifest
 // resolved over the person's own scoped connection must be IDENTICAL to the one the
 // root provider computes — resolve() degrades SILENTLY on missing catalog entries
@@ -16,7 +16,7 @@ import {
   connectAsPassword,
   SurrealProvider,
 } from "../src/provider/surreal.ts";
-import { LocalBuildService } from "../src/service/build-service.ts";
+import { LocalAccessService } from "../src/service/access.ts";
 import { reset } from "../src/commands/reset.ts";
 import { passwd } from "../src/commands/passwd.ts";
 import { loadGraphFile } from "../src/graph/load-graph.ts";
@@ -38,7 +38,7 @@ if (dbUp) {
 
 /** Manifest over an arbitrary connection (root = ground truth; person = experiment). */
 async function manifestVia(db: Awaited<ReturnType<typeof connectSurreal>>, userId: string) {
-  return new LocalBuildService(new SurrealProvider(db, "acme")).getManifest(userId, {});
+  return new LocalAccessService(new SurrealProvider(db, "acme")).getManifest(userId, {});
 }
 
 (dbUp ? describe : describe.skip)("structural reads by lineage (ADR 0016)", () => {
@@ -84,15 +84,15 @@ async function manifestVia(db: Awaited<ReturnType<typeof connectSurreal>>, userI
       expect(await ids("SELECT record::id(id) AS id FROM bucket")).toEqual(["clients", "kb-method", "kb-projects"]);
       // catalogs, strict: only what delivery references...
       expect(await ids("SELECT record::id(id) AS id FROM tool")).toEqual(["tracker"]);
-      expect(await ids("SELECT record::id(id) AS id FROM agent")).toEqual(["delivery"]);
+      expect(await ids("SELECT record::id(id) AS id FROM agent")).toEqual([]);
       // ...plus the ambient skills (every workspace carries them)
       expect(await ids("SELECT record::id(id) AS id FROM skill")).toEqual([
-        "friction", "journal", "pending", "update-workspace",
+        "journal",
       ]);
-      // no plugin in her slice → no marketplace row
-      expect(await ids("SELECT record::id(id) AS id FROM marketplace")).toEqual([]);
-      // decision domains: only the ones owned within reach (delivery decides: scope)
-      expect(await ids("SELECT record::id(id) AS id FROM decision_domain")).toEqual(["scope"]);
+      // the delivery plugin exposes its marketplace binding
+      expect(await ids("SELECT record::id(id) AS id FROM marketplace")).toEqual(["acme"]);
+      // Retired decision tables are absent on fresh databases; history.test.ts
+      // covers their absence and permission lockdown on migrated databases.
       // humans: only herself; hashes: none
       expect(await ids("SELECT record::id(id) AS id FROM user")).toEqual(["cleo"]);
       const [creds] = await db.query<[unknown[]]>("SELECT * FROM credential");
@@ -138,7 +138,7 @@ async function manifestVia(db: Awaited<ReturnType<typeof connectSurreal>>, userI
         expect(ids.map((r) => r.id).sort()).toEqual(["clients", "kb-method", "kb-projects"]); // ...but the backfill did
         const [skills] = await healed.query<[{ id: string }[]]>("SELECT record::id(id) AS id FROM skill");
         expect(skills.map((r) => r.id).sort()).toEqual([
-          "friction", "journal", "pending", "update-workspace",
+          "journal",
         ]); // ambient restored too
       } finally {
         await healed.close();

@@ -6,7 +6,7 @@
 import { describe, test, expect } from "bun:test";
 import { join } from "node:path";
 import { desiredState, planGraph, planIsEmpty, validateGraph, type GraphState, type Edge } from "../src/graph/plan.ts";
-import { loadDecisions, loadGraphFile } from "../src/graph/load-graph.ts";
+import { loadGraphFile } from "../src/graph/load-graph.ts";
 import { configDoc } from "../src/graph/records.ts";
 import { reset } from "../src/commands/reset.ts";
 import { SurrealProvider, surrealConfig, surrealReachable, connectSurreal } from "../src/provider/surreal.ts";
@@ -82,50 +82,6 @@ describe("validateGraph", () => {
     expect(errors.some((e) => e.includes("discount-policy"))).toBe(false); // hyphens legal
   });
 
-  test("decision records: domain must be declared, supersedes must resolve", () => {
-    const def: Definition = {
-      namespace: "t",
-      ambient: { skills: [] },
-      purposes: [{ id: "p", parent: null, reason: "r", decides: ["pricing"], owns: [], reads: [], skills: [], tools: [] }],
-      buckets: [],
-      toolCatalog: {}, skillCatalog: {}, agentByPurpose: {}, marketplaces: {},
-      decisionCatalog: {
-        "pricing/0001-floor": { domain: "pricing", status: "accepted", title: "t", content: "c" },
-        "ghost/0001-x": { domain: "ghost", status: "proposed", title: "t", content: "c" },
-        "pricing/0002-new": { domain: "pricing", status: "accepted", title: "t", content: "c", supersedes: "pricing/0000-nope" },
-      },
-    };
-    const errors = validateGraph(def, {});
-    expect(errors).toContain(`decision "ghost/0001-x": domain "ghost" is not declared by any purpose (decides:)`);
-    expect(errors).toContain(`decision "pricing/0002-new": supersedes "pricing/0000-nope" does not exist`);
-    expect(errors.some((e) => e.includes("0001-floor"))).toBe(false);
-  });
-});
-
-// ─── decisions/ loader (ADR 0013) ────────────────────────────────────────
-
-describe("loadDecisions", () => {
-  test("reads the fixture decisions/ — frontmatter + verbatim body", () => {
-    const decisions = loadDecisions(join(import.meta.dir, "../fixtures/example"));
-    const floor = decisions["pricing/0001-enterprise-floor"]!;
-    expect(floor.domain).toBe("pricing");
-    expect(floor.status).toBe("accepted");
-    expect(floor.title).toBe("Enterprise tier price floor");
-    expect(floor.at).toBe(new Date("2026-07-01").toISOString());
-    expect(floor.content.startsWith("# Enterprise tier price floor")).toBe(true);
-    expect(decisions["editorial/0001-voice"]!.status).toBe("proposed");
-  });
-
-  test("an ACCEPTED record with edited content raises a plan warning", () => {
-    const rec = { domain: "pricing", status: "accepted" as const, title: "t", content: "old body" };
-    const mk = (content: string): GraphState => ({
-      def: { namespace: "t", ambient: { skills: [] }, purposes: [], buckets: [], toolCatalog: {}, skillCatalog: {}, agentByPurpose: {}, marketplaces: {}, decisionCatalog: { "pricing/0001-x": { ...rec, content } } },
-      users: {}, edges: [],
-    });
-    const plan = planGraph(mk("NEW body"), mk("old body"));
-    expect(plan.warnings).toEqual([`decision "pricing/0001-x" is accepted (immutable) — supersede it instead of editing`]);
-    expect(plan.update.length).toBe(1); // the content hash change itself
-  });
 });
 
 // ─── plan (b) ────────────────────────────────────────────────────────────

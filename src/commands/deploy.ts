@@ -2,7 +2,7 @@
 //
 //   plan   — read-only audit: validate yaml → drift (yaml × Surreal) → gh existence.
 //   apply  — converge Surreal to the yaml: upsert desired, reconcile edges, delete
-//            (referrer-safe, atomic-on-block, --yes-gated). Structure only.
+//            (referrer-safe, --yes-gated). Structure only.
 //
 // Exit codes (set by the caller): plan  2=invalid · 1=drift · 0=sync.
 //                                 apply 2=invalid · 1=needs-confirm/blocked · 0=applied.
@@ -142,11 +142,11 @@ function renderApply(namespace: string, report: ApplyReport): void {
   renderDiff(report.plan);
 
   if (report.status === "needs-confirm") {
-    console.log(`\n⚠ ${report.plan.delete.length} pending deletion(s) — nothing was applied. Re-run with --yes to confirm.`);
+    console.log(`\n⚠ ${report.plan.delete.length} pending deletion(s) — graph reconciliation was not applied; schema preparation may have run. Re-run with --yes to confirm.`);
   } else if (report.status === "blocked") {
-    console.log(`\n✗ apply aborted (atomic) — deletion blocked by live data:`);
+    console.log(`\n✗ graph reconciliation blocked by live data (schema preparation may have run):`);
     for (const b of report.blocked ?? []) console.log(`  · ${b.kind} ${b.id} — referenced by ${b.referrers.join(", ")}`);
-    console.log(`\nRe-point or remove those records before deleting.`);
+    console.log(`\nKeep identities referenced by immutable journals; remove their assignments instead. Review other references before retrying.`);
   } else {
     const a = report.applied!;
     console.log(`\n✓ applied: +${a.created} created · ~${a.updated} changed · -${a.deleted} deleted.`);

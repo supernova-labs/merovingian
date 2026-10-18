@@ -1,7 +1,7 @@
 {
   "name": "governance",
-  "version": "0.5.0",
-  "description": "Architect agent + operations skills for administering and governing a Merovingian tenant — author desired state, manage members and workspaces, plan/apply deploys, troubleshoot runtime, and drain learning into structure and jurisprudence.",
+  "version": "0.6.0",
+  "description": "Administer a Merovingian purpose graph: individual access, catalog and journal, reviewed deploys, marketplace workflows and historical preservation.",
   "author": {
     "name": "Luis Novo"
   },

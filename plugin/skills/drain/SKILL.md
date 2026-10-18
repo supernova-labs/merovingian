@@ -1,145 +1,47 @@
 ---
 name: drain
-description: The heavy governance pass — drain the tenant's learning inbox (journal/friction) AND the in-flight decision log, synthesize tensions WITH the human, turn the agreed ones into graph/library changes and promote converged decisions into ratified records (decisions/), stamp everything drained, and close the git loop. Use when the human asks for a governance pass, to drain the inbox, or to review accumulated frictions, learnings and decisions.
-allowed-tools: Bash, Read, Edit
+description: Review accumulated Merovingian journals, tracked frictions and authorized historical evidence with the human. Use for a governance review that turns agreed findings into graph changes, plugin improvements or issues.
 ---
 
-# drain — the governance pass
+# Governance review
 
-Members work; the ambient `journal`/`friction` tools append what they learn and where they
-snagged to the tenant's **inbox**, and `register-decision` appends the calls they made with no
-policy behind them to the **decision log**. This skill is the other half of both loops:
-governance reads what accumulated, synthesizes it into tensions **with the human**, and returns
-the agreed ones as changes to the structure (`graph.yaml`), the behavior (`library/`, including
-tenant-wide `library/workspace.md` when appropriate) or the
-jurisprudence (`decisions/` — ratified records). Friction in → structure out; decisions in →
-policy out.
+Run when the human requests a governance pass. Establish the tenant and authorized
+sources: the authenticated Journal MCP, the tenant's issue tracker, and an administrative
+historical archive when the operator has access. Routine setup belongs to `tenant-admin`.
 
-Human-triggered, never scheduled. Runs **inside the tenant repo** (the folder with `graph.yaml`).
-Routine onboarding, password rotation, workspace refreshes, and one-off authentication/build
-failures belong to the `tenant-admin` skill. Bring them into a drain only when accumulated evidence
-shows a structural or tenant-wide tension.
+## Gather evidence
 
-## Preconditions
+List journals within the authenticated person's access. An explicit journal administrator
+can read all tenant journals; purpose ownership alone cannot. The motor provides a direct
+paginated list, not a pending queue or processing status. Preserve IDs and references and
+use the issue tracker to determine whether earlier work was already addressed.
 
-- You are in the tenant repo and `merovingian help` works.
-- The working tree is clean (`git status`) — the pass gets its own branch.
-- Surreal is reachable (`merovingian deploy plan` connects).
-- Create the branch **before touching anything**: `git checkout -b governance/<YYYY-MM-DD>`.
+Read old friction/decision material from the preserved administrative archive only when
+relevant. Do not expose that restricted archive to members or restore it into the active
+tenant. Missing access is a limitation to report, not a reason to change permissions.
 
-## Step 1 — read the inbox AND the decision log (CLI, never queries)
+## Discuss and act
 
-```bash
-merovingian inbox <ns>          # journal/friction: undrained, oldest first, full text
-merovingian decisions <ns>      # in-flight decision log: domain, author, applied records
-merovingian inbox <ns> --all    # (either surface) include drained history, if context helps
-```
+Synthesize concrete tensions with evidence, existing destinations and decisions needed
+from the human. Do not convert a tentative journal entry into binding policy.
 
-Entry anatomy (the formats live in the tenant's own `library/skills/{journal,friction}/format.md`):
+For agreed changes, use the appropriate destination:
 
-- **journal** — sections `Done / Problems / Insights / Context gaps`. Mine **Context gaps** and
-  **Problems**; Done/Insights are context, not tensions.
-- **friction** — sections `Friction / Context / Cost / Could be`. The whole entry is signal.
-  Each carries a **scope** (`scope <purpose>` or `scope root`) — whose problem the writer
-  thinks it is — and possibly a `resolved via:` trace (already resolved locally).
-- **decision log** — a call someone made mid-work, with its domain and the ratified records it
-  applied (`applies: decision:…`). Every entry is a PROMOTION CANDIDATE (Step 4b).
+- Structure, assignments and general instructions: tenant `graph.yaml`, followed by
+  provider plan/review/apply within the authorized scope.
+- Behavior and approved operating rules: the tenant's plugin skills and instructions,
+  reviewed and distributed through its marketplace workflow.
+- Work needing execution or collective judgment: the tenant's issue/review workflow.
+  The motor does not implement a shared judgment queue.
 
-## Step 1b — triage by scope (ADR 0014: you see everything; you don't fix everything)
+Record outcomes and links in the agreed issue or a new journal entry where appropriate.
+Journals remain immutable: no edit, delete, drained stamp, resolution field or hidden
+processed cursor is introduced. Corrections and continuity use references in new entries.
+Avoid recreating issues already linked from previous reviews.
 
-Root sees every friction — that synoptic view is half the drain's value (three "stale KB"
-frictions in three purposes are ONE systemic tension). But resolution is subsidiarity:
+## Close the loop
 
-- **Yours** — structural/global (graph, library, engine, cross-purpose): keep it in the pass.
-  If the answer is context or an operating default for every member, its destination is
-  `library/workspace.md`; scoped behavior remains in a skill or agent.
-- **Theirs** — operational inside one purpose (its kb, its flows, its data): re-scope it down
-  and DON'T act on it:
-  ```bash
-  merovingian inbox <ns> --rescope <id> --to <purpose>   # "não sou eu que resolvo"
-  merovingian inbox <ns> --rescope <id> --to root         # fish a systemic one back up
-  ```
-- **Report, don't nag**: close the pass telling the human where local queues stand —
-  "N frictions await local governance in `eventos` and `comercial`; recommend those run their
-  `pending` pass" — a warning, never an obligation to act. Re-scoped entries are NOT drained
-  by you; their purpose resolves them (same `drained` stamp, their hands, with a
-  `resolved_through` trace you can audit later with `--all`).
-
-## Step 2 — cluster into tensions
-
-Group **by theme across entries**, not entry-by-entry. A tension is:
-
-- one sentence naming the gap (is → could-be);
-- its evidence — the `inbox:<id>`s behind it (keep them: they feed `--ids` later, and the human
-  may ask for the raw text);
-- a candidate answer: a graph change (purpose/bucket/assignment), a library change (skill/agent
-  prompt), a tenant-wide `library/workspace.md` change, a missing tool, or a conscious no-op.
-
-Few and strong beats many and shallow. One loud friction can be a tension; five journals brushing
-the same wall definitely are.
-
-## Step 3 — a conversation, not a report
-
-Present **one tension at a time**, strongest first: the sentence, the evidence, your candidate
-answer. Ask what the human thinks. Listen. Adjust. Only then move to the next.
-
-Tensions can die here — the human saying "that's fine as is" is a valid outcome (it still counts
-as drained: seen, destination given). **Never** dump all tensions and proposals in one message.
-
-## Step 4 — make the agreed changes
-
-The normal change loop (the `merovingian` operations skill has the details): edit `graph.yaml`
-and/or `library/` → `merovingian deploy plan` → the human sees the diff → `merovingian deploy
-apply` (deletions need `--yes`, only after the human saw the plan). Several tensions can land in
-one plan/apply. Use `library/workspace.md` only when every tenant member should receive the text;
-it is projected into both managed root files and must never carry secrets.
-
-## Step 4b — promote decisions into jurisprudence
-
-Read the decision log as a court reads cases:
-
-- **Convergence promotes**: three logs making the same call is a screaming candidate; even ONE
-  log the human confirms as policy is enough. Promotion = write
-  `decisions/<domain>/NNNN-slug.md` (frontmatter: `status: accepted`, `title:`, `date:`) with
-  the decision + rationale distilled from the logs — it ships on the same `deploy apply`.
-- **The telemetry reads records too**: logs whose `applies:` cite a record are usage signal —
-  many citations = load-bearing (be careful superseding it); a record no log ever cites is dead
-  letter (candidate to supersede/retire); logs that *stretched* a record are revision pressure.
-- **Accepted is immutable**: changing a ratified record means a NEW record with
-  `supersedes: <old-id>` — the plan warns if you edit an accepted one in place. A record cited
-  by logs cannot be deleted (the apply blocks, atomically).
-- Discarding is valid: a log the human rules "one-off, not policy" is still drained.
-
-## Step 5 — stamp drained
-
-After the changes land (or the human closes the pass), stamp BOTH surfaces:
-
-```bash
-merovingian inbox <ns> --drain                        # journal/friction
-merovingian decisions <ns> --drain                    # decision log
-merovingian decisions <ns> --drain --ids <id1>,<id2>  # partial pass: only what was covered
-```
-
-Semantics: **drained = "governance saw it and gave it a destination"** — resolved, deferred, or
-consciously dismissed. It does NOT mean "fixed". Never stamp before the human has seen the
-tensions. Entries are never deleted; `--all` audits the history.
-
-## Step 6 — close the git loop
-
-On the `governance/<date>` branch: conventional commit(s) describing the pass (what tensions,
-what changed). Then:
-
-- Repo **has a remote** → **ask the human** before opening a PR (`gh pr create`); they may prefer
-  to push the branch and review later.
-- **No remote** → merge the branch into `main` locally and delete it.
-
-## Guardrails
-
-- Every contact with Surreal goes through the CLI (`merovingian inbox`, `merovingian decisions`,
-  `--drain`, `deploy`) — never a direct query.
-- Never WRITE inbox or decision-log entries — `journal`/`friction`/`register-decision` belong to
-  the members' workspaces.
-- Ratified records are authored ONLY as files in `decisions/` (shipped by deploy) — never
-  inserted into the db by hand.
-- Never touch business rows; structure, prompts and jurisprudence only.
-- Always `deploy plan` before `deploy apply`; never stamp `--drain` before the conversation.
+Summarize the human's decisions, implemented changes, deferred items and remaining
+questions. Preserve unrelated work and use reviewable commits. Publishing, merging and
+provider mutations require the relevant authorization; never auto-merge merely because
+no remote exists. Historical friction triage is post-major work and does not block release.

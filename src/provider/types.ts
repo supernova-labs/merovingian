@@ -39,7 +39,7 @@ export interface Bucket {
 /** The ambient capabilities every instance inherits. */
 export interface Ambient {
   skills: string[];
-  /** Tenant-authored Markdown projected into every workspace root instruction file. */
+  /** Tenant-authored Markdown available through the authenticated catalog. */
   instructions?: string;
 }
 
@@ -109,24 +109,9 @@ export interface LibraryAgentRef {
 /** How a purpose's agent (persona) is delivered. */
 export type AgentRef = PluginRef | LibraryAgentRef;
 
-/** A ratified decision record (ADR 0013): authored in the tenant repo's decisions/
- *  folder, shipped by deploy, served tenant-wide. accepted = immutable (supersede). */
-export type DecisionStatus = "proposed" | "accepted" | "superseded";
-export interface DecisionDef {
-  /** the decision domain (a purpose's `decides:` entry) — the folder it lives in */
-  domain: string;
-  status: DecisionStatus;
-  title: string;
-  /** the markdown body after the frontmatter, verbatim */
-  content: string;
-  /** id of the record this one replaces (e.g. "pricing/0001-old-floor") */
-  supersedes?: string;
-  /** ISO timestamp (frontmatter `date:`) */
-  at?: string;
-}
-
-/** The whole definition for one namespace (tenant). */
 export interface Definition {
+  /** Administrative deployment policy; never exposed by the member catalog. */
+  github?: import("../github/policy.ts").GithubPolicy;
   namespace: string;
   ambient: Ambient;
   purposes: Purpose[];
@@ -143,7 +128,6 @@ export interface Definition {
   marketplaces: Record<string, MarketplaceDef>;
   /** ratified decision records (ADR 0013): "<domain>/<slug>" -> the record. Absent
    *  (synthetic defs in tests) reads as empty. */
-  decisionCatalog?: Record<string, DecisionDef>;
 }
 
 /** The role a human plays in a purpose. Two independent axes: ACCESS is the same
@@ -166,8 +150,13 @@ export interface Assignment {
 export interface User {
   id: string;
   name: string;
-  /** GitHub login — the identity anchor (v1). Maps a gh user to this record. */
+  /** Administrator-managed GitHub login for repository access reconciliation. */
   github?: string;
+  /** Administrator-managed external identifiers; never credentials. */
+  email?: string;
+  slackId?: string;
+  /** Explicit tenant-wide journal reader; never grants write or database administration. */
+  journalAdmin?: boolean;
   /** every purpose this human belongs to. Access = union of their subtrees. */
   assignments: Assignment[];
 }
@@ -175,7 +164,7 @@ export interface User {
 /** One human → one purpose edge, flattened. The god-view (console) lists every
  *  one of these at once — unlike resolveUser, which answers for a single id. */
 export interface AssignmentRow {
-  user: { id: string; name: string; github?: string };
+  user: { id: string; name: string; github?: string; email?: string; slackId?: string; journalAdmin?: boolean };
   purpose: string;
   scope?: string;
   role: Role;

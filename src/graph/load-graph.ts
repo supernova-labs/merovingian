@@ -1,27 +1,11 @@
-// Load the tenant graph from its YAML desired-state (ADR 0009) + the tenant
-// library (ADR 0012).
-//
-// Contract v2: the `skills:` catalog holds ONLY external refs — always explicit
-// `plugin@marketplace`. Any referenced skill/agent name NOT in the catalog resolves
-// by convention to the tenant library next to the yaml:
-//   library/skills/<name>/SKILL.md [+ supporting files]
-//   library/agents/<name>.md
-// The library is part of the DESIRED STATE: `parseGraph` folds its content into the
-// Definition, deploy persists it, and build materializes it — a member never needs
-// to read the tenant repo.
-//
-// Cross-reference validation (owner points at a real purpose, skill resolvable, …)
-// is NOT here — that's `validateGraph` (pure), run by every deploy.
-
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { GithubPolicySchema } from "../github/policy.ts";
+// Desired state contains plugin references, never local capability files.
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import { parseAgentMarkdown } from "./agent-content.ts";
-import { parseSkillMarkdown } from "./skill-content.ts";
 import type {
   AgentRef,
-  DecisionDef,
   Definition,
   MarketplaceBinding,
   MarketplaceDef,
@@ -84,18 +68,17 @@ const UserSchema = z.object({
   id: z.string(),
   name: z.string(),
   github: z.string().optional(),
+  email: z.string().email().optional(),
+  slackId: z.string().min(1).optional(),
+  journalAdmin: z.boolean().optional(),
   assignments: z.array(AssignmentSchema).default([]),
 }).strict();
 
 // catalog values are EXTERNAL refs — always explicit plugin@marketplace. Local
-// content needs no catalog entry (it resolves from library/ by convention).
+// library content is no longer loaded or distributed.
 const ExternalRef = z.string().regex(/^[^@\s]+@[^@\s]+$/, {
-  message: 'catalog refs are explicit "plugin@marketplace"; local content resolves from library/ by convention — drop the entry',
+  message: 'catalog refs are explicit "plugin@marketplace"; local library content is no longer supported',
 });
-
-const AgentMetadataSchema = z.object({
-  description: z.string().min(1),
-}).strict();
 
 const MarketplaceBindingSchema = z.union([
   z.string(),
@@ -118,113 +101,19 @@ const MarketplaceSchema = z.union([
 // .strict() everywhere: contract v2 has no back-compat — a leftover `razao:`,
 // bucket `scope:` or `defaultMarketplace:` must fail loudly, not be ignored.
 const GraphSchema = z.object({
+  github: GithubPolicySchema.optional(),
   namespace: z.string(),
-  ambient: z.object({ skills: z.array(z.string()).default([]) }).strict().default({ skills: [] }),
+  ambient: z.object({ skills: z.array(z.string()).default([]), instructions: z.string().optional() }).strict().default({ skills: [] }),
   marketplaces: z.record(MarketplaceSchema).default({}),
   tools: z.record(ToolSchema).default({}),
   skills: z.record(ExternalRef).default({}),
-  agents: z.record(AgentMetadataSchema).default({}),
   purposes: z.array(PurposeSchema),
   buckets: z.array(BucketSchema).default([]),
   users: z.array(UserSchema).default([]),
 }).strict();
 
-/** The tenant library, listed: name -> files (skills) / content (agents). */
-export interface TenantLibrary {
-  /** tenant-wide Markdown from library/workspace.md */
-  workspace?: string;
-  /** skill name -> relative path -> content ("SKILL.md" expected) */
-  skills: Record<string, Record<string, string>>;
-  /** agent name -> markdown content */
-  agents: Record<string, string>;
-}
-
-const EMPTY_LIBRARY: TenantLibrary = { skills: {}, agents: {} };
-
-/** Empty/whitespace-only workspace instructions are equivalent to no instructions.
- * Internal Markdown whitespace stays byte-for-byte intact. */
 function normalizeWorkspaceInstructions(content: string | undefined): string | undefined {
-  const normalized = content?.trim();
-  return normalized ? normalized : undefined;
-}
-
-/** Recursively read a skill folder into a relPath -> content map. */
-function readFileTree(root: string, prefix = ""): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const entry of readdirSync(root)) {
-    const abs = join(root, entry);
-    const rel = prefix ? `${prefix}/${entry}` : entry;
-    if (statSync(abs).isDirectory()) Object.assign(out, readFileTree(abs, rel));
-    else out[rel] = readFileSync(abs, "utf8");
-  }
-  return out;
-}
-
-/** Read the tenant library at <tenantDir>/library. Absent dir = empty library. */
-export function loadLibrary(tenantDir: string): TenantLibrary {
-  const root = join(tenantDir, "library");
-  if (!existsSync(root)) return EMPTY_LIBRARY;
-  const lib: TenantLibrary = { skills: {}, agents: {} };
-  const workspaceFile = join(root, "workspace.md");
-  if (existsSync(workspaceFile)) {
-    const workspace = normalizeWorkspaceInstructions(readFileSync(workspaceFile, "utf8"));
-    if (workspace !== undefined) lib.workspace = workspace;
-  }
-  const agentsDir = join(root, "agents");
-  if (existsSync(agentsDir)) {
-    for (const f of readdirSync(agentsDir)) {
-      if (!f.endsWith(".md")) continue;
-      lib.agents[f.slice(0, -3)] = readFileSync(join(agentsDir, f), "utf8");
-    }
-  }
-  const skillsDir = join(root, "skills");
-  if (existsSync(skillsDir)) {
-    for (const name of readdirSync(skillsDir)) {
-      const dir = join(skillsDir, name);
-      if (!statSync(dir).isDirectory()) continue;
-      lib.skills[name] = readFileTree(dir);
-    }
-  }
-  return lib;
-}
-
-/** Ratified decision records: "<domain>/<slug>" -> DecisionDef (ADR 0013). */
-export type TenantDecisions = Record<string, DecisionDef>;
-
-const DecisionFrontmatter = z.object({
-  status: z.enum(["proposed", "accepted", "superseded"]),
-  title: z.string(),
-  supersedes: z.string().optional(),
-  date: z.union([z.string(), z.date()]).optional(),
-}).strict();
-
-/** Read the tenant decisions at <tenantDir>/decisions — one folder per domain, one
- *  `NNNN-slug.md` per record (yaml frontmatter + verbatim markdown body). Absent
- *  dir = no records. The domain is the FOLDER; the record id is `<domain>/<slug>`. */
-export function loadDecisions(tenantDir: string): TenantDecisions {
-  const root = join(tenantDir, "decisions");
-  if (!existsSync(root)) return {};
-  const out: TenantDecisions = {};
-  for (const domain of readdirSync(root)) {
-    const dir = join(root, domain);
-    if (!statSync(dir).isDirectory()) continue;
-    for (const f of readdirSync(dir)) {
-      if (!f.endsWith(".md")) continue;
-      const raw = readFileSync(join(dir, f), "utf8");
-      const m = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-      if (!m) throw new Error(`decision ${domain}/${f}: missing frontmatter (--- yaml --- + body)`);
-      const fm = DecisionFrontmatter.parse(parseYaml(m[1]!));
-      out[`${domain}/${f.slice(0, -3)}`] = {
-        domain,
-        status: fm.status,
-        title: fm.title,
-        content: m[2]!,
-        ...(fm.supersedes !== undefined ? { supersedes: fm.supersedes } : {}),
-        ...(fm.date !== undefined ? { at: new Date(fm.date).toISOString() } : {}),
-      };
-    }
-  }
-  return out;
+  return content?.trim() || undefined;
 }
 
 /** Split an explicit `plugin@marketplace` ref (shape guaranteed by ExternalRef). */
@@ -262,13 +151,11 @@ export interface LoadedGraph {
   warnings: string[];
 }
 
-/** Validate + expand a graph YAML string (+ the tenant library) into a Definition
- *  and users. `library` is injected so the parse stays pure/offline-testable —
- *  `loadGraphFile` wires the real folder. */
-export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBRARY, decisions: TenantDecisions = {}): LoadedGraph {
+/** Parse plugin references and tenant instructions without filesystem content. */
+export function parseGraph(yamlText: string): LoadedGraph {
   const g = GraphSchema.parse(parseYaml(yamlText));
   const warnings: string[] = [];
-  const workspaceInstructions = normalizeWorkspaceInstructions(library.workspace);
+  const workspaceInstructions = normalizeWorkspaceInstructions(g.ambient.instructions);
 
   // external catalog (authored) …
   const skillCatalog: Record<string, SkillRef> = {};
@@ -277,25 +164,7 @@ export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBR
   const agentByPurpose: Record<string, AgentRef> = {};
   const purposes: Definition["purposes"] = g.purposes.map((p) => {
     if (p.agent) {
-      // "@" is the discriminator: external plugin ref vs library agent name.
-      if (p.agent.includes("@")) {
-        agentByPurpose[p.id] = pluginRef(p.agent);
-      } else {
-        const raw = library.agents[p.agent];
-        const parsed = raw === undefined ? undefined : parseAgentMarkdown(raw);
-        const description = g.agents[p.agent]?.description ?? parsed?.description;
-        if (parsed?.legacyFrontmatter) {
-          warnings.push(
-            `library/agents/${p.agent}.md: frontmatter is deprecated; move description to graph.yaml agents.${p.agent}.description`,
-          );
-        }
-        agentByPurpose[p.id] = {
-          source: "library",
-          name: p.agent,
-          ...(description ? { description } : {}),
-          ...(parsed ? { content: parsed.content } : {}),
-        };
-      }
+      agentByPurpose[p.id] = pluginRef(ExternalRef.parse(p.agent));
     }
     return {
       id: p.id,
@@ -309,24 +178,6 @@ export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBR
     };
   });
 
-  // … + referenced library skills (by convention). Only REFERENCED names fold in —
-  // unreferenced library folders are dormant, not deployed.
-  const referenced = new Set<string>(g.ambient.skills);
-  for (const p of g.purposes) for (const s of p.skills) referenced.add(s);
-  for (const name of referenced) {
-    if (skillCatalog[name]) continue;
-    const files = library.skills[name];
-    if (!files || files["SKILL.md"] === undefined) continue; // missing → validateGraph reports it
-    for (const rel of Object.keys(files)) {
-      if (rel.includes("..") || rel.startsWith("/")) throw new Error(`library skill "${name}": unsafe file path "${rel}"`);
-    }
-    const parsed = parseSkillMarkdown(name, files["SKILL.md"]);
-    for (const warning of parsed.lintWarnings) {
-      warnings.push(`library/skills/${name}/SKILL.md: ${warning}`);
-    }
-    skillCatalog[name] = { source: "library", files };
-  }
-
   const buckets: Definition["buckets"] = g.buckets.map((b) => ({
     id: b.id,
     backend: b.backend,
@@ -338,6 +189,7 @@ export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBR
   }));
 
   const definition: Definition = {
+    ...(g.github ? { github: g.github } : {}),
     namespace: g.namespace,
     ambient: {
       skills: g.ambient.skills,
@@ -351,7 +203,6 @@ export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBR
     marketplaces: Object.fromEntries(
       Object.entries(g.marketplaces).map(([name, value]) => [name, marketplaceDef(value, name)]),
     ),
-    decisionCatalog: decisions,
   };
 
   const users: Record<string, User> = {};
@@ -360,6 +211,8 @@ export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBR
       id: u.id,
       name: u.name,
       ...(u.github !== undefined ? { github: u.github } : {}),
+      ...(u.email !== undefined ? { email: u.email } : {}),
+      ...(u.slackId !== undefined ? { slackId: u.slackId } : {}), ...(u.journalAdmin !== undefined ? { journalAdmin: u.journalAdmin } : {}),
       assignments: u.assignments.map((a) => ({
         purpose: a.purpose,
         ...(a.scope !== undefined ? { scope: a.scope } : {}),
@@ -371,10 +224,9 @@ export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBR
   return { definition, users, warnings: [...new Set(warnings)].sort() };
 }
 
-/** Read + parse a graph YAML file from disk, with its sibling library/ + decisions/. */
+/** Read only desired-state YAML. Historical content directories are not loaded. */
 export function loadGraphFile(path: string): LoadedGraph {
-  const dir = dirname(path);
-  return parseGraph(readFileSync(path, "utf8"), loadLibrary(dir), loadDecisions(dir));
+  return parseGraph(readFileSync(path, "utf8"));
 }
 
 /** Resolve which graph.yaml an authoring command should act on: an explicit path

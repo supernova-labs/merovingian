@@ -1,5 +1,7 @@
 # ADR 0013 — O domínio de decisões: log em voo, record ratificado, jurisprudência como mecanismo
 
+> **Substituída pela [ADR 0019](0019-catalogo-e-journal.md).** Mecanismo substituído na próxima major; conteúdo abaixo preservado como histórico.
+
 **Status:** Consolidada — implementação entregue em 2026-07-03 (3 tabelas engine + records
 git→deploy + MCP `decisions` ambient + CLI `merovingian decisions` + skill drain com promoção,
 plugin 0.3.0; resoluções abaixo)

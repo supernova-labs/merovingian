@@ -1,55 +1,39 @@
 # Merovingian documentation
 
-Merovingian models an organization as a **graph of purposes**: `build` projects each person a scoped
-Claude Code and Codex workspace, while `deploy` reconciles `graph.yaml`, tenant library content,
-global workspace instructions, and ratified decisions into SurrealDB. This is the full documentation
-set. New here? Read [concepts/overview.md](./concepts/overview.md) first.
+These guides describe the next-major checkout: declarative deploy, authenticated
+catalog, native plugins/setup, and immutable Journal. The published 0.5.x CLI differs.
 
-The docs are organized by what you're trying to do (a [Diátaxis](https://diataxis.fr) split):
+## Concepts
 
-## Concepts — understand how it works
+- [Overview](concepts/overview.md) — Source, tenant and member responsibilities.
+- [The graph](concepts/the-graph.md) — purposes, assignments and resource access.
+- [Build to catalog/setup](concepts/build-vs-deploy.md) — the new distribution boundary.
+- [Architecture](concepts/architecture.md), [enforcement](concepts/enforcement.md),
+  and [topology](concepts/topology.md) — data flow, authority and runtime processes.
 
-| Doc | What it covers |
-|---|---|
-| [overview](./concepts/overview.md) | The 1-page mental model: Source vs tenant, the two operations, the lifecycle. |
-| [the-graph](./concepts/the-graph.md) | purpose · bucket · scope · skill · tool · user + assignment · decision domains — the model. |
-| [build-vs-deploy](./concepts/build-vs-deploy.md) | Projection vs reconciliation — what each reads, writes, and never touches. |
-| [architecture](./concepts/architecture.md) | The data flow `graph.yaml + library → Definition → Manifest → workspace`; the provider & service seams. |
-| [enforcement](./concepts/enforcement.md) | The security model: `generation ≠ enforcement`; scoped JWT identity + SurrealDB PERMISSIONS. |
-| [topology](./concepts/topology.md) | The runtime pieces — CLI, service, MCPs, SurrealDB — what runs where and holds what. |
+## Guides
 
-## Guides — get something done
+- [Getting started](guides/getting-started.md) — synthetic example and first deploy.
+- [Operating a tenant](guides/operating-a-tenant.md) — administrative workflow.
+- [Authoring the graph](guides/authoring-the-graph.md) — review and reconciliation.
+- [Onboarding a member](guides/onboarding-a-member.md) — identity, access and setup.
+- [Connections and secrets](guides/connection-and-secrets.md) — private configuration.
+- [Production](guides/going-to-production.md) — rollout and operational limits.
+- [History and cutover](guides/history-and-cutover.md) — preserve history and retire old runtime.
+- [Releasing](guides/releasing.md) — package and plugin publication gates.
 
-| Doc | What it covers |
-|---|---|
-| [getting-started](./guides/getting-started.md) | First run end-to-end, locally, with the bundled `acme` example. |
-| [operating-a-tenant](./guides/operating-a-tenant.md) | **The operator runbook**: connect → deploy → login → build. |
-| [authoring-the-graph](./guides/authoring-the-graph.md) | The change loop (plan → apply), rename semantics, the invariants. |
-| [connection-and-secrets](./guides/connection-and-secrets.md) | Point the CLI at a database, the JWT secret, how company API keys resolve. |
-| [going-to-production](./guides/going-to-production.md) | From the offline stub → a real Surreal backend; the service; multi-tenant. |
-| [releasing](./guides/releasing.md) | Tag-driven npm releases (trusted publishing) · the plugin's independent version line · the both-manifests rule. |
+## Reference and evidence
 
-## Reference — look up an exact contract
+- [CLI](reference/cli.md), [graph YAML](reference/graph-yaml.md),
+  [environment](reference/env-vars.md), and [machine layout](reference/machine-layout.md).
+- [Catalog and Journal](reference/catalog-and-journal.md) — personal MCP contract.
+- [GitHub deploy](reference/github-deploy.md) — permissions and protection policies.
+- [Desktop smoke evidence](testing/desktop-mcp-smoke.md) — results and remaining acceptance.
+- [1.0.0 release notes](releases/1.0.0.md) — approved version, publication pending.
+- [Candidate review](testing/release-candidate.md) — package evidence and cutover gates.
 
-| Doc | What it covers |
-|---|---|
-| [cli](./reference/cli.md) | Every command, its flags, exit codes, and authoring-vs-runtime split. |
-| [graph-yaml](./reference/graph-yaml.md) | The complete `graph.yaml` schema — every key, type, default, invariant. |
-| [env-vars](./reference/env-vars.md) | Every environment variable the engine reads and its default. |
-| [machine-layout](./reference/machine-layout.md) | The per-machine on-disk layout: session files, the central repo store. |
+## Architectural history
 
-## The design record — why it's built this way
-
-These predate the product docs and are kept in Portuguese; they are the rationale, not a how-to.
-
-- **[foundation/](./foundation/)** — the conceptual base: the 5 primitives and the 5 principles.
-- **[decisions/](./decisions/)** — the ADRs. `decisions/INDEX.md` is the status of all of them.
-
-## The queue — what is NOT done
-
-
-## Suggested paths
-
-- **Operating a tenant** → overview → getting-started → operating-a-tenant → connection-and-secrets.
-- **Authoring a graph** → the-graph → authoring-the-graph → reference/graph-yaml.
-- **Contributing to the engine** → architecture → build-vs-deploy → enforcement → topology.
+The Portuguese [ADR index](decisions/INDEX.md) identifies current and superseded
+decisions. [Foundation](foundation/) records conceptual origins, not runtime commands.
+ADRs 0019 and 0020 take precedence over historical build/library/queue descriptions.

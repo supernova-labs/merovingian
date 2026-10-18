@@ -38,7 +38,7 @@ export const BUCKET_ID = /^[A-Za-z0-9_-]{1,64}$/;
  *  their permissions. Keep in sync with surreal/schema.surql + data.surql. */
 export const RESERVED_TABLES = new Set([
   "config", "purpose", "bucket", "tool", "marketplace", "skill", "agent", "user", "responsible", "inbox",
-  "decision", "decision_log", "decision_domain",
+  "decision", "decision_log", "decision_domain", "journal", "credential",
 ]);
 
 function assertSafe(b: Bucket): void {

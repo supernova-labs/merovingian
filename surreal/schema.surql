@@ -120,6 +120,9 @@ DEFINE FIELD OVERWRITE readers ON agent TYPE array<record<purpose>> DEFAULT [];
 DEFINE TABLE OVERWRITE user SCHEMAFULL
   PERMISSIONS FOR select WHERE id = $auth FOR create, update, delete NONE;
 DEFINE FIELD OVERWRITE name   ON user TYPE string;
+DEFINE FIELD OVERWRITE email ON user TYPE option<string>;
+DEFINE FIELD OVERWRITE slackId ON user TYPE option<string>;
+DEFINE FIELD OVERWRITE journalAdmin ON user TYPE option<bool>;
 DEFINE FIELD OVERWRITE github ON user TYPE option<string>;  -- anchor de identidade (gh login)
 
 -- atribuição = aresta de grafo: user -> responsible -> purpose (scope + papel na aresta)

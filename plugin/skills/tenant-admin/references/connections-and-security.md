@@ -1,102 +1,41 @@
 # Connections and security
 
-Use this reference to select transport, locate configuration, and keep secrets on the correct side
-of the trust boundary.
+## Select the correct connection
 
-## Connection resolution
+The tenant namespace in `graph.yaml` maps to a Surreal database. A tenant's optional
+`merovingian.toml` declares `[surreal] url = "wss://db.example.test/rpc"` without credentials.
+Authoring commands register that direct connection on the operator machine.
+`SURREAL_DB` can override the database; verify it before any write.
 
-The tenant namespace names the Surreal database. Server location is resolved from an explicit
-override, environment, the per-machine namespace registry, or the local development default.
+Administrative commands use `SURREAL_USER` and `SURREAL_PASS`. First provisioning also
+requires a private `MEROVINGIAN_JWT_SECRET`; ordinary deploys do not rotate an existing
+access definition. Root credentials and signing keys never belong on member machines.
+The local root/root defaults are for development only.
 
-A tenant repo may commit a `merovingian.toml` containing only the server URL:
+Catalog and Journal require all five personal settings explicitly: `SURREAL_URL`,
+`SURREAL_NS`, `MEROVINGIAN_DB`, `MEROVINGIAN_USER`, `MEROVINGIAN_PASS`. Their password
+SIGNIN path has no root, GitHub or development-token fallback. Store these in private
+native client configuration. A project `.env` is optional, not the architecture.
+Do not embed the tenant endpoint or password in a shared setup skill.
 
-```toml
-[surreal]
-url = "wss://db.example.com/rpc"
-```
+GitHub deployment uses the operator's `gh` authentication. This credential manages
+repository ACLs; it is not the member's Merovingian login. External tool authentication
+belongs to native integrations; the catalog does not distribute company secrets.
 
-Authoring commands read it and register the URL for that namespace on the operator's machine.
-Credentials never belong in this file. Keep root values in the operator/service environment or the
-tenant repo's gitignored `.env`:
+## Preserve and cut over
 
-```dotenv
-SURREAL_URL=wss://db.example.com/rpc
-SURREAL_USER=<operator user>
-SURREAL_PASS=<operator password>
-SURREAL_NS=merovingian
-```
+Export with `history export --graph <path> --output <new-private-directory>` and verify
+with `history verify --archive <directory>`. The export requires explicit administrative
+credentials. Keep it outside Git or in an explicitly ignored directory. Rehearse restore
+in an isolated administrative database and compare records, IDs, links and timestamps.
+The archive is historical data, not a complete backup of the tenant or its credentials.
 
-`SURREAL_DB` normally defaults to the tenant namespace. Avoid overriding it unless the deployment
-topology deliberately maps the tenant to another database.
+Stop old writers and capture a final snapshot before switching production. New deploys
+restrict existing inbox/decision tables to administrative access without deleting them.
+Never run the old deploy against a cut-over tenant: it can restore old table permissions.
+Historical friction triage may happen after release; preservation must precede cutover.
 
-## Authentication and transport choices
-
-### Local development
-
-Use `--backend stub` only for the synthetic offline fixture. A local Surreal container is suitable
-for development and tests, not proof that the production connection or permissions work.
-
-### Direct operator connection
-
-System credentials may live on a trusted operator machine for authoring, deploy, password
-administration, root drain, and local diagnostics. Do not copy this environment to member machines.
-
-### Password SIGNIN
-
-For a small real tenant without the build/auth service, the operator creates each person's password
-with `merovingian passwd`. The member's workspace carries `MEROVINGIAN_USER` and
-`MEROVINGIAN_PASS`; Surreal validates the hash and issues the scoped token. The database must remain
-on a private network because member machines connect to it directly.
-
-### Remote build/auth service
-
-For service-backed operation, register the machine once and authenticate through GitHub:
-
-```bash
-gh auth login
-merovingian namespace add <namespace> https://build.example.com
-merovingian login <namespace>
-```
-
-The service holds root credentials and the JWT signing key, resolves the GitHub login to the tenant
-user, and returns a scoped manifest/token. User machines should hold only their GitHub credential
-and short-lived scoped tokens.
-
-## Provisioning and signing key
-
-A real first `deploy apply` requires a private `MEROVINGIAN_JWT_SECRET`; it refuses to provision a
-tenant with the public development key. The same key must be held by the build/auth service when it
-mints tokens. Under password-SIGNIN-only operation, discard the provisioning copy after the key is
-bound inside the database.
-
-Routine deploys do not rotate a live tenant's signing key because doing so would invalidate every
-outstanding token. Treat key rotation as a separately reviewed production procedure with a restart
-of every token-minting service; do not improvise it during normal tenant administration.
-
-## Company tool secrets
-
-Tool environment entries may reference company keys, but the secret value must be resolved where
-the build service runs. Local builds can resolve them from a member's gitignored `.env`; remote
-builds resolve them server-side. Generated secret-bearing harness files are mode-restricted and
-must not be committed, copied into support messages, or built inside a Git repository.
-
-`library/workspace.md` is delivered to every authenticated tenant member. It must never contain a
-credential, private topology, customer-specific secret, or information unsuitable for that entire
-audience.
-
-## Production checklist
-
-- SurrealDB is durable, backed up, and reachable only from intended operators, members using
-  password SIGNIN, or the service.
-- Root credentials and the signing key are stored outside Git and member workspaces.
-- The remote service is behind TLS, a reverse proxy/firewall, and production monitoring; do not
-  expose an unaudited development process directly.
-- `merovingian console` remains localhost-only: it is a no-auth full-tenant view.
-- GitHub identities and repository ACLs match the graph's external mounts.
-- A restore procedure is tested independently of Merovingian; `reset` is not backup or recovery.
-- The plugin, CLI, tenant library templates, and generated workspaces have distinct update cycles
-  and are tracked deliberately.
-
-If the task involves hosting, backups, signing-key rotation, firewalling, or incident response,
-surface the infrastructure steps and required authority explicitly. The Merovingian CLI does not
-make those external changes on the admin's behalf.
+Production requires durable database storage, tested backups and intended network access.
+The local console has no authentication and must remain on trusted localhost. A release
+candidate needs the four macOS client paths and reviewed documentation. Neither publishing
+nor changing production follows automatically from a successful synthetic test.
