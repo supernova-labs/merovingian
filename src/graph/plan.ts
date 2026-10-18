@@ -100,15 +100,6 @@ export function validateGraph(def: Definition, users: Record<string, User>): str
     }
   }
 
-  // decision records: the folder (= domain) must be a declared decides: entry, the
-  // slug a safe record id, and a supersedes link must point at a real record.
-  const decisionIds = new Set(Object.keys(def.decisionCatalog ?? {}));
-  for (const [id, d] of Object.entries(def.decisionCatalog ?? {})) {
-    const slug = id.slice(d.domain.length + 1);
-    if (!BUCKET_ID.test(slug)) errors.push(`decision "${id}": slug is not safe (letters, digits, _ or -)`);
-    if (!domainOwner.has(d.domain)) errors.push(`decision "${id}": domain "${d.domain}" is not declared by any purpose (decides:)`);
-    if (d.supersedes && !decisionIds.has(d.supersedes)) errors.push(`decision "${id}": supersedes "${d.supersedes}" does not exist`);
-  }
 
   // tool kinds (zod refines authored graphs; re-asserted for synthetic Definitions)
   for (const [name, t] of Object.entries(def.toolCatalog)) {
@@ -221,22 +212,6 @@ export function planGraph(desired: GraphState, current: GraphState): GraphPlan {
     scalar("codex.source", d.codex?.source ?? "∅", c.codex?.source ?? "∅"),
     scalar("codex.name", d.codex?.name ?? "∅", c.codex?.name ?? "∅"),
   ]);
-
-  // decision records (ADR 0013): content as a hash scalar; an ACCEPTED record whose
-  // content changed is jurisprudence being rewritten — warn (supersede is the way).
-  diffKind(plan, "decision", asMap(desired.def.decisionCatalog ?? {}), asMap(current.def.decisionCatalog ?? {}), (d, c, id) => {
-    if (c.status === "accepted" && d.content !== c.content) {
-      plan.warnings.push(`decision "${id}" is accepted (immutable) — supersede it instead of editing`);
-    }
-    return [
-      scalar("domain", d.domain, c.domain),
-      scalar("status", d.status, c.status),
-      scalar("title", d.title, c.title),
-      scalar("supersedes", d.supersedes ?? "∅", c.supersedes ?? "∅"),
-      scalar("at", d.at ?? "∅", c.at ?? "∅"),
-      scalar("content", hash8(d.content), hash8(c.content)),
-    ];
-  });
 
   // library agent content (deduped by name; the purpose-level ref diffs above)
   diffKind(plan, "agent", libraryAgents(desired), libraryAgents(current), (d, c) => [

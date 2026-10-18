@@ -1,68 +1,55 @@
+import { historyCommand } from "./commands/history.ts";
 import { deployGithub } from "./commands/github.ts";
 // Hand-rolled arg parsing + dispatch (harny house style — no arg-parser dep).
 //
 // Commands:
 //   merovingian login <namespace> <user>
 //   merovingian graph <namespace> [--backend stub|surreal]
-//   merovingian build <namespace> [--purposes a,b,c] [--backend stub|surreal]
 //   merovingian reset [--graph P]              (dev/test: wipe structure + reproject)
 
 import { login } from "./commands/login.ts";
-import { build } from "./commands/build.ts";
 import { graph } from "./commands/graph.ts";
 import { reset } from "./commands/reset.ts";
 import { data } from "./commands/data.ts";
 import { passwd } from "./commands/passwd.ts";
-import { inbox } from "./commands/inbox.ts";
-import { decisions } from "./commands/decisions.ts";
-import { namespaceAdd } from "./commands/namespace.ts";
 import { startConsole } from "./server/console.ts";
 import { deployPlan, deployApply } from "./commands/deploy.ts";
 import { init } from "./commands/init.ts";
-import { libraryUpdate, renderLibraryUpdate } from "./commands/library.ts";
-import { pluginsSync } from "./commands/plugins.ts";
 import { planIsEmpty } from "./graph/plan.ts";
 import { startUpdateCheck, notifyUpdate } from "./update-check.ts";
-import type { Backend } from "./service/build-service.ts";
+import type { Backend } from "./service/access.ts";
 import pkg from "../package.json";
 
-const USAGE = `merovingian — build CLI (stub + surreal)
+const USAGE = `merovingian — purpose graph, catalog and journal
 
 Usage:
+  merovingian history export --graph P --output DIR   archive legacy history (admin, read-only)
+  merovingian history verify --archive DIR           verify archive integrity
   merovingian --version                              print the installed CLI version
-  merovingian init <tenant> --owner <id> --github <login>   scaffold a tenant repo (graph + seeded library, in ./<tenant>/)
-  merovingian namespace add <namespace> <url>      register a namespace served by a remote service
-  merovingian login <namespace> [user]             authenticate (gh if remote; <user> if local)
+  merovingian init <tenant> --owner <id> --github <login>   scaffold a tenant repo (graph and connection, in ./<tenant>/)
+  merovingian login <namespace> [user]             authenticate with your individual password
   merovingian graph <namespace>                    show your personal access graph
-  merovingian build <namespace> [--purposes a,b]   project the workspace (in cwd)
   merovingian reset [--graph P]                    DEV/TEST: wipe structure + reproject (never on a live tenant — first run is just deploy apply)
   merovingian data <namespace> <table>             list rows the logged-in user CAN see (enforced by Surreal)
   merovingian passwd <namespace> <user>            set/rotate a person's SIGNIN password (operator; reads MEROVINGIAN_NEW_PASS or stdin)
-  merovingian inbox <namespace> [--all] [--drain [--ids a,b]] [--rescope <id> --to <purpose|root>]   governance drain (root): list/stamp/triage the learning inbox
-  merovingian mcp <catalog|journal|inbox|decisions|surreal-data>            run a bundled MCP server (stdio)
-  merovingian decisions <namespace> [--all] [--drain [--ids a,b]]   governance drain (root): the in-flight decision log (promotion candidates)
+  merovingian mcp <catalog|journal|surreal-data>            run a bundled MCP server (stdio)
   merovingian console <namespace> [--port N]       serve the Architect console (read-only god-view, 127.0.0.1)
   merovingian deploy github-plan [--graph P]       audit GitHub ACLs and PR protections; emits an approval revision
   merovingian deploy github-apply --approve HASH   apply reviewed GitHub plan [--graph P] [--scope all|permissions|protections]
   merovingian deploy plan [--graph P]              audit: diff graph.yaml × Surreal (read-only; exit 1=drift 2=invalid)
   merovingian deploy apply [--graph P] [--yes]     converge Surreal to graph.yaml (structure only; --yes to allow deletes)
-  merovingian library update [--graph P] [--yes]   refresh the seeded library from the Source templates (audit-first)
-  merovingian plugins sync                         install the Codex plugins required by this built workspace
 
   --owner id · --github login   the founding owner for init
   --graph P            path to the graph.yaml (authoring commands; default ./graph.yaml in cwd)
-  --purposes a,b       narrow the build to a subset of accessible purposes
-  --backend stub|surreal   backend for login/graph/build/console (default: surreal; stub = the offline acme fixture)
-  --all                also show already-drained entries (inbox/decisions)
-  --drain · --ids a,b  stamp entries drained (all undrained, or only --ids)
+  --backend stub|surreal   backend for login/graph/console (default: surreal; stub = the offline acme fixture)
   --port N             port for the console (default 8888; env CONSOLE_PORT)
 
 Authoring commands (deploy, reset) read the graph from --graph / ./graph.yaml (a tenant repo).
-Runtime commands (build/graph/console/…) take a namespace (selects the db / stub). Example tenant: acme
+Runtime commands (graph/console/…) take a namespace (selects the db / stub). Example tenant: acme
 `;
 
 export interface ParsedArgs {
-  command: "namespace" | "login" | "graph" | "build" | "reset" | "data" | "passwd" | "inbox" | "decisions" | "console" | "deploy" | "init" | "library" | "plugins" | "mcp" | "help" | "version";
+  command: "login" | "graph" | "reset" | "data" | "passwd" | "console" | "deploy" | "init" | "mcp" | "help" | "version";
   namespace?: string;
   user?: string;
   url?: string;
@@ -138,23 +125,13 @@ export function parseArgs(argv: string[]): ParsedArgs {
   const [cmd, ...rest] = argv;
   if (!cmd || cmd === "help" || cmd === "--help" || cmd === "-h") return { command: "help" };
   if (cmd === "version" || cmd === "--version" || cmd === "-v") return { command: "version" };
-  if (cmd === "namespace") {
-    // namespace add <ns> <url>
-    if (rest[0] !== "add") throw new Error(`usage: merovingian namespace add <namespace> <url>`);
-    return { command: "namespace", namespace: rest[1], url: rest[2] };
-  }
+
   if (cmd === "init") {
     const { positionals, owner, github } = extractFlags(rest);
     return { command: "init", namespace: positionals[0], owner, github };
   }
-  if (cmd === "library") {
-    // library update [--graph P] [--yes]
-    const { graph, yes } = extractFlags(rest.slice(1));
-    return { command: "library", subcommand: rest[0], graph, yes };
-  }
-  if (cmd === "plugins") {
-    return { command: "plugins", subcommand: rest[0] };
-  }
+
+
   if (cmd === "login") {
     const { positionals, backend } = extractFlags(rest);
     return { command: "login", namespace: positionals[0], user: positionals[1], backend };
@@ -163,26 +140,19 @@ export function parseArgs(argv: string[]): ParsedArgs {
     const { positionals, backend } = extractFlags(rest);
     return { command: "graph", namespace: positionals[0], backend };
   }
-  if (cmd === "build") {
-    const { positionals, purposes, backend } = extractFlags(rest);
-    return { command: "build", namespace: positionals[0], purposes, backend };
-  }
+
   if (cmd === "reset") {
     const { graph } = extractFlags(rest);
     return { command: "reset", graph };
   }
   if (cmd === "data") return { command: "data", namespace: rest[0], table: rest[1] };
   if (cmd === "passwd") return { command: "passwd", namespace: rest[0], user: rest[1] };
-  if (cmd === "inbox" || cmd === "decisions") {
-    const { positionals, all, drain, ids, rescope, to } = extractFlags(rest);
-    return { command: cmd, namespace: positionals[0], all, drain, ids, rescope, to };
-  }
+
   if (cmd === "console") {
     const { positionals, backend, port } = extractFlags(rest);
     return { command: "console", namespace: positionals[0], backend, port };
   }
-  // system MCP servers (stdio) — what the emitted .mcp.json invokes. `namespace`
-  // carries the server name (inbox | decisions | surreal-data).
+  // Bundled runtime MCP servers (stdio).
   if (cmd === "mcp") return { command: "mcp", namespace: rest[0] };
   if (cmd === "deploy") {
     // deploy <plan|apply> [--graph P] [--yes]
@@ -193,6 +163,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
 }
 
 export async function main(argv = process.argv.slice(2)): Promise<void> {
+  if (argv[0] === "history") { await historyCommand(argv.slice(1)); return; }
   if (argv[0] === "deploy" && ["github-plan", "github-apply"].includes(argv[1] ?? "")) {
     await deployGithub(argv.slice(1));
     return;
@@ -218,11 +189,7 @@ async function run(parsed: ParsedArgs): Promise<void> {
     return;
   }
 
-  if (parsed.command === "namespace") {
-    if (!parsed.namespace || !parsed.url) throw new Error(`usage: merovingian namespace add <namespace> <url>`);
-    await namespaceAdd(parsed.namespace, parsed.url);
-    return;
-  }
+
 
   if (parsed.command === "init") {
     if (!parsed.namespace) throw new Error(`init needs a tenant name\n\n${USAGE}`);
@@ -243,11 +210,7 @@ async function run(parsed: ParsedArgs): Promise<void> {
     return;
   }
 
-  if (parsed.command === "build") {
-    if (!parsed.namespace) throw new Error(`build needs a namespace\n\n${USAGE}`);
-    await build(parsed.namespace, { purposes: parsed.purposes, backend: parsed.backend });
-    return;
-  }
+
 
   if (parsed.command === "reset") {
     await reset({ graph: parsed.graph });
@@ -266,27 +229,15 @@ async function run(parsed: ParsedArgs): Promise<void> {
     return;
   }
 
-  if (parsed.command === "inbox" || parsed.command === "decisions") {
-    if (!parsed.namespace) throw new Error(`${parsed.command} needs a namespace\n\n${USAGE}`);
-    if (parsed.ids && !parsed.drain) throw new Error(`--ids only narrows --drain\n\n${USAGE}`);
-    if (parsed.rescope && parsed.command !== "inbox") throw new Error(`--rescope is an inbox flag (ADR 0014)\n\n${USAGE}`);
-    if (parsed.command === "inbox") {
-      await inbox(parsed.namespace, { all: parsed.all, drain: parsed.drain, ids: parsed.ids, rescope: parsed.rescope, to: parsed.to });
-    } else {
-      await decisions(parsed.namespace, { all: parsed.all, drain: parsed.drain, ids: parsed.ids });
-    }
-    return;
-  }
+
 
   if (parsed.command === "mcp") {
     // stdio protocol lives on stdout — NEVER print here; the servers log to stderr.
     const name = parsed.namespace;
     if (name === "journal") return (await import("./mcp/journal.ts")).serveStdio();
     if (name === "catalog") return (await import("./mcp/catalog.ts")).serveStdio();
-    if (name === "inbox") return (await import("./mcp/inbox.ts")).serveStdio();
-    if (name === "decisions") return (await import("./mcp/decisions.ts")).serveStdio();
     if (name === "surreal-data") return (await import("./mcp/surreal-data.ts")).serveStdio();
-    throw new Error(`unknown mcp server "${name ?? ""}" — catalog | journal | inbox | decisions | surreal-data`);
+    throw new Error(`unknown mcp server "${name ?? ""}" — catalog | journal | surreal-data`);
   }
 
   if (parsed.command === "console") {
@@ -296,26 +247,9 @@ async function run(parsed: ParsedArgs): Promise<void> {
     return;
   }
 
-  if (parsed.command === "library") {
-    if (parsed.subcommand !== "update") throw new Error(`usage: merovingian library update [--graph P] [--yes]`);
-    const result = await libraryUpdate({ graph: parsed.graph, yes: parsed.yes });
-    renderLibraryUpdate(result);
-    // exit: 1 = drift pending · 0 = in sync / applied
-    process.exitCode = result.status === "drift" ? 1 : 0;
-    return;
-  }
 
-  if (parsed.command === "plugins") {
-    if (parsed.subcommand !== "sync") throw new Error(`usage: merovingian plugins sync`);
-    const result = await pluginsSync();
-    for (const name of result.addedMarketplaces) console.log(`added Codex marketplace ${name}`);
-    for (const id of result.installedPlugins) console.log(`installed Codex plugin ${id}`);
-    for (const id of result.alreadyPresent) console.log(`Codex plugin already present ${id}`);
-    if (!result.installedPlugins.length && !result.addedMarketplaces.length) {
-      console.log("Codex plugins are in sync");
-    }
-    return;
-  }
+
+
 
   if (parsed.command === "deploy") {
     if (parsed.subcommand !== "plan" && parsed.subcommand !== "apply") {

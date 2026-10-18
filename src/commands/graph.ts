@@ -5,8 +5,7 @@
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { sessionFile } from "../paths.ts";
-import { buildServiceFor, type Backend } from "../service/build-service.ts";
-import { remoteOptsFor } from "../transport.ts";
+import { accessServiceFor, type Backend } from "../service/access.ts";
 import type { Session } from "./login.ts";
 import { assignmentsLabel, type Manifest } from "../projection/resolve.ts";
 
@@ -15,7 +14,7 @@ export function renderGraph(m: Manifest): string {
   lines.push(`access for ${m.user.name} @ ${m.namespace}`);
   lines.push(`  assignments: ${assignmentsLabel(m.assignments)}`);
   lines.push("");
-  lines.push(`  purposes (use with --purposes):`);
+  lines.push(`  purposes:`);
   for (const p of m.visiblePurposes) lines.push(`    • ${p}`);
   lines.push("");
   lines.push(`  okf context:    ${m.okf.map((o) => o.bucket).join(", ") || "—"}`);
@@ -37,9 +36,8 @@ export async function graph(namespace: string, opts: GraphOpts = {}): Promise<Ma
     throw new Error(`not logged in to "${namespace}". Run: merovingian login ${namespace} <user>`);
   }
   const session = JSON.parse(await readFile(path, "utf8")) as Session;
-  const remote = await remoteOptsFor(namespace);
 
-  const { service, close } = await buildServiceFor(namespace, { backend: opts.backend, asUser: session.user, ...remote });
+  const { service, close } = await accessServiceFor(namespace, { backend: opts.backend, asUser: session.user });
   let manifest: Manifest;
   try {
     manifest = await service.getManifest(session.user); // full entitlement

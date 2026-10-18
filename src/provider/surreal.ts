@@ -6,7 +6,7 @@ import { createHmac } from "node:crypto";
 import { Surreal, RecordId } from "surrealdb";
 import { registeredSurrealUrl } from "../transport.ts";
 import { parseAgentMarkdown } from "../graph/agent-content.ts";
-import type { DefinitionProvider, Definition, DecisionDef, Purpose, Bucket, User, ToolDef, SkillRef, AgentRef, AssignmentRow, Role } from "./types.ts";
+import type { DefinitionProvider, Definition, Purpose, Bucket, User, ToolDef, SkillRef, AgentRef, AssignmentRow, Role } from "./types.ts";
 
 /** The PUBLIC dev signing key — matches auth.surql's DEFINE ACCESS when a tenant is
  *  provisioned in dev/test. It is committed and world-readable ON PURPOSE: a token
@@ -225,11 +225,6 @@ interface SkillRow {
   files: Record<string, string> | null;
 }
 interface AgentRow { id: RecordId; description: string; content: string }
-interface DecisionRow {
-  id: RecordId; domain: string; status: DecisionDef["status"]; title: string;
-  content: string; supersedes: RecordId | null; at: unknown;
-}
-
 export class SurrealProvider implements DefinitionProvider {
   readonly namespace: string;
   constructor(private db: Surreal, namespace: string) {
@@ -244,7 +239,6 @@ export class SurrealProvider implements DefinitionProvider {
     const [marketplaceRows] = await this.db.query<[MarketplaceRow[]]>("SELECT * FROM marketplace");
     const [skillRows] = await this.db.query<[SkillRow[]]>("SELECT * FROM skill");
     const [agentRows] = await this.db.query<[AgentRow[]]>("SELECT * FROM agent");
-    const [decisionRows] = await this.db.query<[DecisionRow[]]>("SELECT * FROM decision");
 
     const cfg = cfgRows[0];
     if (!cfg) throw new Error(`namespace "${this.namespace}" not migrated (config empty). Run: merovingian deploy apply (from the tenant repo)`);
@@ -316,18 +310,6 @@ export class SurrealProvider implements DefinitionProvider {
       });
     }
 
-    const decisionCatalog: Record<string, DecisionDef> = {};
-    for (const d of decisionRows) {
-      decisionCatalog[idOf(d.id)] = {
-        domain: d.domain,
-        status: d.status,
-        title: d.title,
-        content: d.content,
-        ...(d.supersedes ? { supersedes: idOf(d.supersedes) } : {}),
-        ...(d.at != null ? { at: (d.at instanceof Date ? d.at : new Date(String(d.at))).toISOString() } : {}),
-      };
-    }
-
     // "@" is the discriminator the purpose record stores (see records.agentRefString).
     const agentByPurpose: Record<string, AgentRef> = {};
     for (const p of purposeRows) {
@@ -356,7 +338,6 @@ export class SurrealProvider implements DefinitionProvider {
       skillCatalog,
       agentByPurpose,
       marketplaces,
-      decisionCatalog,
     };
   }
 

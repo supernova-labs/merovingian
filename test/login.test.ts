@@ -10,6 +10,7 @@ import { readFile, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { Surreal } from "surrealdb";
 import { applyGraph } from "../src/graph/apply.ts";
+import { passwd } from "../src/commands/passwd.ts";
 import { login } from "../src/commands/login.ts";
 import { sessionFile } from "../src/paths.ts";
 import { surrealConfig, surrealReachable, connectSurreal } from "../src/provider/surreal.ts";
@@ -29,6 +30,7 @@ const dbUp = await surrealReachable(surrealConfig(TEST_NS));
   beforeAll(async () => {
     db = await connectSurreal(surrealConfig(TEST_NS));
     await applyGraph(db, { ...structuredClone(exampleDefinition), namespace: TEST_NS }, structuredClone(exampleUsers), { reset: true });
+    await passwd(TEST_NS, "ada", {password: "synthetic-password"});
   });
 
   afterAll(async () => {
@@ -39,7 +41,7 @@ const dbUp = await surrealReachable(surrealConfig(TEST_NS));
   });
 
   test("resolves a real user against the live db and writes the session", async () => {
-    await login(TEST_NS, "ada", { backend: "surreal" });
+    await login(TEST_NS, "ada", { backend: "surreal", password: "synthetic-password" });
     const path = sessionFile(TEST_NS);
     expect(existsSync(path)).toBe(true);
     const session = JSON.parse(await readFile(path, "utf8"));
@@ -47,8 +49,12 @@ const dbUp = await surrealReachable(surrealConfig(TEST_NS));
     expect(session.user).toBe("ada");
   });
 
+  test("does not turn administrator credentials into a personal login", async () => {
+    await expect(login(TEST_NS, "ada", { backend: "surreal", password: "" })).rejects.toThrow("MEROVINGIAN_PASS");
+  });
+
   test("rejects a user that is not in the graph", async () => {
-    await expect(login(TEST_NS, "nobody", { backend: "surreal" })).rejects.toThrow(/unknown user/);
+    await expect(login(TEST_NS, "nobody", { backend: "surreal", password: "synthetic-password" })).rejects.toThrow();
   });
 
   test("stub backend still rejects a namespace that is not a fixture", async () => {
@@ -59,7 +65,7 @@ const dbUp = await surrealReachable(surrealConfig(TEST_NS));
   // must NOT flip login onto the remote-HTTP path (it fetch()ed the ws:// url).
   test("a surreal-transport registry entry keeps login on the local path", async () => {
     await writeNamespace(TEST_NS, { transport: "surreal", url: surrealConfig(TEST_NS).url });
-    await login(TEST_NS, "ada", { backend: "surreal" });
+    await login(TEST_NS, "ada", { backend: "surreal", password: "synthetic-password" });
     const session = JSON.parse(await readFile(sessionFile(TEST_NS), "utf8"));
     expect(session.user).toBe("ada");
   });

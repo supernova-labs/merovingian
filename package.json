@@ -1,7 +1,7 @@
 {
   "name": "@supernova-labs/merovingian",
   "version": "0.5.3",
-  "description": "Merovingian OS — a declarative engine that projects a tenant's purpose graph into scoped Claude Code and Codex workspaces, and reconciles it with `deploy`.",
+  "description": "Merovingian OS \u2014 purpose-based access, catalog and journal for agent workflows.",
   "license": "MIT",
   "author": "Luis Novo <lfnovo@gmail.com>",
   "homepage": "https://github.com/supernova-labs/merovingian#readme",
@@ -49,7 +49,6 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "reset": "bun bin/merovingian.ts reset --graph fixtures/example/graph.yaml",
-    "service": "bun bin/merovingian-service.ts",
     "console": "bun bin/merovingian-console.ts",
     "seed:acme": "bun fixtures/example/seed.ts"
   },

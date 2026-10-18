@@ -22,7 +22,7 @@ export async function visibleRows(
   const cfg = surrealConfig(namespace, surrealDb ? { db: surrealDb } : {});
   // ONE token order for every surface (see tokenSourceFor): service > password > dev-mint.
   // 6s window matches the signin path (the password flow already allows it end-to-end).
-  const db = await connectWithToken(cfg, await tokenSourceFor(cfg, userId, namespace)(), 6000);
+  const db = await connectWithToken(cfg, await tokenSourceFor(cfg, userId)(), 6000);
   try {
     const [rows] = await db.query<[Record<string, unknown>[]]>(
       "SELECT * FROM type::table($t) LIMIT 20",

@@ -9,8 +9,7 @@
 
 import { connectSurreal, surrealConfig, SurrealProvider } from "../provider/surreal.ts";
 import { stubProviderFor } from "../provider/stub.ts";
-import { defaultBackend, type Backend } from "../service/build-service.ts";
-import { listInbox, type InboxEntry } from "../commands/inbox.ts";
+import { defaultBackend, type Backend } from "../service/access.ts";
 import type { Definition, AssignmentRow } from "../provider/types.ts";
 
 export interface GraphPayload {
@@ -36,18 +35,6 @@ export async function loadGraph(namespace: string, backend: Backend): Promise<Gr
   return { definition, assignments };
 }
 
-export interface InboxPayload {
-  entries: InboxEntry[];
-}
-
-/** God-view of the learning inbox (journal/friction), newest first. The stub
- *  backend has no runtime data — an empty inbox, not an error. */
-export async function loadInbox(namespace: string, backend: Backend, surrealDb?: string): Promise<InboxPayload> {
-  if (backend !== "surreal") return { entries: [] };
-  const entries = await listInbox(namespace, { all: true, ...(surrealDb ? { surrealDb } : {}) });
-  return { entries: entries.reverse() };
-}
-
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
@@ -66,13 +53,6 @@ export function makeConsoleHandler(
     if (url.pathname === "/graph") {
       try {
         return json(200, await loadGraph(namespace, backend));
-      } catch (e) {
-        return json(502, { error: e instanceof Error ? e.message : String(e) });
-      }
-    }
-    if (url.pathname === "/inbox") {
-      try {
-        return json(200, await loadInbox(namespace, backend));
       } catch (e) {
         return json(502, { error: e instanceof Error ? e.message : String(e) });
       }

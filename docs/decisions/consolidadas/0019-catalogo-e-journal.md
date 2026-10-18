@@ -43,8 +43,12 @@ de ADRs arquiteturais.
 
 Implementados: catálogo MCP sem build, vínculos administrativos, revisão do catálogo,
 Journal append/list e permissões de autor/admin com testes em SurrealDB 3.0.1.
-Os emitters e as superfícies antigas ainda existem enquanto consumidores são substituídos;
-isso é estado intermediário da implementação, não compromisso de compatibilidade.
+Retirados: emitters, servidor HTTP de build, comandos build/library/plugins sync,
+MCPs e comandos de inbox/decisões, e inbox do console. Init não semeia library.
+O grafo recebe instruções em ambient.instructions e referências explícitas a plugins.
+Deploy preserva tabelas históricas existentes, bloqueia identidades do produto e
+não volta a reconciliar decisões nem alterar frictions. Exportação administrativa
+nativa e restauração isolada têm cobertura de integração.
 
 Pendentes: setup e diagnóstico nos quatro clientes em macOS; publicação de plugins e
 fontes de versões; reconciliação GitHub e proteções; exportação do histórico; retirada

@@ -37,6 +37,8 @@ test("revision is stable across insertion order and changes outside the user's s
 
 test("plugins are explicit; missing client bindings and legacy skills are not fabricated", () => {
   const d = fixture();
+  d.skillCatalog.old = {source: "library", files: {"SKILL.md": "Historical only"}};
+  d.ambient.skills.push("old");
   d.skillCatalog.sample = { source: "plugin", plugin: "sample", marketplace: "samples" };
   d.marketplaces.samples = { claude: { source: "acme-labs/samples", name: "samples" } };
   d.purposes.find(p => p.id === "delivery")!.skills.push("sample");

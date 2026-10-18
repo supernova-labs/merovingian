@@ -6,7 +6,7 @@
 
 import { describe, test, expect, beforeAll, beforeEach, afterAll } from "bun:test";
 import { RecordId, type Surreal } from "surrealdb";
-import { applyGraph } from "../src/graph/apply.ts";
+import { applyGraph, readCurrentState } from "../src/graph/apply.ts";
 import { seedInto } from "../fixtures/example/seed.ts";
 import { surrealConfig, surrealReachable, connectSurreal, connectAs } from "../src/provider/surreal.ts";
 import { exampleDefinition } from "../fixtures/example/graph.ts";
@@ -48,7 +48,7 @@ async function edgeIds(db: Surreal): Promise<string[]> {
     // then clear the runtime tables (now guaranteed to exist) for test isolation.
     const { def, users } = clone();
     await applyGraph(db, def, users, { reset: true });
-    await db.query("DELETE inbox; DELETE client;");
+    await db.query("DELETE journal; DELETE client;");
   });
 
   test("T.1 lineage cascade — re-parenting an ancestor rewrites descendants' lineage", async () => {
@@ -67,7 +67,7 @@ async function edgeIds(db: Surreal): Promise<string[]> {
     );
     expect(rows.length).toBe(1);
     expect(rows[0]!.id).toBe("acme");
-    expect(rows[0]!.instructions).toContain("fictional **acme** tenant");
+    expect(rows[0]!.instructions).toContain("authenticated identity");
   });
 
   test("T.2b tenant instructions update and clear through the config singleton", async () => {
@@ -129,22 +129,17 @@ async function edgeIds(db: Surreal): Promise<string[]> {
     expect(agents.length).toBe(0);
   });
 
-  test("T.4b library content update converges (skill files + agent content)", async () => {
-    const { def, users } = clone();
-    const journal = def.skillCatalog.journal!;
-    if (journal.source !== "library") throw new Error("fixture drift: journal must be library");
-    journal.files["SKILL.md"] = "# journal v2\nnew method";
-    const agent = def.agentByPurpose.method!;
-    if (agent.source !== "library") throw new Error("fixture drift: method agent must be library");
-    agent.content = "# method v2";
-    const report = await applyGraph(db, def, users, {});
+  test("T.4b plugin reference updates converge without copying capability files", async () => {
+    const {def, users} = clone();
+    def.skillCatalog.journal = {source: "plugin", plugin: "journal-v2", marketplace: "acme"};
+    def.agentByPurpose.method = {source: "plugin", plugin: "method-v2", marketplace: "acme"};
+    const report = await applyGraph(db, def, users);
     expect(report.status).toBe("applied");
-    // hash-scalar updates in the plan, real content in the db
-    expect(report.plan.update.map((u) => `${u.kind}:${u.id}`).sort()).toEqual(["agent:method", "skill:journal"]);
-    const [skills] = await db.query<[{ files: Record<string, string> }[]]>("SELECT files FROM skill:journal");
-    expect(skills[0]!.files["SKILL.md"]).toBe("# journal v2\nnew method");
-    const [agents] = await db.query<[{ content: string }[]]>("SELECT content FROM agent:method");
-    expect(agents[0]!.content).toBe("# method v2");
+    const [skills] = await db.query<[{plugin:string;files?:unknown}[]]>("SELECT plugin, files FROM skill:journal");
+    expect(skills[0]?.plugin).toBe("journal-v2");
+    expect(skills[0]?.files).toBeUndefined();
+    const state = await readCurrentState(db, "acme");
+    expect(state.def.agentByPurpose.method).toEqual(def.agentByPurpose.method);
   });
 
   test("T.5 idempotency — a no-op apply changes zero edge records", async () => {
@@ -156,11 +151,11 @@ async function edgeIds(db: Surreal): Promise<string[]> {
     expect(await edgeIds(db)).toEqual(before); // relate mints new ids → any churn would differ
   });
 
-  test("T.6 atomic block — a user with a live inbox row can't be deleted; nothing applies", async () => {
+  test("T.6 atomic block — a user with a live journal row can't be deleted; nothing applies", async () => {
     // cleo appends an inbox row (stamped user:cleo by VALUE $auth)
     const rdb = await connectAs(cfg, "cleo");
     try {
-      await rdb.query('CREATE inbox SET kind = "journal", text = "need to stay"');
+      await rdb.query('CREATE journal SET text = "need to stay"');
     } finally {
       await rdb.close();
     }
@@ -185,10 +180,6 @@ async function edgeIds(db: Surreal): Promise<string[]> {
     def.buckets = def.buckets.filter((b) => !["kb-company", "kb-content", "proposals"].includes(b.id));
     delete def.agentByPurpose.content;
     delete def.agentByPurpose.sales;
-    // their decision domains (pricing, editorial) go too — records can't outlive the domain
-    def.decisionCatalog = Object.fromEntries(
-      Object.entries(def.decisionCatalog ?? {}).filter(([, d]) => !["pricing", "editorial"].includes(d.domain)),
-    );
     delete users.ben;
     users.ada!.assignments = users.ada!.assignments.filter((a) => a.purpose !== "content");
 

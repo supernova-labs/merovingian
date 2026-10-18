@@ -6,9 +6,9 @@
 import { describe, test, expect } from "bun:test";
 import { join } from "node:path";
 import { stubProviderFor } from "../src/provider/stub.ts";
-import { SurrealProvider, surrealConfig, surrealReachable, connectSurreal, connectWithToken, mintIdentityJwt } from "../src/provider/surreal.ts";
+import { SurrealProvider, surrealConfig, surrealReachable, connectSurreal } from "../src/provider/surreal.ts";
 import { reset } from "../src/commands/reset.ts";
-import { makeConsoleHandler, loadGraph, loadInbox } from "../src/server/console.ts";
+import { makeConsoleHandler, loadGraph } from "../src/server/console.ts";
 import type { AssignmentRow } from "../src/provider/types.ts";
 
 const TEST_DB = "acme_console_test"; // own db — golden also uses acme_test (avoid racing the migrate)
@@ -61,10 +61,8 @@ describe("/graph handler (stub)", () => {
     expect(res.status).toBe(404);
   });
 
-  test("GET /inbox on the stub → an empty inbox (no runtime data), not an error", async () => {
-    const res = await handler(new Request("http://127.0.0.1/inbox"));
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ entries: [] });
+  test("retired inbox route is unavailable", async () => {
+    expect((await handler(new Request("http://127.0.0.1/inbox"))).status).toBe(404);
   });
 });
 
@@ -72,32 +70,6 @@ describe("/graph handler (stub)", () => {
 const cfg = surrealConfig("acme", { db: TEST_DB });
 const dbUp = await surrealReachable(cfg);
 if (dbUp) await reset({ graph: EXAMPLE_YAML, surrealDb: TEST_DB });
-
-(dbUp ? describe : describe.skip)("/inbox god-view (surreal)", () => {
-  test("shows every entry — drained and undrained, newest first, user stamped", async () => {
-    // reset wipes STRUCTURE only — inbox rows survive across runs; start clean.
-    const root = await connectSurreal(cfg);
-    try {
-      await root.query("DELETE inbox");
-    } finally {
-      await root.close();
-    }
-    // seed as MEMBERS (the console never writes): user is stamped by the db.
-    for (const [uid, kind, text] of [["ada", "journal", "wrote the launch plan"], ["cleo", "friction", "the tracker stub broke"]] as const) {
-      const db = await connectWithToken(cfg, mintIdentityJwt(cfg, uid));
-      try {
-        await db.query(`CREATE inbox SET kind = $kind, text = $text`, { kind, text });
-      } finally {
-        await db.close();
-      }
-    }
-    const { entries } = await loadInbox("acme", "surreal", TEST_DB);
-    expect(entries.length).toBe(2);
-    // newest first: cleo's friction was created last. scope rides along (null = root queue).
-    expect(entries[0]).toMatchObject({ kind: "friction", user: "cleo", text: "the tracker stub broke", drained: null, scope: null });
-    expect(entries[1]).toMatchObject({ kind: "journal", user: "ada" });
-  });
-});
 
 (dbUp ? describe : describe.skip)("listAssignments (surreal)", () => {
   test("traverses responsible edges → same god-view as stub", async () => {

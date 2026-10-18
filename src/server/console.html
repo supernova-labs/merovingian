@@ -156,7 +156,6 @@
   <span class="tabs">
     <button id="tab-tree" class="tab active">Tree</button>
     <button id="tab-graph" class="tab">Graph</button>
-    <button id="tab-inbox" class="tab">Inbox</button>
   </span>
   <span class="meta" id="meta">loading…</span>
   <span class="gaps" id="gapsum"></span>
@@ -175,19 +174,6 @@
       <div><span class="sq" style="background:#22D3EE"></span>owner &nbsp; <span class="sq" style="background:#7e8799"></span>member</div>
     </div>
   </div>
-  <div id="inboxview" class="view" hidden>
-    <div class="inboxwrap">
-      <div class="inboxbar">
-        <button id="if-all" class="tab active">all</button>
-        <button id="if-journal" class="tab">journal</button>
-        <button id="if-friction" class="tab">friction</button>
-        <button id="if-undrained" class="tab">undrained only</button>
-        <span class="count" id="inboxcount"></span>
-      </div>
-      <div id="inboxscopes" class="inboxscopes"></div>
-      <div id="inboxlist"><div class="empty">loading…</div></div>
-    </div>
-  </div>
 </main>
 <script>
 let G = null;            // { definition, assignments }
@@ -198,11 +184,8 @@ let assignByUser = new Map();    // userId -> { user, rows: [assignment] }
 let userSpread = new Map();       // userId -> count of assignments
 let selected = null;             // selected purpose id
 let selectedPerson = null;       // selected user id
-let view = "tree";                // "tree" | "graph" | "inbox"
+let view = "tree";                // "tree" | "graph"
 let fg = null;                    // force-graph instance (lazy)
-let INBOX = null;                 // /inbox payload entries (lazy)
-let inboxKind = "all";            // "all" | "journal" | "friction"
-let inboxUndrained = false;       // filter: undrained only
 let showPeople = true;            // graph view: people layer on/off
 const hiddenPeople = new Set();   // graph view: individually hidden user ids
 
@@ -502,96 +485,22 @@ function chipSection(title, items, mapper) {
 function chip(text, cls) { return el("span", cls || "chip", text); }
 function plink(id) { const a = el("a", "plink", id); a.onclick = () => select(id); return a; }
 
-// ---- view switching (Tree | Graph | Inbox) ----
+// ---- view switching (Tree | Graph) ----
 function setView(v) {
   view = v;
-  for (const t of ["tree", "graph", "inbox"]) {
+  for (const t of ["tree", "graph"]) {
     document.getElementById("tab-" + t).classList.toggle("active", v === t);
     document.getElementById(t + "view").hidden = v !== t;
   }
   if (v === "graph") { ensureGraph(); renderPeopleCtl(); }
-  if (v === "inbox") ensureInbox();
   // re-render the current selection into the now-active panel
-  if (v !== "inbox") {
+  {
     if (selected) renderDetail(P.get(selected));
     else if (selectedPerson) renderPerson(selectedPerson);
   }
 }
 document.getElementById("tab-tree").onclick = () => setView("tree");
 document.getElementById("tab-graph").onclick = () => setView("graph");
-document.getElementById("tab-inbox").onclick = () => setView("inbox");
-
-// ---- inbox view (journals + frictions, god-view) ----
-async function ensureInbox() {
-  if (INBOX) { renderInbox(); return; }
-  const res = await fetch("/inbox");
-  const body = await res.json();
-  if (!res.ok) { document.getElementById("inboxlist").innerHTML = '<div class="empty">Error: ' + (body.error || res.status) + "</div>"; return; }
-  INBOX = body.entries;
-  renderInbox();
-}
-function setInboxKind(k) {
-  inboxKind = k;
-  for (const t of ["all", "journal", "friction"]) document.getElementById("if-" + t).classList.toggle("active", k === t);
-  renderInbox();
-}
-document.getElementById("if-all").onclick = () => setInboxKind("all");
-document.getElementById("if-journal").onclick = () => setInboxKind("journal");
-document.getElementById("if-friction").onclick = () => setInboxKind("friction");
-document.getElementById("if-undrained").onclick = () => {
-  inboxUndrained = !inboxUndrained;
-  document.getElementById("if-undrained").classList.toggle("active", inboxUndrained);
-  renderInbox();
-};
-function renderInbox() {
-  const list = document.getElementById("inboxlist");
-  list.innerHTML = "";
-  const shown = (INBOX || []).filter(e =>
-    (inboxKind === "all" || e.kind === inboxKind) && (!inboxUndrained || !e.drained));
-  const undrained = (INBOX || []).filter(e => !e.drained).length;
-  document.getElementById("inboxcount").textContent =
-    shown.length + " shown · " + (INBOX || []).length + " total · " + undrained + " undrained";
-  // pending-by-scope: the drain's "N frictions await local governance" warning, as a panel
-  const byScope = new Map();
-  for (const e of (INBOX || [])) if (!e.drained && e.kind === "friction") {
-    const k = e.scope || "root";
-    byScope.set(k, (byScope.get(k) || 0) + 1);
-  }
-  const parts = [...byScope.entries()].sort((a, b) => b[1] - a[1]).map(([s, n]) => s + " " + n);
-  const scopesEl = document.getElementById("inboxscopes");
-  scopesEl.innerHTML = "";
-  if (parts.length) {
-    scopesEl.appendChild(document.createTextNode("pending frictions by scope: "));
-    parts.forEach((p, i) => {
-      if (i) scopesEl.appendChild(document.createTextNode(" · "));
-      const b = el("b", null, p);
-      scopesEl.appendChild(b);
-    });
-  }
-  if (!shown.length) { list.appendChild(el("div", "empty", "nothing here — the inbox fills as sessions journal and register frictions.")); return; }
-  for (const e of shown) {
-    const card = el("div", "entry" + (e.drained ? " drained" : ""));
-    const head = el("div", "head");
-    head.appendChild(el("span", "kind " + e.kind, e.kind));
-    head.appendChild(el("span", "who", e.user));
-    if (e.origin) head.appendChild(el("span", "origin", "via " + e.origin));
-    head.appendChild(el("span", "scope" + (e.scope ? "" : " rootq"), "→ " + (e.scope || "root")));
-    head.appendChild(el("span", "when", new Date(e.at).toLocaleString()));
-    head.appendChild(e.drained
-      ? el("span", "stamp", "drained " + new Date(e.drained).toLocaleString())
-      : el("span", "stamp live", "undrained"));
-    card.appendChild(head);
-    const txt = el("div", "text clamped", e.text);
-    card.appendChild(txt);
-    list.appendChild(card);
-    // in the DOM now — only offer expand when the clamp actually cut something
-    if (txt.scrollHeight > txt.clientHeight + 1) {
-      const t = el("a", "more", "▸ more");
-      t.onclick = () => { const c = txt.classList.toggle("clamped"); t.textContent = c ? "▸ more" : "▾ less"; };
-      card.appendChild(t);
-    }
-  }
-}
 
 // ---- force-graph (2D): purposes + humans ----
 function loadScript(src) {

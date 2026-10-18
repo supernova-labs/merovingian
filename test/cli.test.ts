@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import pkg from "../package.json";
 import { parseArgs } from "../src/cli.ts";
-import { normalizeRequestedPurposes } from "../src/commands/build.ts";
 
 describe("version command", () => {
   test("accepts the command and conventional flag aliases", () => {
@@ -30,11 +29,19 @@ describe("version command", () => {
   });
 });
 
-describe("build purpose receipt", () => {
-  test("normalizes the requested purpose roots without expanding them", () => {
-    expect(normalizeRequestedPurposes(undefined)).toEqual([]);
-    expect(normalizeRequestedPurposes([" growth ", "content", "growth", ""])).toEqual([
-      "growth", "content",
-    ]);
+describe("retired entrypoints", () => {
+  test("rejects legacy commands instead of producing workspace files", () => {
+    for (const command of ["build", "inbox", "decisions", "library", "plugins", "namespace"]) {
+      expect(() => parseArgs([command, "acme"])).toThrow("unknown command");
+    }
+  });
+  test("retired MCP servers cannot start", async () => {
+    for (const server of ["inbox", "decisions"]) {
+      const child = Bun.spawn([process.execPath, join(import.meta.dir, "../bin/merovingian.ts"), "mcp", server], {stdout: "pipe", stderr: "pipe"});
+      const stderr = await new Response(child.stderr).text();
+      expect(await child.exited).not.toBe(0);
+      expect(stderr).toContain("unknown mcp server");
+      expect(await new Response(child.stdout).text()).toBe("");
+    }
   });
 });

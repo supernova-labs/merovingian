@@ -1,3 +1,4 @@
+import { restrictLegacyHistory } from "../history/retire.ts";
 // The deterministic apply (roadmap I.4, ADR 0009 §3). Converges Surreal toward the
 // desired graph.yaml — structure-only, idempotent, referrer-safe on delete, never
 // touching business data. ONE orchestration serves both:
@@ -8,7 +9,7 @@
 // → [pre-flight referrer-check, atomic] → upsert desired → reconcile edges → delete.
 //
 // Atomicity without a transaction: apply never touches runtime tables, so a runtime
-// referrer (inbox.user) reads identically before/after the upsert; and validateGraph
+// referrer (journal.author) reads identically before/after the upsert; and validateGraph
 // guarantees no surviving structural record references a deleted one. So the referrer
 // check is accurate PRE-WRITE → abort-before-writing is atomic, zero partial state.
 
@@ -86,7 +87,7 @@ export async function readCurrentState(db: Surreal, namespace: string): Promise<
 // ─── runtime referrer registry ───────────────────────────────────────────
 // Structural referrers are provably clean (validate + upsert-before-delete), so the
 // only referrers that can BLOCK a delete are live runtime rows pointing at a record.
-// Today: inbox.user → user. Future runtime FKs are one entry each.
+// Journal authors remain referentially protected.
 
 interface RuntimeRef {
   table: string;
@@ -96,34 +97,9 @@ interface RuntimeRef {
   array?: boolean;
 }
 const RUNTIME_REFERRERS: Record<string, RuntimeRef[]> = {
-  user: [{ table: "inbox", field: "user", targetKind: "user" }, { table: "journal", field: "author", targetKind: "user" }],
-  // a decision_log citing a record blocks its deletion — cited jurisprudence
-  // never vanishes silently (ADR 0013).
-  decision: [{ table: "decision_log", field: "records", targetKind: "decision", array: true }],
-};
+  user: [{ table: "journal", field: "author", targetKind: "user" }],
 
-/** ADR 0014: a deleted purpose's scoped frictions fall to the nearest SURVIVING
- *  ancestor (gravity, ADR 0008) — or back to the root queue (scope = NONE) when the
- *  whole line goes. Runtime data never blocks a structural purpose delete. */
-async function rescopeOrphanedFrictions(
-  db: Surreal,
-  current: GraphState,
-  recordDeletes: { kind: string; id: string }[],
-): Promise<void> {
-  const deleted = new Set(recordDeletes.filter((d) => d.kind === "purpose").map((d) => d.id));
-  if (!deleted.size) return;
-  const parentOf = new Map(current.def.purposes.map((p) => [p.id, p.parent]));
-  for (const id of deleted) {
-    let anc = parentOf.get(id) ?? null;
-    while (anc && deleted.has(anc)) anc = parentOf.get(anc) ?? null;
-    await db.query(
-      anc
-        ? `UPDATE inbox SET scope = type::record("purpose", $anc) WHERE scope = type::record("purpose", $id)`
-        : `UPDATE inbox SET scope = NONE WHERE scope = type::record("purpose", $id)`,
-      anc ? { anc, id } : { id },
-    );
-  }
-}
+};
 
 /** Live-query the runtime rows still pointing at a to-be-deleted record. */
 export async function referrerCheck(db: Surreal, kind: string, id: string): Promise<string[]> {
@@ -143,13 +119,10 @@ export async function referrerCheck(db: Surreal, kind: string, id: string): Prom
 
 // ─── mutations ─────────────────────────────────────────────────────────────
 
-/** Engine runtime TABLE schema (inbox + decision domain/log) — idempotent OVERWRITE,
- *  safe to re-apply standalone (the inbox drain does, before stamping: SCHEMAFULL
- *  silently drops writes to a field an older db hasn't defined yet). Carries NO secret:
- *  the identity DEFINE ACCESS lives in auth.surql (ensureAuthSchema), so the drain can
- *  never re-key it. */
+/** Apply current runtime schema and restrict preserved history; never re-key identity. */
 export async function ensureDataSchema(db: Surreal): Promise<void> {
   await db.query(await readFile(DATA_SCHEMA_PATH, "utf8"));
+  await restrictLegacyHistory(db);
 }
 
 /** The identity DEFINE ACCESS — provisioned ONLY on the apply/reset path (never the
@@ -203,21 +176,6 @@ async function relateEdge(db: Surreal, e: Edge): Promise<void> {
     new RecordId("purpose", e.purpose),
     compact({ role: e.role, scope: e.scope }),
   );
-}
-
-/** Reconcile the decision_domain lookup (ADR 0013): domain → owning purpose, derived
- *  from purpose.decides. It is LIVE AUTHORIZATION (decision_log permissions dot-access
- *  it), so staleness matters both ways: upsert every declared domain, DELETE every row
- *  whose domain is no longer declared. Runs in both modes, after upsertRecords. */
-export async function reconcileDecisionDomains(db: Surreal, def: Definition): Promise<void> {
-  const declared: string[] = [];
-  for (const p of def.purposes) {
-    for (const d of p.decides) {
-      declared.push(d);
-      await db.upsert(new RecordId("decision_domain", d)).content({ owner: new RecordId("purpose", p.id) });
-    }
-  }
-  await db.query("DELETE decision_domain WHERE record::id(id) NOTINSIDE $domains", { domains: declared });
 }
 
 /** Reconcile responsible edges as a delta. relate is only ever called for a key
@@ -279,9 +237,8 @@ export async function applyGraph(db: Surreal, definition: Definition, users: Rec
 
   // reset: blunt wipe + project. No plan, no referrer-check, no deletes.
   if (opts.reset) {
-    await db.query("DELETE config; DELETE purpose; DELETE bucket; DELETE tool; DELETE marketplace; DELETE skill; DELETE agent; DELETE user; DELETE responsible; DELETE decision_domain; DELETE decision;");
+    await db.query("DELETE config; DELETE purpose; DELETE bucket; DELETE tool; DELETE marketplace; DELETE skill; DELETE agent; DELETE user; DELETE responsible;");
     await upsertRecords(db, definition, users);
-    await reconcileDecisionDomains(db, definition);
     await reconcileEdges(db, { added: desired.edges, removed: [], roleChanged: [] });
     return { status: "applied", plan: EMPTY_PLAN, applied: { created: structuralRecords(definition, users).length + desired.edges.length, updated: 0, deleted: 0 } };
   }
@@ -314,9 +271,7 @@ export async function applyGraph(db: Surreal, definition: Definition, users: Rec
 
   // mutate: upsert all desired → reconcile edges → delete removed records.
   await upsertRecords(db, definition, users);
-  await reconcileDecisionDomains(db, definition);
   await reconcileEdges(db, edgeDelta(desired, current));
-  await rescopeOrphanedFrictions(db, current, recordDeletes);
   for (const d of recordDeletes) {
     await db.delete(new RecordId(d.kind, d.id));
     // a removed HUMAN takes their credential along: if the same uid is ever re-created

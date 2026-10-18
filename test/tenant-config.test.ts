@@ -8,7 +8,7 @@ import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadTenantConnection, connectionOverrides } from "../src/tenant-config.ts";
-import { writeNamespace, remoteOptsFor, registeredSurrealUrl } from "../src/transport.ts";
+import { writeNamespace, registeredSurrealUrl } from "../src/transport.ts";
 import { surrealConfig } from "../src/provider/surreal.ts";
 import { namespaceFile } from "../src/paths.ts";
 import { baselineMerovingianToml } from "../src/init/baseline.ts";
@@ -72,18 +72,6 @@ describe("surrealConfig url resolution — overrides > env > registry > default"
     expect(surrealConfig("beta", { url: "ws://explicit:1/rpc" }, home).url).toBe("ws://explicit:1/rpc");
   });
 
-  test("a remote-transport entry is NOT a surreal url (registry keeps both shapes apart)", async () => {
-    await writeNamespace("beta", { transport: "remote", url: "https://service.example" }, home);
-    expect(registeredSurrealUrl("beta", home)).toBeNull();
-    expect(surrealConfig("beta", {}, home).url).toBe("ws://localhost:8020/rpc");
-  });
-});
-
-describe("remoteOptsFor — only remote entries are remote", () => {
-  test("a surreal entry is served locally (undefined)", async () => {
-    await writeNamespace("beta", { transport: "surreal", url: "ws://localhost:9019/rpc" }, home);
-    expect(await remoteOptsFor("beta", home)).toBeUndefined();
-  });
 });
 
 describe("connectionOverrides — the authoring-side registration", () => {

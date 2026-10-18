@@ -1,9 +1,12 @@
 # Merovingian documentation
 
-Merovingian models an organization as a **graph of purposes**: `build` projects each person a scoped
-Claude Code and Codex workspace, while `deploy` reconciles `graph.yaml`, tenant library content,
-global workspace instructions, and ratified decisions into SurrealDB. This is the full documentation
-set. New here? Read [concepts/overview.md](./concepts/overview.md) first.
+The next major uses authenticated Catalog and Journal MCPs, a declarative purpose
+graph and native marketplace installation. Start with [Catalog and Journal](reference/catalog-and-journal.md)
+and [History and cutover](guides/history-and-cutover.md).
+
+**Documentation migration is in progress.** The older conceptual and operator guides
+below describe 0.5.x and still contain retired build/library workflows. They must be
+revised before this branch is released; do not use them to operate the new runtime.
 
 The docs are organized by what you're trying to do (a [Diátaxis](https://diataxis.fr) split):
 

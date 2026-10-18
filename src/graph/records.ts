@@ -5,7 +5,7 @@
 // so callers can hand the content straight to `.content()` without re-compacting.
 
 import { RecordId } from "surrealdb";
-import type { AgentRef, Ambient, Bucket, DecisionDef, Definition, Purpose, SkillRef, ToolDef, User } from "../provider/types.ts";
+import type { AgentRef, Ambient, Bucket, Definition, Purpose, SkillRef, ToolDef, User } from "../provider/types.ts";
 
 /** Drop keys whose value is undefined (they become NONE on write). */
 export function compact<T extends Record<string, unknown>>(obj: T): T {
@@ -124,22 +124,6 @@ export function agentDoc(name: string, description: string, content: string, rea
   return { recordId: new RecordId("agent", name), content: { description, content, readers: purposeLinks(readers) } };
 }
 
-/** A ratified decision record (ADR 0013) — id is "<domain>/<slug>" (⟨⟩-escaped by
- *  the driver). `at` ships as a real datetime; supersedes as a record link. */
-export function decisionDoc(id: string, d: DecisionDef): RecordDoc {
-  return {
-    recordId: new RecordId("decision", id),
-    content: compact({
-      domain: d.domain,
-      status: d.status,
-      title: d.title,
-      content: d.content,
-      supersedes: d.supersedes ? new RecordId("decision", d.supersedes) : undefined,
-      at: d.at ? new Date(d.at) : undefined,
-    }),
-  };
-}
-
 /** The authored ref string a purpose record stores: `name` (library) or
  *  `plugin@marketplace` (external). "@" is the discriminator on read-back. */
 export function agentRefString(a: AgentRef | undefined): string | undefined {
@@ -204,7 +188,6 @@ export function structuralRecords(def: Definition, users: Record<string, User>):
     docs.push(marketplaceDoc(name, repo, readers.marketplace.get(name), ambientMarketplaces.has(name)));
   for (const [name, s] of Object.entries(def.skillCatalog))
     docs.push(skillDoc(name, s, readers.skill.get(name), ambientSkills.has(name)));
-  for (const [id, d] of Object.entries(def.decisionCatalog ?? {})) docs.push(decisionDoc(id, d));
   docs.push(configDoc(def.namespace, def.ambient));
   for (const b of def.buckets) docs.push(bucketDoc(b, readers.bucket.get(b.id)));
   const lin = lineageOf(def.purposes);
