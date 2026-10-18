@@ -14,7 +14,7 @@ github:
       reviewTeam: marketplace-reviewers
       requiredApprover: operator
       approverTeam: marketplace-approver
-      allowApproverOwnPullRequest: true
+      allowApproverPullRequestBypass: true
 ```
 
 This is a schema example, not a complete graph. Every referenced user needs a unique
@@ -24,10 +24,12 @@ to identify its contributors; plugin consumers receive read access. Purpose memb
 and owners have the same entitlement. Multiple assignments combine their access.
 The member catalog never exposes the administrative policy.
 
-The author-only exception in the example is deliberately **blocked by the native
-protection adapter**. It requires a trusted conditional review check; it is not
-implemented as a general administrator bypass. Do not disable it just to make an
-apply succeed if the tenant requires that behavior.
+`allowApproverPullRequestBypass` grants the singleton mandatory-approver team
+manual bypass of the approval rules **through pull requests only**. It also permits
+that person to bypass review on someone else's PR; limiting its use to their own
+PRs is an operating convention, not an enforced condition. No custom check is used.
+Branch integrity lives in a separate ruleset with no bypass: force pushes and branch
+deletion remain prohibited. The planner validates singleton membership on each run.
 
 ## Review and apply
 
@@ -63,7 +65,9 @@ No database credential is needed for these commands.
   graph-derived reviewer membership. The mandatory-approver team has one member.
   The command does not mutate shared teams. Read-only members cannot review under
   this policy, and the native GitHub review rule excludes PR authors.
-- The owned `merovingian-reviewed-changes` ruleset targets the default branch.
+- The owned `merovingian-reviewed-changes` and `merovingian-branch-integrity`
+  rulesets target the default branch. Integrity is installed and verified before
+  upgrading an older combined ruleset or granting any approval bypass.
   Other rulesets remain in force. The API's required-team-reviewer feature is beta
   and may be unavailable for an account. Failure is reported, never replaced with
   a weaker protection. Existing rulesets with the reserved name are managed by this

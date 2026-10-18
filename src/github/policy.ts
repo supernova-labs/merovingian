@@ -11,7 +11,7 @@ export const GithubPolicySchema = z.object({
     reviewTeam: z.string().regex(/^[a-z0-9-]+$/),
     requiredApprover: z.string().optional(),
     approverTeam: z.string().regex(/^[a-z0-9-]+$/).optional(),
-    allowApproverOwnPullRequest: z.boolean().default(false),
+    allowApproverPullRequestBypass: z.boolean().default(false),
   }).strict()),
 }).strict();
 export type GithubPolicy = z.infer<typeof GithubPolicySchema>;
@@ -54,7 +54,7 @@ export function githubDesired(def: Definition, users: Record<string, User>): Des
     if (result.has(repository)) throw new Error(`Duplicate repository: ${repository}`);
     if (Boolean(p.requiredApprover) !== Boolean(p.approverTeam)) throw new Error(`${repository}: requiredApprover and approverTeam must be paired`);
     if (p.requiredApprover) loginFor(p.requiredApprover);
-    if (p.allowApproverOwnPullRequest && !p.requiredApprover) throw new Error(`${repository}: self-author exception requires an approver`);
+    if (p.allowApproverPullRequestBypass && !p.requiredApprover) throw new Error(`${repository}: manual PR bypass requires an approver`);
     result.set(repository, { repository, policy: p, access: {}, reviewers: [] });
   }
   // An explicit repository list is the mutation boundary. Undeclared sources are never touched.

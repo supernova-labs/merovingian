@@ -47,7 +47,7 @@ test("marketplace consumers get read; ownership comes from the same repository's
   const g=graph(); g.definition.marketplaces.core={claude:{name:"core",source:"acme/marketplace"}};
   g.definition.skillCatalog.setup={source:"plugin",plugin:"core",marketplace:"core"};
   g.definition.ambient.skills=["setup"];
-  g.definition.github!.repositories["acme/marketplace"]={reviewTeam:"core",allowApproverOwnPullRequest:false};
+  g.definition.github!.repositories["acme/marketplace"]={reviewTeam:"core",allowApproverPullRequestBypass:false};
   const desired=githubDesired(g.definition,g.users).find(r=>r.repository==="acme/marketplace")!;
   expect(Object.values(desired.access)).toEqual(["pull","pull","pull"]);
   expect(desired.reviewers).toEqual([]);
@@ -81,29 +81,28 @@ test("pending matching invite is not reissued; stale invite is cancelled before 
   expect(plan(s,"permissions").blockers.join()).toContain("unmapped invitation");
 });
 
-test("review policy checks exact group and requires no bypass; self-author exception is explicit blocker", () => {
+test("review policy checks exact group and defaults to no bypass", () => {
   const s=snapshot(), p=plan(s,"protections"); expect(p.blockers).toEqual([]);
-  const body=p.changes[0]!.body as any;
+  const body=p.changes[1]!.body as any;
   expect(body.bypass_actors).toEqual([]);
-  expect(body.rules[2].parameters.required_reviewers[0].reviewer.id).toBe(1);
+  expect(body.rules[0].parameters.required_reviewers[0].reviewer.id).toBe(1);
   s.teams[0]!.members.push("outsider"); expect(plan(s,"protections").blockers.join()).toContain("exactly");
-  const t=target();t.policy.allowApproverOwnPullRequest=true;
-  expect(planRepository(t,s,graph().users,"protections").blockers.join()).toContain("author-only");
+
 });
 
 test("mandatory approver is an additional singleton team, not OR with any owner", () => {
   const t=target();t.policy.requiredApprover="ada";t.policy.approverTeam="mandatory";
   const s=snapshot();s.teams.push({id:2,slug:"mandatory",permission:"push",members:["ada-example"]});
   const p=planRepository(t,s,graph().users,"protections");expect(p.blockers).toEqual([]);
-  expect((p.changes[0]!.body as any).rules[2].parameters.required_reviewers).toHaveLength(2);
+  expect((p.changes[1]!.body as any).rules[0].parameters.required_reviewers).toHaveLength(2);
 });
 
 test("API defaults and rule order do not create perpetual drift; missing reviewer enforcement does", () => {
-  const s=snapshot();const body=plan(s,"protections").changes[0]!.body as any;
-  body.rules[2].parameters.allowed_merge_methods=["merge","squash","rebase"];
-  body.rules.reverse(); s.rulesets=[{id:7,source_type:"Repository",...body}];
+  const s=snapshot();const bodies=plan(s,"protections").changes.map(c=>c.body as any); const body=bodies[1]!;
+  body.rules[0].parameters.allowed_merge_methods=["merge","squash","rebase"];
+  body.rules.reverse(); s.rulesets=bodies.map((b,i)=>({id:7+i,source_type:"Repository",...b}));
   expect(plan(s,"protections").changes).toEqual([]);
-  delete (s.rulesets[0]!.rules[0] as any).parameters.required_reviewers;
+  delete (s.rulesets[1]!.rules[0] as any).parameters.required_reviewers;
   expect(plan(s,"protections").changes).toHaveLength(1);
 });
 
@@ -112,7 +111,11 @@ class Fake implements GithubApi {
   async request(method: "GET" | "PUT" | "POST" | "DELETE", path:string, body?:unknown): Promise<unknown> {
     if(method!=="GET") {
       this.writes.push({method,path,body}); if(this.fail) throw new Error("SECRET ERROR");
-      if(path.includes("/rulesets")) {if(!this.ignoreRules) this.s.rulesets=[{id:7,source_type:"Repository",...body as any}];}
+      if(path.includes("/rulesets")) {if(!this.ignoreRules) {
+        const b=body as any; const existing=this.s.rulesets.find(r=>r.name===b.name);
+        this.s.rulesets=this.s.rulesets.filter(r=>r.name!==b.name);
+        this.s.rulesets.push({id:existing?.id ?? 7+this.s.rulesets.length,source_type:"Repository",...b});
+      }}
       else if(path.includes("/collaborators/") && method==="PUT") {
         const c={login:path.split("/").at(-1)!,type:"User",role_name:(body as any).permission === "pull" ? "read":"write"};
         this.s.direct.push(c);this.s.collaborators.push(c);
@@ -128,7 +131,7 @@ class Fake implements GithubApi {
     if(clean.endsWith("/teams"))return this.s.teams;
     if(clean.endsWith("/members"))return this.s.teams[0]!.members.map(login=>({login,type:"User"}));
     if(clean.endsWith("/rulesets"))return this.s.rulesets;
-    if(clean.endsWith("/rulesets/7"))return this.s.rulesets[0];
+    if(/\/rulesets\/\d+$/.test(clean))return this.s.rulesets.find(r=>r.id===Number(clean.split("/").at(-1)));
     throw new Error(`Unexpected ${path}`);
   }
 }
@@ -160,4 +163,48 @@ test("pagination includes later pages and rejects non-array/error responses",asy
 });
 test("missing administrative metadata fails closed",async()=>{
   await expect(inspectRepository({request:async()=>({private:true})},"acme/kb")).rejects.toThrow();
+});
+
+test("manual approver bypass is PR-only and never bypasses branch integrity", () => {
+  const g=graph(); const t=target();
+  t.policy={...t.policy,requiredApprover:"ada",approverTeam:"mandatory",allowApproverPullRequestBypass:true};
+  const s=snapshot();s.teams.push({id:2,slug:"mandatory",permission:"push",members:["ada-example"]});
+  const p=planRepository(t,s,g.users,"protections");
+  expect(p.blockers).toEqual([]);
+  const [integrity,review]=p.changes.map(c=>c.body as any);
+  expect(integrity.name).toBe("merovingian-branch-integrity");
+  expect(integrity.bypass_actors).toEqual([]);
+  expect(integrity.rules).toEqual([{type:"deletion"},{type:"non_fast_forward"}]);
+  expect(review.bypass_actors).toEqual([{actor_id:2,actor_type:"Team",bypass_mode:"pull_request"}]);
+  expect(review.rules.map((r:any)=>r.type)).toEqual(["pull_request"]);
+  s.teams[1]!.members.push("ben-example");
+  expect(planRepository(t,s,g.users,"protections").blockers.join()).toContain("exactly");
+});
+
+test("combined ruleset upgrade installs integrity before replacing approval rules", () => {
+  const s=snapshot(); const bodies=plan(s,"protections").changes.map(c=>c.body as any);
+  const review=bodies[1]!;
+  s.rulesets=[{id:12,source_type:"Repository",...review,rules:[...bodies[0]!.rules,...review.rules]}];
+  const p=plan(s,"protections");
+  expect(p.changes.map(c=>c.method)).toEqual(["POST","PUT"]);
+  expect((p.changes[0]!.body as any).name).toBe("merovingian-branch-integrity");
+  expect(p.changes[1]!.path).toBe("/repos/acme/kb/rulesets/12");
+});
+
+test("approval rules rejection after integrity creation stops all access grants", async () => {
+  const api=new Fake(),g=graph();const base=api.request.bind(api);
+  api.request=async(method,path,body)=>{
+    if(method!=="GET" && (body as any)?.name==="merovingian-reviewed-changes") throw new Error("rejected");
+    return base(method,path,body);
+  };
+  const p=await planGithub(api,g.definition,g.users);
+  const report=await applyGithub(api,g.definition,g.users,p.revision);
+  expect(report.status).toBe("partial");
+  expect(api.writes).toHaveLength(1);
+  expect((api.writes[0]!.body as any).name).toBe("merovingian-branch-integrity");
+});
+
+test("manual bypass requires an explicitly mapped mandatory approver",()=>{
+  const g=graph();g.definition.github!.repositories["acme/kb"]!.allowApproverPullRequestBypass=true;
+  expect(()=>githubDesired(g.definition,g.users)).toThrow("requires an approver");
 });

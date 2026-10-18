@@ -72,7 +72,6 @@ export function planRepository(target: DesiredRepository, current: Snapshot, use
     }
   }
   if (scope !== "permissions") {
-    if (target.policy.allowApproverOwnPullRequest) block("native required-reviewer rules cannot express the approver's author-only exception; choose a trusted review check before enabling this policy");
     const teamFor = (slug: string, expected: string[]) => {
       const team = current.teams.find(t => t.slug === slug);
       if (!team || canonical(team.members) !== canonical([...expected].sort()) || (level[team.permission] ?? 0) < level.push!) {
@@ -86,20 +85,28 @@ export function planRepository(target: DesiredRepository, current: Snapshot, use
     if (target.policy.requiredApprover && target.policy.approverTeam) {
       reviewers.push(teamFor(target.policy.approverTeam, [users[target.policy.requiredApprover]!.github!.toLowerCase()]));
     }
-    const body = { name: ruleName, target: "branch", enforcement: "active", bypass_actors: [],
+    const approverTeam = current.teams.find(t => t.slug === target.policy.approverTeam);
+    const bypass = target.policy.allowApproverPullRequestBypass && approverTeam
+      ? [{ actor_id: approverTeam.id, actor_type: "Team", bypass_mode: "pull_request" }] : [];
+    const body = { name: ruleName, target: "branch", enforcement: "active", bypass_actors: bypass,
       conditions: { ref_name: { include: ["~DEFAULT_BRANCH"], exclude: [] } },
-      rules: [{ type: "deletion" }, { type: "non_fast_forward" }, { type: "pull_request", parameters: {
+      rules: [{ type: "pull_request", parameters: {
         required_approving_review_count: 1, dismiss_stale_reviews_on_push: true, require_code_owner_review: false,
         require_last_push_approval: false, required_review_thread_resolution: true,
         required_reviewers: reviewers.filter(r => r !== undefined),
       } }] };
-    const owned = current.rulesets.filter(r => r.name === ruleName);
-    if (owned.length > 1 || owned.some(r => r.source_type !== "Repository")) block("ambiguous or inherited Merovingian ruleset");
-    const existing = owned[0];
-    const currentBody = existing ? { name: existing.name, target: existing.target, enforcement: existing.enforcement,
-      bypass_actors: existing.bypass_actors, conditions: existing.conditions, rules: existing.rules } : undefined;
-    if (!rulesMatch(currentBody, body)) changes.unshift({ repository: repo, description: "enforce reviewed PRs on the default branch",
-      method: existing ? "PUT" : "POST", path: `${base}/rulesets${existing ? `/${existing.id}` : ""}`, body });
+    // Install non-bypassable integrity first, including when upgrading the old combined ruleset.
+    const integrity = { ...body, name: "merovingian-branch-integrity", bypass_actors: [],
+      rules: [{ type: "deletion" }, { type: "non_fast_forward" }] };
+    for (const desired of [integrity, body]) {
+      const owned = current.rulesets.filter(r => r.name === desired.name);
+      if (owned.length > 1 || owned.some(r => r.source_type !== "Repository")) block(`ambiguous or inherited ruleset: ${desired.name}`);
+      const existing = owned[0];
+      const currentBody = existing ? { name: existing.name, target: existing.target, enforcement: existing.enforcement,
+        bypass_actors: existing.bypass_actors, conditions: existing.conditions, rules: existing.rules } : undefined;
+      if (!rulesMatch(currentBody, desired)) changes.push({ repository: repo, description: `enforce ${desired.name} on the default branch`,
+        method: existing ? "PUT" : "POST", path: `${base}/rulesets${existing ? `/${existing.id}` : ""}`, body: desired });
+    }
   }
   return { changes, blockers };
 }
@@ -130,8 +137,9 @@ export async function applyGithub(api: GithubApi, def: Definition, users: Record
       await api.request(change.method, change.path, change.body); applied.push(change);
       if (change.path.includes("/rulesets")) {
         const snapshot = await inspectRepository(api, change.repository);
-        const protection = planRepository(plan.desired.find(d => d.repository === change.repository)!, snapshot, users, "protections");
-        if (protection.changes.length || protection.blockers.length) throw new Error("Protection was not enforced");
+        const expected = change.body as { name: string };
+        const matches = snapshot.rulesets.filter(r => r.name === expected.name && r.source_type === "Repository");
+        if (matches.length !== 1 || !rulesMatch(matches[0], expected)) throw new Error("Protection was not enforced");
       }
     }
     catch { return { status: "partial" as const, applied, failed: change, message: "This operation failed or its protection could not be verified. No subsequent operations ran. Re-plan before retrying." }; }

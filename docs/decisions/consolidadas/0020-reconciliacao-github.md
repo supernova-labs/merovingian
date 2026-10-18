@@ -1,6 +1,6 @@
 # ADR 0020 — Reconciliação administrativa do GitHub
 
-**Status:** Implementação inicial; exceção de review por autoria aguarda decisão.
+**Status:** Implementação inicial; bypass manual via PR aprovado pelo humano.
 **Relacionado:** 0008, 0009, 0019.
 
 ## Contrato
@@ -40,16 +40,20 @@ acesso herdado. Recursos, papéis e atores não compreendidos falham fechados.
 
 ## Proteções
 
-Um ruleset próprio protege a branch padrão contra deleção, force push e merge sem
-PR revisada. Não altera rulesets alheios ou herdados. Equipe de review existente
-precisa corresponder exatamente às pessoas cujo recorte possui o repositório.
-Um aprovador obrigatório acrescenta outra equipe, com somente essa pessoa; as
-exigências são cumulativas. Equipes não são modificadas automaticamente porque sua
-composição pode afetar outros repositórios. A API de required reviewers está em
-beta; rejeição ou ausência da regra na releitura impede concessões posteriores.
+Dois rulesets protegem a branch padrão: `merovingian-reviewed-changes` exige PR
+revisada; `merovingian-branch-integrity` impede deleção e force push sem bypass.
+A integridade é instalada e verificada primeiro, inclusive ao substituir o ruleset
+combinado anterior. Não altera rulesets alheios ou herdados. Equipe de review
+existente precisa corresponder exatamente às pessoas cujo recorte possui o
+repositório. O aprovador obrigatório acrescenta equipe individual; as exigências
+são cumulativas. Equipes não são modificadas automaticamente porque sua composição
+pode afetar outros repositórios. Rejeição ou ausência da regra na releitura impede
+concessões posteriores.
 
-A exceção aprovada pelo humano (aprovador obrigatório é autor da PR) **não** vira
-bypass irrestrito. O adaptador nativo bloqueia essa política, pois regras por equipe
-não expressam a condição por autoria. Um check obrigatório confiável pode avaliar
-essa condição; sua inclusão está sendo discutida. Até a escolha, não declaramos o
-requisito de review do marketplace como concluído.
+O humano aprovou `allowApproverPullRequestBypass`: bypass manual da regra de review
+para a equipe individual do aprovador obrigatório, somente no modo `pull_request`.
+Pode ser usado também em PRs de terceiros. Usá-lo apenas para a própria autoria é
+convenção operacional aceita, não condição imposta pelo motor. Não haverá check
+próprio. A integridade continua sem bypass, e a permissão não é concedida a todos
+os administradores. Mudar a composição da equipe fora do deploy pode alterar quem
+recebe o bypass; o próximo plano detecta composição divergente e bloqueia apply.
