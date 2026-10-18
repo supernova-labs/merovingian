@@ -43,7 +43,12 @@ const personal = { cfg: { ...cfg, username: "", password: "" }, user: "cleo", pa
     } finally { await db.close(); }
   });
   test("wrong password and different database never produce an empty valid catalog", async () => {
-    await expect(readCatalog({ ...personal, password: "wrong-test-password" })).rejects.toThrow("Identity connection failed");
-    await expect(readCatalog({ ...personal, cfg: { ...personal.cfg, db: "acme_catalog_absent" } })).rejects.toThrow("Identity connection failed");
+    await expect(readCatalog({ ...personal, password: "wrong-test-password" })).rejects.toMatchObject({ code: "invalid_credentials" });
+    await expect(readCatalog({ ...personal, cfg: { ...personal.cfg, db: "acme_catalog_absent" } })).rejects.toMatchObject({ code: "invalid_configuration" });
   });
+  test("authenticated identity without assignments is denied rather than an unavailable empty catalog", async () => {
+    await root.query("DELETE responsible WHERE in = user:cleo");
+    await expect(readCatalog(personal)).rejects.toMatchObject({ code: "access_denied" });
+  });
+
 });

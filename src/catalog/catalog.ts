@@ -4,7 +4,7 @@ import { resolve } from "../projection/resolve.ts";
 
 export type CatalogClient = "claude" | "codex";
 export class CatalogError extends Error {
-  constructor(public readonly code: "invalid_request" | "access_denied" | "invalid_configuration" | "unavailable", message: string) {
+  constructor(public readonly code: "invalid_request" | "invalid_credentials" | "access_denied" | "invalid_configuration" | "unavailable", message: string) {
     super(message);
   }
 }

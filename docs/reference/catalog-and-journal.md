@@ -51,7 +51,11 @@ setup diagnostics are subsequent implementation steps. Library-backed skills app
 only as migration diagnostics.
 
 Connection and read failures are errors, never an authoritative empty catalog or a
-signal to revoke local resources. Driver details and credentials are not returned.
+signal to revoke local resources. `invalid_credentials` means individual authentication
+was refused; `invalid_configuration` covers missing connection settings or tenant/auth
+configuration; `access_denied` covers an unavailable identity or no assignments;
+`unavailable` leaves other connection/read failures unclassified. Unknown driver errors
+are not guessed to be authentication failures. Driver details and credentials are not returned.
 Tenant instructions are available to callers; MCP availability alone does not ensure
 that a client loads them into every conversation.
 
@@ -78,3 +82,17 @@ connection interruption: inspect the list before retrying.
 Old inbox and decision records are not imported or made newly visible. Their export,
 retirement, and removal of old runtime surfaces are separate release requirements.
 The new journal table is runtime data and survives ordinary deploy reconciliation.
+
+## Required macOS client matrix
+
+The release gate covers Claude Code CLI, Claude Code's **Code tab** in the desktop app,
+Codex CLI, and Codex desktop, using local execution. Claude chat and Cowork are outside
+this matrix. Each surface must demonstrate discovery, individual authentication,
+catalog, Journal, plugin use, authorized repository reading, and on-demand diagnosis.
+A shared configuration format does not replace separate runtime validation.
+
+`test/personal-mcp.test.ts` starts the actual CLI stdio servers in two unrelated temporary
+folders, using synthetic individual credentials. It verifies that catalog and Journal
+work without a build or a workspace environment file. This proves the process contract,
+not a model session or the four native interfaces. Native setup instructions belong to
+the tenant Core plugin.
