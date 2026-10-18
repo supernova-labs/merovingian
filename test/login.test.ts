@@ -76,6 +76,24 @@ const dbUp = await surrealReachable(surrealConfig(TEST_NS));
     }
   });
 
+  test("successful SIGNIN with an invisible own row reports schema drift without changing the session", async () => {
+    const previousSession = await readFile(sessionFile(TEST_NS), "utf8").catch(() => null);
+    await db.query("ALTER TABLE user PERMISSIONS NONE");
+    try {
+      let failure: Error | undefined;
+      try { await login(TEST_NS, "ada", { backend: "surreal", password: "synthetic-password" }); }
+      catch (error) { failure = error as Error; }
+      expect(failure).toBeDefined();
+      expect(failure!.message).toContain("SIGNIN succeeded but the identity record did not resolve");
+      expect(failure!.message).toContain("schema drift");
+      expect(failure!.message).not.toContain("synthetic-password");
+      expect(failure!.cause).toBeUndefined();
+      expect(await readFile(sessionFile(TEST_NS), "utf8").catch(() => null)).toBe(previousSession);
+    } finally {
+      await applyGraph(db, { ...structuredClone(exampleDefinition), namespace: TEST_NS }, structuredClone(exampleUsers));
+    }
+  });
+
   test("stub backend still rejects a namespace that is not a fixture", async () => {
     await expect(login(TEST_NS, "ada", { backend: "stub" })).rejects.toThrow(/unknown namespace/);
   });
