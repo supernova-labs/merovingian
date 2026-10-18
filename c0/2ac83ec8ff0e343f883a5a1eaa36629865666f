@@ -1,0 +1,26 @@
+docs/testing/release-candidate.md
+  s_e7effeab5cddad::t_d837b48608fad8 30-39
+  s_e7effeab5cddad::t_33e410473fc490 6-8,50-51
+docs/README.md
+  s_e7effeab5cddad::t_d837b48608fad8 32
+package.json
+  s_e7effeab5cddad::t_33e410473fc490 3
+docs/releases/1.0.0.md
+  s_e7effeab5cddad::t_33e410473fc490 1-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c02ac83ec8ff0e343f883a5a1eaa36629865666f",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
