@@ -51,7 +51,9 @@ import { exampleDefinition, exampleUsers } from "../fixtures/example/graph.ts";
  try{
   await applyGraph(db,exampleDefinition,exampleUsers,{reset:true});
   const [fresh]=await db.query<[{tables:Record<string,unknown>}]>('INFO FOR DB');
-  expect(Object.keys(fresh.tables)).not.toContain('decision_log');
+  for (const table of ['inbox', 'decision_domain', 'decision', 'decision_log']) {
+    expect(Object.keys(fresh.tables)).not.toContain(table);
+  }
   await db.query("DEFINE TABLE inbox SCHEMALESS PERMISSIONS FULL; CREATE inbox:old SET text = 'Keep', user = user:cleo; DEFINE TABLE decision SCHEMALESS PERMISSIONS FULL; CREATE decision:old SET title = 'Keep';");
   const before=await db.query('SELECT * FROM inbox; SELECT * FROM decision');
   await restrictLegacyHistory(db);

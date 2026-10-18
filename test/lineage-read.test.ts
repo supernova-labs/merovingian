@@ -1,5 +1,5 @@
 // ADR 0016 — "o grafo também é dado": the structural tables are SELECT-scoped by
-// lineage, so build/graph run AS the person (password connection) and the database
+// lineage, so catalog/graph run AS the person (password connection) and the database
 // hands the provider exactly their slice. The killer assertion is PARITY: the manifest
 // resolved over the person's own scoped connection must be IDENTICAL to the one the
 // root provider computes — resolve() degrades SILENTLY on missing catalog entries
@@ -89,10 +89,10 @@ async function manifestVia(db: Awaited<ReturnType<typeof connectSurreal>>, userI
       expect(await ids("SELECT record::id(id) AS id FROM skill")).toEqual([
         "journal",
       ]);
-      // no plugin in her slice → no marketplace row
+      // the delivery plugin exposes its marketplace binding
       expect(await ids("SELECT record::id(id) AS id FROM marketplace")).toEqual(["acme"]);
-      // decision domains: only the ones owned within reach (delivery decides: scope)
-      expect(await ids("SELECT record::id(id) AS id FROM decision_domain")).toEqual([]);
+      // Retired decision tables are absent on fresh databases; history.test.ts
+      // covers their absence and permission lockdown on migrated databases.
       // humans: only herself; hashes: none
       expect(await ids("SELECT record::id(id) AS id FROM user")).toEqual(["cleo"]);
       const [creds] = await db.query<[unknown[]]>("SELECT * FROM credential");

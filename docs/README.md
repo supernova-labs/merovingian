@@ -29,6 +29,7 @@ catalog, native plugins/setup, and immutable Journal. The published 0.5.x CLI di
 - [Catalog and Journal](reference/catalog-and-journal.md) — personal MCP contract.
 - [GitHub deploy](reference/github-deploy.md) — permissions and protection policies.
 - [Desktop smoke evidence](testing/desktop-mcp-smoke.md) — results and remaining acceptance.
+- [Candidate review](testing/release-candidate.md) — package evidence and cutover gates.
 - [Roadmap](ROADMAP.md) — release gates and deferred work.
 
 ## Architectural history

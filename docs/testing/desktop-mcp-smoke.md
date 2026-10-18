@@ -43,9 +43,10 @@ not completed personal installation across arbitrary projects. The temporary con
 were removed and the in-memory database stopped after the test. Chats retain the
 observed results; reconnecting them requires reprovisioning the synthetic environment.
 
-Still required for the major: native terminal sessions, personal setup in all four
-surfaces, plugin installation/discovery/version diagnosis, authorized KB access,
-setup repetition/conflicts, and integration of historical journals. The process-level
+At this initial checkpoint, terminal sessions, personal setup, plugin/KB use and
+setup repetition/conflicts were still unverified. Follow-ups below supersede that
+initial list. Historical journals are archived administratively, not imported into
+the new personal Journal. The process-level
 cross-folder regression in `test/personal-mcp.test.ts` complements this evidence but
 does not replace those end-to-end acceptance checks.
 
@@ -115,3 +116,11 @@ These checks use a disposable local tenant and do not prove remote repository gr
 published-package installation, or a completed release gate. The old Claude desktop
 session did not refresh its MCP list after personal configuration changed; its
 successful earlier project-config smoke is separate evidence.
+
+
+## Candidate review — 2026-10-18
+
+The extracted npm artifact passed the Core setup suite: 30 tests, including the
+live personal MCP probe, no skips. This adds process/package evidence without
+creating another native desktop chat. See [candidate review](release-candidate.md)
+for the exact artifact, test results and remaining release gates.
