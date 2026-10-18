@@ -1,0 +1,25 @@
+src/graph/records.ts
+  s_e7effeab5cddad::t_bca71650200c05 179-180,182
+docs/guides/operating-a-tenant.md
+  s_e7effeab5cddad::t_bca71650200c05 27-29
+test/state-inspection.test.ts
+  s_e7effeab5cddad::t_bca71650200c05 50-66
+.github/workflows/publish.yml
+  s_e7effeab5cddad::t_bca71650200c05 86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c83c9ae38a63af67b394fab0692f84ef155afd09",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
