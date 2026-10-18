@@ -1,0 +1,31 @@
+docs/guides/operating-a-tenant.md
+  s_e7effeab5cddad::t_00b451a4943188 3,20
+README.md
+  s_e7effeab5cddad::t_00b451a4943188 12,15
+docs/releases/1.0.1.md
+  s_e7effeab5cddad::t_00b451a4943188 1-25
+docs/README.md
+  s_e7effeab5cddad::t_00b451a4943188 3,32
+docs/guides/releasing.md
+  s_e7effeab5cddad::t_00b451a4943188 3-4
+package.json
+  s_e7effeab5cddad::t_00b451a4943188 3
+docs/guides/connection-and-secrets.md
+  s_e7effeab5cddad::t_00b451a4943188 22,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b63434cb148d0bc71c7caa9cb4cd0b8960bb4592",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
