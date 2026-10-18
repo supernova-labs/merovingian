@@ -1,0 +1,25 @@
+docs/reference/cli.md
+  s_e7effeab5cddad::t_0b676e77ef34ef 3
+docs/reference/catalog-and-journal.md
+  s_e7effeab5cddad::t_0b676e77ef34ef 3,9-10
+docs/guides/getting-started.md
+  s_e7effeab5cddad::t_0b676e77ef34ef 3-4
+README.md
+  s_e7effeab5cddad::t_0b676e77ef34ef 12-13,15-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fcd13151ea83149af6c0593c1f10d1b3c2e0f031",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
