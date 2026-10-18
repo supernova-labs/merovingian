@@ -105,3 +105,18 @@ DEFINE FIELD OVERWRITE text    ON decision_log TYPE string;
 DEFINE FIELD OVERWRITE records ON decision_log TYPE option<array<record<decision>>>;
 DEFINE FIELD OVERWRITE at      ON decision_log TYPE datetime DEFAULT time::now();
 DEFINE FIELD OVERWRITE drained ON decision_log TYPE option<datetime>;
+
+-- New major's journal: personal history; explicit administrators can read all.
+-- No product identity (including journalAdmin) can update or delete entries.
+-- Administrative root still bypasses permissions, as with every Surreal table.
+DEFINE TABLE OVERWRITE journal SCHEMAFULL
+  PERMISSIONS
+    FOR create WHERE $auth
+    FOR select WHERE $auth AND (author = $auth OR $auth.journalAdmin = true)
+    FOR update, delete NONE;
+DEFINE FIELD OVERWRITE author ON journal TYPE record<user> VALUE $before OR $auth;
+DEFINE FIELD OVERWRITE text ON journal TYPE string ASSERT string::len(string::trim($value)) > 0;
+DEFINE FIELD OVERWRITE origin ON journal TYPE option<string>;
+-- References never grant access; the MCP validates target existence/visibility.
+DEFINE FIELD OVERWRITE previous ON journal TYPE option<record<journal>>;
+DEFINE FIELD OVERWRITE at ON journal TYPE datetime VALUE $before OR time::now();

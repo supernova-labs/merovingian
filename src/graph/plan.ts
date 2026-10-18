@@ -32,7 +32,7 @@ export interface Edge {
 }
 export interface GraphState {
   def: Definition;
-  users: Record<string, { name: string; github?: string }>;
+  users: Record<string, { name: string; github?: string; email?: string; slackId?: string; journalAdmin?: boolean }>;
   edges: Edge[];
 }
 
@@ -41,7 +41,7 @@ export function desiredState(def: Definition, users: Record<string, User>): Grap
   const edges: Edge[] = [];
   const us: GraphState["users"] = {};
   for (const u of Object.values(users)) {
-    us[u.id] = { name: u.name, ...(u.github !== undefined ? { github: u.github } : {}) };
+    us[u.id] = { name: u.name, ...(u.github !== undefined ? { github: u.github } : {}), ...(u.email !== undefined ? { email: u.email } : {}), ...(u.slackId !== undefined ? { slackId: u.slackId } : {}), ...(u.journalAdmin !== undefined ? { journalAdmin: u.journalAdmin } : {}) };
     for (const a of u.assignments) {
       edges.push({ user: u.id, purpose: a.purpose, ...(a.scope !== undefined ? { scope: a.scope } : {}), role: a.role });
     }
@@ -259,6 +259,9 @@ export function planGraph(desired: GraphState, current: GraphState): GraphPlan {
   diffKind(plan, "user", strMap2(desired.users), strMap2(current.users), (d, c) => [
     scalar("name", d.name, c.name),
     scalar("github", d.github ?? "∅", c.github ?? "∅"),
+    scalar("email", d.email ?? "∅", c.email ?? "∅"),
+    scalar("slackId", d.slackId ?? "∅", c.slackId ?? "∅"),
+    scalar("journalAdmin", String(d.journalAdmin ?? false), String(c.journalAdmin ?? false)),
   ]);
 
   // responsible edges (key = user|purpose|scope; role is the field)
@@ -358,7 +361,7 @@ function libraryAgents(st: GraphState): Map<string, { description: string; conte
 function asMap<T>(rec: Record<string, T>): Map<string, T> {
   return new Map(Object.entries(rec));
 }
-function strMap2(rec: Record<string, { name: string; github?: string }>): Map<string, { name: string; github?: string }> {
+function strMap2(rec: Record<string, { name: string; github?: string; email?: string; slackId?: string; journalAdmin?: boolean }>): Map<string, { name: string; github?: string; email?: string; slackId?: string; journalAdmin?: boolean }> {
   return new Map(Object.entries(rec));
 }
 function dupes(ids: string[]): string[] {

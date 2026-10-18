@@ -361,7 +361,7 @@ export class SurrealProvider implements DefinitionProvider {
   }
 
   async resolveUser(userId: string): Promise<User> {
-    const [users] = await this.db.query<[{ id: RecordId; name: string; github: string | null }[]]>(
+    const [users] = await this.db.query<[{ id: RecordId; name: string; github: string | null; email: string | null; slackId: string | null; journalAdmin: boolean | null }[]]>(
       "SELECT * FROM type::record('user', $id)",
       { id: userId },
     );
@@ -380,6 +380,8 @@ export class SurrealProvider implements DefinitionProvider {
       id: idOf(u.id),
       name: u.name,
       ...(u.github ? { github: u.github } : {}),
+      ...(u.email ? { email: u.email } : {}),
+      ...(u.slackId ? { slackId: u.slackId } : {}), ...(u.journalAdmin !== undefined && u.journalAdmin !== null ? { journalAdmin: u.journalAdmin } : {}),
       assignments: edges.map((e) => ({
         purpose: idOf(e.out),
         ...(e.scope ? { scope: e.scope } : {}),
@@ -392,12 +394,12 @@ export class SurrealProvider implements DefinitionProvider {
     // One traversal of the responsible edge: every human→purpose at once, with
     // the linked user's name/github fetched via record-link dot-access.
     const [rows] = await this.db.query<
-      [{ uid: string; name: string; github: string | null; purpose: string; scope: string | null; role: Role | null }[]]
+      [{ uid: string; name: string; github: string | null; email: string | null; slackId: string | null; journalAdmin: boolean | null; purpose: string; scope: string | null; role: Role | null }[]]
     >(
-      "SELECT record::id(in) AS uid, in.name AS name, in.github AS github, record::id(out) AS purpose, scope, role FROM responsible",
+      "SELECT record::id(in) AS uid, in.name AS name, in.github AS github, in.email AS email, in.slackId AS slackId, in.journalAdmin AS journalAdmin, record::id(out) AS purpose, scope, role FROM responsible",
     );
     return rows.map((r) => ({
-      user: { id: r.uid, name: r.name, ...(r.github ? { github: r.github } : {}) },
+      user: { id: r.uid, name: r.name, ...(r.github ? { github: r.github } : {}), ...(r.email ? { email: r.email } : {}), ...(r.slackId ? { slackId: r.slackId } : {}), ...(r.journalAdmin !== undefined && r.journalAdmin !== null ? { journalAdmin: r.journalAdmin } : {}) },
       purpose: r.purpose,
       ...(r.scope ? { scope: r.scope } : {}),
       role: r.role ?? "member",

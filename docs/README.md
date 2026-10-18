@@ -53,3 +53,8 @@ These predate the product docs and are kept in Portuguese; they are the rational
 - **Operating a tenant** → overview → getting-started → operating-a-tenant → connection-and-secrets.
 - **Authoring a graph** → the-graph → authoring-the-graph → reference/graph-yaml.
 - **Contributing to the engine** → architecture → build-vs-deploy → enforcement → topology.
+
+## Next major (in progress)
+
+- [Catalog and Journal](reference/catalog-and-journal.md) — personal MCP connection, scoped discovery and immutable journals.
+- [ADR 0019](decisions/consolidadas/0019-catalogo-e-journal.md) — direction and remaining implementation work.

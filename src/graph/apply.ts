@@ -77,7 +77,7 @@ export async function readCurrentState(db: Surreal, namespace: string): Promise<
   const users: GraphState["users"] = {};
   const edges: Edge[] = [];
   for (const r of asg) {
-    users[r.user.id] = { name: r.user.name, ...(r.user.github !== undefined ? { github: r.user.github } : {}) };
+    users[r.user.id] = { name: r.user.name, ...(r.user.github !== undefined ? { github: r.user.github } : {}), ...(r.user.email !== undefined ? { email: r.user.email } : {}), ...(r.user.slackId !== undefined ? { slackId: r.user.slackId } : {}), ...(r.user.journalAdmin !== undefined ? { journalAdmin: r.user.journalAdmin } : {}) };
     edges.push({ user: r.user.id, purpose: r.purpose, ...(r.scope !== undefined ? { scope: r.scope } : {}), role: r.role });
   }
   return { def, users, edges };
@@ -96,7 +96,7 @@ interface RuntimeRef {
   array?: boolean;
 }
 const RUNTIME_REFERRERS: Record<string, RuntimeRef[]> = {
-  user: [{ table: "inbox", field: "user", targetKind: "user" }],
+  user: [{ table: "inbox", field: "user", targetKind: "user" }, { table: "journal", field: "author", targetKind: "user" }],
   // a decision_log citing a record blocks its deletion — cited jurisprudence
   // never vanishes silently (ADR 0013).
   decision: [{ table: "decision_log", field: "records", targetKind: "decision", array: true }],

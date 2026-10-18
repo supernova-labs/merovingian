@@ -25,6 +25,8 @@ de cada uma está em `fermentacao/` (em discussão) ou `consolidadas/` (fechadas
 | 0017 | Projeção multi-harness | 🟢 Consolidada | `consolidadas/` | um manifest neutro → emitters Claude + Codex no mesmo workspace; sessão raiz chama agentes de propósito como subagentes; ownership por arquivo, aplicação transacional e degradação explícita (impl. entregue 2026-07-26) |
 | 0018 | Instruções globais do tenant | 🟢 Consolidada | `consolidadas/` | `library/workspace.md` tenant-owned → `config` → Manifest neutro → mesma seção em `CLAUDE.md` e `AGENTS.md`; alcance tenant-wide, sem segredos (impl. entregue 2026-08-01) |
 
+| 0019 | Catálogo autenticado e Journal pessoal | 🟢 Direção consolidada; implementação parcial | `consolidadas/` | catálogo sem build, Journal autor/admin, clean cut na próxima major |
+
 🟢 consolidada (lastro) · 🟡 superseded (history, aponta pro sucessor) · 🔵 fermentação (aberta)
 
 ## A família que conta a história

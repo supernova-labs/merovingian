@@ -41,7 +41,7 @@ export class StubProvider implements DefinitionProvider {
   async listAssignments(): Promise<AssignmentRow[]> {
     return Object.values(this.users).flatMap((u) =>
       u.assignments.map((a) => ({
-        user: { id: u.id, name: u.name, ...(u.github ? { github: u.github } : {}) },
+        user: { id: u.id, name: u.name, ...(u.github ? { github: u.github } : {}), ...(u.email ? { email: u.email } : {}), ...(u.slackId ? { slackId: u.slackId } : {}), ...(u.journalAdmin !== undefined && u.journalAdmin !== null ? { journalAdmin: u.journalAdmin } : {}) },
         purpose: a.purpose,
         ...(a.scope ? { scope: a.scope } : {}),
         role: a.role,

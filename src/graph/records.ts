@@ -188,7 +188,7 @@ export function purposeDoc(p: Purpose, agent: AgentRef | undefined, lineageIds: 
 }
 
 export function userDoc(u: User): RecordDoc {
-  return { recordId: new RecordId("user", u.id), content: compact({ name: u.name, github: u.github }) };
+  return { recordId: new RecordId("user", u.id), content: compact({ name: u.name, github: u.github, email: u.email, slackId: u.slackId, journalAdmin: u.journalAdmin }) };
 }
 
 /** Every structural record for a Definition + users (NO responsible edges — those

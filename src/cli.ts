@@ -38,7 +38,7 @@ Usage:
   merovingian data <namespace> <table>             list rows the logged-in user CAN see (enforced by Surreal)
   merovingian passwd <namespace> <user>            set/rotate a person's SIGNIN password (operator; reads MEROVINGIAN_NEW_PASS or stdin)
   merovingian inbox <namespace> [--all] [--drain [--ids a,b]] [--rescope <id> --to <purpose|root>]   governance drain (root): list/stamp/triage the learning inbox
-  merovingian mcp <inbox|decisions|surreal-data>            run a bundled system MCP server (stdio — what the emitted .mcp.json invokes)
+  merovingian mcp <catalog|journal|inbox|decisions|surreal-data>            run a bundled MCP server (stdio)
   merovingian decisions <namespace> [--all] [--drain [--ids a,b]]   governance drain (root): the in-flight decision log (promotion candidates)
   merovingian console <namespace> [--port N]       serve the Architect console (read-only god-view, 127.0.0.1)
   merovingian deploy plan [--graph P]              audit: diff graph.yaml × Surreal (read-only; exit 1=drift 2=invalid)
@@ -274,10 +274,12 @@ async function run(parsed: ParsedArgs): Promise<void> {
   if (parsed.command === "mcp") {
     // stdio protocol lives on stdout — NEVER print here; the servers log to stderr.
     const name = parsed.namespace;
+    if (name === "journal") return (await import("./mcp/journal.ts")).serveStdio();
+    if (name === "catalog") return (await import("./mcp/catalog.ts")).serveStdio();
     if (name === "inbox") return (await import("./mcp/inbox.ts")).serveStdio();
     if (name === "decisions") return (await import("./mcp/decisions.ts")).serveStdio();
     if (name === "surreal-data") return (await import("./mcp/surreal-data.ts")).serveStdio();
-    throw new Error(`unknown mcp server "${name ?? ""}" — inbox | decisions | surreal-data`);
+    throw new Error(`unknown mcp server "${name ?? ""}" — catalog | journal | inbox | decisions | surreal-data`);
   }
 
   if (parsed.command === "console") {

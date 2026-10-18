@@ -84,6 +84,9 @@ const UserSchema = z.object({
   id: z.string(),
   name: z.string(),
   github: z.string().optional(),
+  email: z.string().email().optional(),
+  slackId: z.string().min(1).optional(),
+  journalAdmin: z.boolean().optional(),
   assignments: z.array(AssignmentSchema).default([]),
 }).strict();
 
@@ -360,6 +363,8 @@ export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBR
       id: u.id,
       name: u.name,
       ...(u.github !== undefined ? { github: u.github } : {}),
+      ...(u.email !== undefined ? { email: u.email } : {}),
+      ...(u.slackId !== undefined ? { slackId: u.slackId } : {}), ...(u.journalAdmin !== undefined ? { journalAdmin: u.journalAdmin } : {}),
       assignments: u.assignments.map((a) => ({
         purpose: a.purpose,
         ...(a.scope !== undefined ? { scope: a.scope } : {}),

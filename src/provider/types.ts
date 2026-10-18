@@ -166,8 +166,13 @@ export interface Assignment {
 export interface User {
   id: string;
   name: string;
-  /** GitHub login — the identity anchor (v1). Maps a gh user to this record. */
+  /** Administrator-managed GitHub login for repository access reconciliation. */
   github?: string;
+  /** Administrator-managed external identifiers; never credentials. */
+  email?: string;
+  slackId?: string;
+  /** Explicit tenant-wide journal reader; never grants write or database administration. */
+  journalAdmin?: boolean;
   /** every purpose this human belongs to. Access = union of their subtrees. */
   assignments: Assignment[];
 }
@@ -175,7 +180,7 @@ export interface User {
 /** One human → one purpose edge, flattened. The god-view (console) lists every
  *  one of these at once — unlike resolveUser, which answers for a single id. */
 export interface AssignmentRow {
-  user: { id: string; name: string; github?: string };
+  user: { id: string; name: string; github?: string; email?: string; slackId?: string; journalAdmin?: boolean };
   purpose: string;
   scope?: string;
   role: Role;
