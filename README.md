@@ -9,10 +9,10 @@ and review protections. Authenticated Catalog and Journal MCPs provide discovery
 and immutable personal history. A tenant-owned setup skill installs capabilities
 through each client's native plugin system with human approval.
 
-**Version 1.0.0 is published.** Workspace build, emitters and the old
+**Version 1.0.1** includes operator and authentication fixes. Workspace build, emitters and the old
 inbox/decision runtime have been removed. See the
 [history and cutover guide](docs/guides/history-and-cutover.md) before upgrading.
-Install the published CLI with `bun add -g @supernova-labs/merovingian@1.0.0`
+Install the published CLI with `bun add -g @supernova-labs/merovingian@1.0.1`
 and confirm `merovingian --version` before operating a tenant.
 
 ## Develop locally

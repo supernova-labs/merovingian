@@ -1,7 +1,7 @@
 # Guide — releasing
 
-Version 1.0.0 is published. For subsequent releases, documentation and local plugin
-versions alone do not constitute a published release. Release approval and production deployment are separate.
+Documentation and local plugin versions alone do not constitute a published release.
+Confirm the requested version in npm and its GitHub Release before declaring publication complete. Release approval and production deployment are separate.
 
 ## Before tagging
 

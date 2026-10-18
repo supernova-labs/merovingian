@@ -19,14 +19,14 @@ First provisioning requires a private `MEROVINGIAN_JWT_SECRET`. Subsequent deplo
 existing identity access key intact. The key and root credentials stay in protected operator
 storage; changing an environment variable does not rotate the database's live key.
 
-The development checkout adds a provisioning guard: real keys must contain at least 32
+Version 1.0.1 adds a provisioning guard: real keys must contain at least 32
 characters after ignoring leading/trailing whitespace. Generate one with `openssl rand -hex 32`;
 length is only a guard against accidental weak values, not proof of randomness. The guard applies
 to new identity access, not existing tenants or the explicit development/reset path. With
 password SIGNIN, the provisioning copy can be removed from the operator environment after use:
 the database keeps its own signing key. This does not replace a tested recovery procedure.
 
-The checkout's `login` and `passwd` failure diagnostics identify the endpoint origin, namespace,
+The 1.0.1 `login` and `passwd` failure diagnostics identify the endpoint origin, namespace,
 database, and configuration sources. They omit URL paths, credentials, query strings, fragments
 and raw driver errors. Operator diagnostics describe the root → namespace → database signin
 order and warn about development credential defaults. “Environment” includes values loaded
