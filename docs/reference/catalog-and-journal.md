@@ -46,8 +46,9 @@ The catalog reports repository access as declared intent (`effectiveAccess:
 not_verified`), plugin versions as `not_verified`, and missing client bindings as
 `unsupported`. It does not probe GitHub or the local machine. Tool commands, arguments,
 URLs, environment values, library bodies, and server filesystem paths are deliberately
-excluded. Tools currently require out-of-band configuration; plugin delivery and
-setup diagnostics are subsequent implementation steps. Library-backed skills appear
+excluded. Tools currently require out-of-band configuration. Native plugin inventory,
+repository diagnostics and personal connection configuration belong to the tenant
+Core setup skill; they do not require a workspace build. Library-backed skills appear
 only as migration diagnostics.
 
 Connection and read failures are errors, never an authoritative empty catalog or a

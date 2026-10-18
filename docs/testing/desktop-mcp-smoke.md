@@ -64,11 +64,11 @@ No `context` links, build stamps, or copied skills were involved.
 | Codex terminal | Pass | Pass, installed skill then file read |
 | Codex desktop, fresh test chat | Shared personal installation | Pass, discovered skill then file read |
 
-Codex terminal initially rejected an existing unrelated MCP transport configuration
-before starting a session. The successful test used `--ignore-user-config` and
-explicit overrides for only the synthetic plugin and marketplace; the personal
-configuration was not repaired or replaced. This validates installed plugin loading,
-not the compatibility of every existing personal setting with that CLI version.
+The initial Codex terminal probe used `--ignore-user-config` and explicit overrides
+for the synthetic plugin and marketplace. A later investigation corrected the
+initial diagnosis of its failed first attempt: incorrectly quoted configuration
+override keys caused the transport error; it was not evidence of a broken personal
+MCP configuration. The personal configuration was not repaired or replaced.
 
 The Core setup helper now has read-only native inventory and clone diagnostics,
 with 18 regression tests covering repeat execution, wrong origins, dirty clones,
@@ -82,3 +82,36 @@ inventory and read the expected synthetic KB marker. The earlier, already-runnin
 chat had not refreshed its skill inventory. The synthetic plugin and marketplace
 were removed after verification; the test chat retains the evidence. All four
 surfaces have now passed this local plugin-discovery and KB-read probe.
+
+
+## Follow-up: personal MCP onboarding
+
+The Core connection helper writes native personal catalog and Journal definitions,
+accepting credentials through hidden terminal prompts or private stdin. It preserves
+unrelated entries, rejects conflicting connections and unsafe file links, writes
+mode 0600, detects observed concurrent changes, and supports idempotent retries.
+The complete Core suite passed 30 tests, including an opt-in live test against the
+synthetic `acme_onboarding` database: both generated client formats served identity,
+catalog and Journal from two empty project folders; a wrong password was rejected
+without echoing it. No build or workspace environment file was created.
+
+Native personal-config checks on 2026-10-18:
+
+| Surface | identity, catalog, list-journals |
+|---|---|
+| Claude Code terminal in a separate empty folder | Pass |
+| Codex terminal in another empty folder | Pass |
+| Codex desktop, this implementation chat and existing test chat | Pass |
+| Claude Code desktop, pre-existing session | New servers not discovered; fresh session still required |
+
+Claude Code CLI 2.1.302 on this machine writes user-scope MCPs to
+`~/.claude/.config.json`, confirmed with a temporary inert native CLI entry, which
+was then removed. Older configuration/documentation uses `~/.claude.json`.
+The helper requires an explicit confirmed path when both files exist, rather than
+silently updating an ignored file. Tool discovery must account for normalized
+underscores in API namespaces instead of searching only literal server-name hyphens.
+
+These checks use a disposable local tenant and do not prove remote repository grants,
+published-package installation, or a completed release gate. The old Claude desktop
+session did not refresh its MCP list after personal configuration changed; its
+successful earlier project-config smoke is separate evidence.
