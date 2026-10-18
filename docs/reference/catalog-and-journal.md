@@ -1,13 +1,13 @@
-# Catalog and Journal (major-release work in progress)
+# Catalog and Journal
 
-These MCP servers are available from this checkout. They do not require a workspace
+These MCP servers are available in Merovingian 1.0.0. They do not require a workspace
 build. Workspace emitters and the old inbox/decision runtime have been removed.
-This checkout targets the next major; the published 0.5.x CLI is not interchangeable.
+The retired 0.5.x CLI is not interchangeable with this contract.
 
 ## Personal connection
 
-Run `bun /absolute/path/to/merovingian/bin/merovingian.ts mcp catalog` or
-`bun /absolute/path/to/merovingian/bin/merovingian.ts mcp journal` as a stdio MCP
+Run `bun x --bun @supernova-labs/merovingian@1.0.0 mcp catalog` or
+`bun x --bun @supernova-labs/merovingian@1.0.0 mcp journal` as a stdio MCP
 server. Configure these environment variables in the client's private MCP definition:
 
 | Variable | Value supplied privately by the tenant administrator |

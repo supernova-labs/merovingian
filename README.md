@@ -9,10 +9,11 @@ and review protections. Authenticated Catalog and Journal MCPs provide discovery
 and immutable personal history. A tenant-owned setup skill installs capabilities
 through each client's native plugin system with human approval.
 
-This branch contains the **next major**. Workspace build, emitters and the old
+**Version 1.0.0 is published.** Workspace build, emitters and the old
 inbox/decision runtime have been removed. See the
 [history and cutover guide](docs/guides/history-and-cutover.md) before upgrading.
-The published 0.5.x package does not yet contain this branch's changes.
+Install the published CLI with `bun add -g @supernova-labs/merovingian@1.0.0`
+and confirm `merovingian --version` before operating a tenant.
 
 ## Develop locally
 
@@ -55,8 +56,8 @@ For Claude Code, install the repository marketplace plugin:
 /plugin install governance --marketplace supernova-labs/merovingian
 ```
 
-The remote install uses the published repository revision. To review this unreleased
-branch, validate/load its local `plugin/` directory instead. The administrative plugin
+The remote install uses the published repository revision. To review local plugin
+changes, validate/load the checkout’s `plugin/` directory instead. The administrative plugin
 is separate from tenant capability plugins and does not grant database access.
 
 ## Documentation

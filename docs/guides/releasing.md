@@ -1,7 +1,7 @@
 # Guide — releasing
 
-This branch targets the next major. Documentation and local plugin versions do not
-constitute a published release. Release approval and production deployment are separate.
+Version 1.0.0 is published. For subsequent releases, documentation and local plugin
+versions alone do not constitute a published release. Release approval and production deployment are separate.
 
 ## Before tagging
 

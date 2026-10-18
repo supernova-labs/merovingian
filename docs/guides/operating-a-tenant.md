@@ -1,8 +1,8 @@
 # Operating a tenant
 
-Use a matching next-major CLI checkout until the release is published. In the examples,
-`merovingian` stands for that selected executable; from another directory use
-`bun /absolute/path/to/merovingian/bin/merovingian.ts`.
+Use the published 1.0.0 CLI and confirm `merovingian --version`. In these examples,
+`merovingian` stands for that executable. For development against a matching checkout,
+use `bun /absolute/path/to/merovingian/bin/merovingian.ts` explicitly.
 
 ## Reconcile desired state
 

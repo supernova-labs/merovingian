@@ -1,6 +1,8 @@
 # Getting started from the checkout
 
-This branch contains an unreleased major. Use its CLI, not the published 0.5.x binary.
+Merovingian 1.0.0 is published. For normal tenant operation, install it with
+`bun add -g @supernova-labs/merovingian@1.0.0` and check `merovingian --version`.
+The examples below use the Source checkout for offline development.
 Install Bun 1.3+ and dependencies in the Source checkout:
 
 ```sh
@@ -10,7 +12,7 @@ bun bin/merovingian.ts login acme ada --backend stub
 bun bin/merovingian.ts graph acme --backend stub
 ```
 
-The stub is an offline synthetic graph. Login writes local session metadata; graph is read-only. They they do not prove database authentication or remote repository access.
+The stub is an offline synthetic graph. Login writes local session metadata; graph is read-only. They do not prove database authentication or remote repository access.
 
 ## A synthetic database
 

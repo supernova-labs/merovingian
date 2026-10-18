@@ -1,7 +1,7 @@
 # Merovingian documentation
 
-These guides describe the next-major checkout: declarative deploy, authenticated
-catalog, native plugins/setup, and immutable Journal. The published 0.5.x CLI differs.
+These guides describe Merovingian 1.0.0: declarative deploy, authenticated
+catalog, native plugins/setup, and immutable Journal. The retired 0.5.x CLI has a different contract.
 
 ## Concepts
 
@@ -29,7 +29,7 @@ catalog, native plugins/setup, and immutable Journal. The published 0.5.x CLI di
 - [Catalog and Journal](reference/catalog-and-journal.md) — personal MCP contract.
 - [GitHub deploy](reference/github-deploy.md) — permissions and protection policies.
 - [Desktop smoke evidence](testing/desktop-mcp-smoke.md) — results and remaining acceptance.
-- [1.0.0 release notes](releases/1.0.0.md) — approved version, publication pending.
+- [1.0.0 release notes](releases/1.0.0.md) — published release and migration notes.
 - [Candidate review](testing/release-candidate.md) — package evidence and cutover gates.
 
 ## Architectural history

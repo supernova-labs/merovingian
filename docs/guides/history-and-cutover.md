@@ -1,8 +1,8 @@
 # Preserve history and retire the previous runtime
 
-The next major removes workspace `build`, emitters, the HTTP build/auth service,
-`library update`, `plugins sync`, inbox/decisions commands and MCP servers, and the
-console inbox. New tenant scaffolding contains no library or client configuration.
+Version 1.0.0 removes workspace `build`, emitters, the HTTP build/auth service,
+`library update`, `plugins sync`, legacy inbox/decision commands and their MCP
+servers, and the console inbox. Catalog, Journal and surreal-data MCPs remain supported. New tenant scaffolding contains no library or client configuration.
 Capabilities are installed from marketplaces through the tenant's setup skill.
 
 ## Administrative archive
