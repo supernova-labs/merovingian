@@ -35,10 +35,12 @@ export async function passwd(namespace: string, userId: string, opts: PasswdOpts
   try { db = await connectSurreal(cfg); }
   catch (error) { throw connectionDiagnostic(cfg, error, "operator", "connect", { source: "new password", password: pass }); }
   let userMissing = false;
+  let stage: "read" | "write" = "write";
   try {
     // an older tenant db may predate the credential table — the runtime schema is
     // idempotent and never carries the signing key, so ensuring it here is safe.
     await ensureDataSchema(db);
+    stage = "read";
     const [rows] = await db.query<[{ uid: string }[]]>(
       "SELECT record::id(id) AS uid FROM user WHERE record::id(id) = $u",
       { u: userId },
@@ -47,16 +49,15 @@ export async function passwd(namespace: string, userId: string, opts: PasswdOpts
       userMissing = true;
       throw new Error("user not found — check the graph (deploy apply ships users)");
     }
+    stage = "write";
     await db.query(
       "UPSERT type::record('credential', $u) SET pass = crypto::argon2::generate($p)",
       { u: userId, p: pass },
     );
   } catch (error) {
-    const diagnostic = connectionDiagnostic(cfg, error, "operator", "write", { source: "new password", password: pass });
-    if (userMissing) diagnostic.message = `user not found — check the graph (deploy apply ships users).\n${diagnostic.message}`;
-    throw diagnostic;
+    throw connectionDiagnostic(cfg, error, "operator", stage, { source: "new password", password: pass }, userMissing ? "user_missing" : undefined);
   } finally {
-    await db.close();
+    await db.close().catch(() => {});
   }
   console.log(`password set for ${userId} @ ${namespace} (argon2, stored in credential:${userId})`);
 }

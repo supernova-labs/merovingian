@@ -26,15 +26,32 @@ describe("connection diagnostics", () => {
     }
   });
   test("errors expose target and guidance, but no driver payload or credentials", () => {
-    const cfg = { url: "wss://url-user:url-password@example.test/private-path?token=query-token#fragment", ns: "acme", db: "tenant", username: "admin", password: "system-secret" };
+    const cfg = { url: "wss://url-user:url-password@example.test/private-path?token=query-token#fragment", ns: "acme", db: "tenant", username: "admin", password: "system-secret", sources: { url: "machine registry", ns: "SURREAL_NS (environment)", db: "tenant argument", username: "SURREAL_USER (environment)", password: "development default" } };
     const error = new Error("driver reveals system-secret, personal-secret, bearer-token");
     for (const mode of ["operator", "personal"] as const) {
       const result = connectionDiagnostic(cfg, error, mode, "connect", { source: "explicit password option", password: "personal-secret" });
       expect(result.message).toContain("wss://example.test");
       expect(result.message).toContain('database "tenant"');
+      expect(result.message).toContain('namespace "acme"');
+      for (const label of ["machine registry", "SURREAL_NS (environment)", "tenant argument"]) expect(result.message).toContain(label);
+      if (mode === "operator") for (const label of ["SURREAL_USER (environment)", "development default"]) expect(result.message).toContain(label);
       for (const secret of ["url-user", "url-password", "private-path", "query-token", "fragment", "system-secret", "personal-secret", "bearer-token"]) expect(result.message).not.toContain(secret);
       expect(result.cause).toBeUndefined();
       expect(result.message).toContain(mode === "operator" ? "root → namespace → database" : "Personal identity SIGNIN");
     }
   });
+  test("successful authentication is not diagnosed as a password problem", () => {
+    const cfg = { url: "wss://example.test/rpc", ns: "acme", db: "tenant", username: "admin", password: "secret" };
+    const missing = connectionDiagnostic(cfg, null, "operator", "read", undefined, "user_missing");
+    expect(missing.message).toContain("user not found");
+    expect(missing.message).not.toContain("Database operation failed");
+    expect(missing.message).not.toContain("network reachability");
+    for (const stage of ["read", "write"] as const) {
+      const error = connectionDiagnostic(cfg, new Error("query failed"), "personal", stage);
+      expect(error.message).toContain("Authentication succeeded");
+      expect(error.message).not.toContain("Check MEROVINGIAN_PASS");
+    }
+    expect(connectionDiagnostic(cfg, null, "personal", "read", undefined, "identity_missing").message).toContain("schema drift");
+  });
+
 });

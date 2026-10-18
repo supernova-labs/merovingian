@@ -23,7 +23,7 @@ export function envJwtSecret(): string | undefined {
 }
 
 /** The secret a tenant's identity DEFINE ACCESS is provisioned to trust (auth.surql).
- *  Prod: MEROVINGIAN_JWT_SECRET (private, used only for initial provisioning). The
+ *  Prod: MEROVINGIAN_JWT_SECRET (private, used for provisioning and optional operator/test JWT minting). The
  *  public dev key is used ONLY when explicitly allowed — dev/test provisioning via
  *  `reset`. A real `deploy apply` with no secret THROWS rather than silently minting a
  *  tenant whose identities anyone reading this repo could forge — and it refuses the
@@ -31,7 +31,7 @@ export function envJwtSecret(): string | undefined {
 export function provisioningSecret(allowDevKey: boolean): string {
   const s = envJwtSecret();
   if (s) {
-    if (s === DEV_JWT_SECRET && !allowDevKey) {
+    if (s.trim() === DEV_JWT_SECRET && !allowDevKey) {
       throw new Error(
         "MEROVINGIAN_JWT_SECRET is the PUBLIC dev key — a real tenant needs a PRIVATE secret.\n" +
           "  Generate one with `openssl rand -hex 32`. (The dev key exists for this repo's own test suite.)",

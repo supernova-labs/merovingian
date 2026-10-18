@@ -76,6 +76,7 @@ describe("provisioningSecret — the deploy-apply gate", () => {
     for (const value of ["changeme", "x".repeat(31), " ".repeat(32), "  changeme".padEnd(40)]) {
       withEnv(value, () => {
         expect(() => provisioningSecret(false)).toThrow(/at least 32/);
+        try { provisioningSecret(false); } catch (error) { expect((error as Error).message).not.toContain(value); }
         expect(provisioningSecret(true)).toBe(value);
       });
     }
@@ -87,6 +88,10 @@ describe("provisioningSecret — the deploy-apply gate", () => {
       expect(() => provisioningSecret(false)).toThrow(/PUBLIC dev key/);
       expect(provisioningSecret(true)).toBe(DEV_JWT_SECRET); // dev/test may use it
     });
+  });
+
+  test("padding cannot disguise the public development key", () => {
+    withEnv(`  ${DEV_JWT_SECRET}  `, () => expect(() => provisioningSecret(false)).toThrow(/PUBLIC dev key/));
   });
 
   test("an empty secret is treated as unset (not a valid key)", () => {

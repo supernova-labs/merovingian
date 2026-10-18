@@ -1,4 +1,4 @@
-import { describe, test, expect, afterAll } from "bun:test";
+import { describe, test, expect, beforeAll, beforeEach, afterAll } from "bun:test";
 import { type Surreal } from "surrealdb";
 import { readCurrentState, applyGraph, emptyDefinition } from "../src/graph/apply.ts";
 import { planGraph, desiredState } from "../src/graph/plan.ts";
@@ -9,11 +9,13 @@ const cfg = surrealConfig("acme", { db: "acme_state_inspection" });
 const up = await surrealReachable(cfg);
 (up ? describe : describe.skip)("administrative state inspection", () => {
   let db: Surreal;
-  afterAll(async () => { if (db) { await db.query("REMOVE DATABASE acme_state_inspection"); await db.close(); } });
-  test("absent database and schema-only database are all-create, then converge is empty", async () => {
-    db = await connectSurreal(cfg);
+  beforeAll(async () => { db = await connectSurreal(cfg); });
+  beforeEach(async () => {
     await db.query("REMOVE DATABASE IF EXISTS acme_state_inspection");
     await db.use({ namespace: cfg.ns, database: cfg.db });
+  });
+  afterAll(async () => { if (db) { await db.query("REMOVE DATABASE acme_state_inspection"); await db.close(); } });
+  test("absent database and schema-only database are all-create, then converge is empty", async () => {
     const desired = desiredState(exampleDefinition, exampleUsers);
     const virgin = planGraph(desired, await readCurrentState(db, "acme"));
     expect(virgin.create).toContainEqual({ kind: "config", id: "ambient" });
@@ -34,18 +36,29 @@ const up = await surrealReachable(cfg);
     expect(planGraph(desired, await readCurrentState(db, "acme"))).toEqual({ create: [], update: [], delete: [], warnings: [] });
   });
   test("missing table on an existing graph is diagnosed, never an all-create plan", async () => {
+    await applyGraph(db, exampleDefinition, exampleUsers);
     await db.query("REMOVE TABLE agent");
     await expect(readCurrentState(db, "acme")).rejects.toThrow(/missing tables agent/);
     await applyGraph(db, exampleDefinition, exampleUsers);
     expect((await readCurrentState(db, "acme")).configExists).toBe(true);
   });
   test("missing config with surviving graph data refuses to infer emptiness", async () => {
+    await applyGraph(db, exampleDefinition, exampleUsers);
     await db.query("DELETE config");
-    await expect(readCurrentState(db, "acme")).rejects.toThrow(/config is missing but purpose contains records/);
+    await expect(readCurrentState(db, "acme")).rejects.toThrow(/config is missing but \w+ contains records/);
+  });
+  test("duplicate or wrong-tenant config records block planning", async () => {
+    await applyGraph(db, exampleDefinition, exampleUsers);
+    await db.query("CREATE config:other CONTENT { ambient: [] }");
+    await expect(readCurrentState(db, "acme")).rejects.toThrow(/exactly one configuration/);
+    await db.query("DELETE config:acme");
+    await expect(readCurrentState(db, "acme")).rejects.toThrow(/exactly one configuration/);
+  });
+  test("business data without config is not a virgin database", async () => {
+    await db.query("DEFINE TABLE `business-data` SCHEMALESS; CREATE `business-data`:old CONTENT { text: 'synthetic business record' }");
+    await expect(readCurrentState(db, "acme")).rejects.toThrow(/business-data contains records/);
   });
   test("historical data alone is not a virgin database", async () => {
-    await db.query("REMOVE DATABASE acme_state_inspection");
-    await db.use({ namespace: cfg.ns, database: cfg.db });
     await db.query("DEFINE TABLE inbox SCHEMALESS; CREATE inbox:old CONTENT { text: 'synthetic history' }");
     await expect(readCurrentState(db, "acme")).rejects.toThrow(/inbox contains records/);
   });

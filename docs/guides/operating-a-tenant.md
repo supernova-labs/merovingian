@@ -21,9 +21,10 @@ In the development checkout, planning verifies schema inventory before reading t
 An absent or schema-only database has an all-create plan, including its configuration singleton.
 An existing graph with missing structural tables stops planning with an upgrade diagnostic;
 verify the target and backup before using `deploy apply` to prepare the schema, then review
-any deletions before confirming. Missing configuration alongside surviving structure or history
+any deletions before confirming. Missing configuration alongside surviving structure, history or business data
 is an error requiring investigation/restoration, not an empty database. Failed inventory or
-record reads never authorize an all-create plan.
+record reads never authorize an all-create plan. Duplicate configuration records or a configuration
+record for a different tenant also stop planning.
 
 GitHub requires its own `deploy github-plan` and `github-apply --approve <revision>`.
 These manage only explicitly declared repositories, with independently verified credentials.

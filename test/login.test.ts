@@ -67,7 +67,7 @@ const dbUp = await surrealReachable(surrealConfig(TEST_NS));
       expect(failure).toBeDefined();
       expect(failure!.message).toContain("root → namespace → database");
       expect(failure!.message).toContain("SURREAL_PASS (environment)");
-      expect(failure!.message).toContain(TEST_NS);
+      expect(failure!.message).toContain(surrealConfig(TEST_NS).db);
       expect(failure!.message).not.toContain("wrong-synthetic-operator-password");
       expect(failure!.message).not.toContain("synthetic-new-password");
     } finally {

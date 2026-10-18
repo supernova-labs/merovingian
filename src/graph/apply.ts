@@ -60,7 +60,6 @@ export function emptyDefinition(namespace: string): Definition {
 }
 
 const STRUCTURAL_TABLES = ["config", "purpose", "bucket", "tool", "marketplace", "skill", "agent", "user", "responsible"] as const;
-const HISTORY_TABLES = ["credential", "journal", "inbox", "decision", "decision_log", "decision_domain"] as const;
 
 /** Administrative, read-only inspection. Never interpret a failed read as empty state. */
 export async function readCurrentState(db: Surreal, namespace: string): Promise<GraphState> {
@@ -75,14 +74,17 @@ export async function readCurrentState(db: Surreal, namespace: string): Promise<
     if (e instanceof NotFoundError && (e.databaseName !== undefined || e.namespaceName !== undefined)) return empty();
     throw e;
   }
-  const hasConfig = "config" in tables
-    ? (await db.query<[unknown[]]>("SELECT id FROM config LIMIT 1"))[0].length > 0
-    : false;
+  const configIds = "config" in tables
+    ? (await db.query<[string[]]>("SELECT VALUE record::id(id) FROM config LIMIT 2"))[0]
+    : [];
+  if (configIds.length > 1 || (configIds.length === 1 && configIds[0] !== namespace)) {
+    throw new Error("Incomplete database: expected exactly one configuration record matching the tenant. No plan was inferred. Verify the target and restore the correct configuration.");
+  }
+  const hasConfig = configIds.length === 1;
   if (!hasConfig) {
     // A schema-only database is safe to initialize; orphaned structure/history is not.
-    for (const table of [...STRUCTURAL_TABLES, ...HISTORY_TABLES]) {
-      if (!(table in tables)) continue;
-      const [rows] = await db.query<[unknown[]]>(`SELECT id FROM ${table} LIMIT 1`);
+    for (const table of Object.keys(tables)) {
+      const [rows] = await db.query<[unknown[]]>("SELECT id FROM type::table($table) LIMIT 1", { table });
       if (rows.length) throw new Error(`Incomplete database: config is missing but ${table} contains records. No plan was inferred. Verify the target and restore the missing configuration before deploying.`);
     }
     return empty();
