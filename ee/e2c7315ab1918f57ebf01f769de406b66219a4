@@ -1,0 +1,19 @@
+docs/releases/1.0.0.md
+  s_d849c6b00c9036::t_8799329e796b52 49-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "eee2c7315ab1918f57ebf01f769de406b66219a4",
+  "prompts": {},
+  "sessions": {
+    "s_d849c6b00c9036": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11152-55fe-78a3-a55f-e911916855c9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
