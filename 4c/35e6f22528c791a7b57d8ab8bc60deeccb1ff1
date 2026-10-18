@@ -1,0 +1,29 @@
+src/catalog/catalog.ts
+  s_e7effeab5cddad::t_7a7cf6a8c4abd2 7
+src/catalog/session.ts
+  s_e7effeab5cddad::t_185376585aa814 1,24-26
+  s_e7effeab5cddad::t_7a7cf6a8c4abd2 23,27-33,37-38
+test/personal-mcp.test.ts
+  s_e7effeab5cddad::t_9e8b20210c2ed0 1-69,71-74
+  s_e7effeab5cddad::t_7a7cf6a8c4abd2 70
+test/catalog-surreal.test.ts
+  s_e7effeab5cddad::t_7a7cf6a8c4abd2 46-47,49-53
+docs/reference/catalog-and-journal.md
+  s_e7effeab5cddad::t_cfbdfc9161d3e7 54-58,85-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4c35e6f22528c791a7b57d8ab8bc60deeccb1ff1",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
