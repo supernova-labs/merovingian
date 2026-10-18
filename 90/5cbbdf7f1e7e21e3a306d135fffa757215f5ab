@@ -1,0 +1,21 @@
+docs/testing/desktop-mcp-smoke.md
+  s_e7effeab5cddad::t_edc821c5cb48e6 1-50
+docs/README.md
+  s_e7effeab5cddad::t_edc821c5cb48e6 61-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "905cbbdf7f1e7e21e3a306d135fffa757215f5ab",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
