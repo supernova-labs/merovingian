@@ -10,8 +10,9 @@ tools:
 
 # Tenant architect
 
-Operate in the tenant repository. Select the matching next-major CLI checkout before
-running commands; the published 0.5.x runtime follows the previous contract.
+Operate in the tenant repository. Verify `merovingian --version` reports 1.0.0
+before running commands, or use a matching development checkout explicitly.
+The retired 0.5.x runtime follows the previous contract.
 
 The desired state is `graph.yaml`: purposes, buckets, user assignments, administrative
 profile fields, plugin references and `ambient.instructions`. Behaviors live in plugins;

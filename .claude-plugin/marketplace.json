@@ -9,7 +9,7 @@
       "name": "governance",
       "source": "./plugin",
       "description": "Administer a Merovingian purpose graph: individual access, catalog and journal, reviewed deploys, marketplace workflows and historical preservation.",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "author": {
         "name": "Luis Novo"
       }

@@ -1,11 +1,13 @@
 # Next-major candidate review — 2026-10-18
 
-Status: code/package checks passed; **not approved for production cutover or publication**.
+Historical pre-release review. Version 1.0.0 was subsequently approved and published
+on 2026-10-18; see the [release notes](../releases/1.0.0.md). The evidence and
+pre-release gates below record the candidate review at that time.
 Engine runtime reviewed: `c38ac75` on `codex/major-catalog-setup`. Follow-up changes
 correct a stale integration-test assertion and document release evidence; they do not
 change runtime code. The operator approved version **1.0.0** on 2026-10-18.
-The package version and draft release notes now reflect that decision; publication
-and production cutover remain unapproved. Governance plugin remains 0.6.0.
+At that checkpoint, the package version and draft notes reflected the version
+decision; publication and cutover still needed approval. The reviewed plugin was 0.6.0.
 
 ## Evidence
 
@@ -38,7 +40,7 @@ SHA-256: `5eb2a12ed7a96339a4c25fbfbaedd7e23dceacba195ced5e8274116a1735072f`.
 Only package version and documentation changed since the full runtime/setup checks
 above; no new database or desktop sessions were needed for this version check.
 
-## Remaining gates
+## Gates recorded before publication
 
 1. Publish/review tenant plugin changes before activating graph references to them.
    Private repository names, commits and sequence belong in the tenant runbook.

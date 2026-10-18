@@ -6,9 +6,10 @@ description: Explain and operate a Merovingian purpose graph. Use when starting 
 # Merovingian — start here
 
 Identify the tenant repository (`graph.yaml`) and the CLI version before acting.
-This plugin targets the next-major runtime. Until released, invoke the matching
-checkout with `bun /absolute/path/to/merovingian/bin/merovingian.ts`; a global
-0.5.x executable implements a different contract.
+This plugin targets Merovingian 1.0.0. Use the published `merovingian` CLI after
+checking `merovingian --version`, or invoke a matching development checkout with
+`bun /absolute/path/to/merovingian/bin/merovingian.ts`. The retired 0.5.x CLI
+implements a different contract.
 
 The graph declares purposes, people, assignments, repositories and plugin references.
 SurrealDB enforces personal access; the Catalog MCP exposes the authenticated slice.

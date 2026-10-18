@@ -1,6 +1,7 @@
 # CLI reference
 
-Use `bun /absolute/path/to/merovingian/bin/merovingian.ts` for this unreleased checkout.
+Use `merovingian` from the published 1.0.0 package, or
+`bun /absolute/path/to/merovingian/bin/merovingian.ts` for checkout development.
 The table omits that common prefix. Commands target a tenant database, not a Git branch.
 
 | Command | Contract |
