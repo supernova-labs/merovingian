@@ -1,6 +1,6 @@
 # CLI reference
 
-Use `merovingian` from the published 1.0.0 package, or
+Use `merovingian` from the 1.0.1 package after publication, or
 `bun /absolute/path/to/merovingian/bin/merovingian.ts` for checkout development.
 The table omits that common prefix. Commands target a tenant database, not a Git branch.
 

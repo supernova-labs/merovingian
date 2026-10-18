@@ -1,6 +1,6 @@
 {
   "name": "@supernova-labs/merovingian",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Merovingian OS \u2014 purpose-based access, catalog and journal for agent workflows.",
   "license": "MIT",
   "author": "Luis Novo <lfnovo@gmail.com>",

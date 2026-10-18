@@ -1,6 +1,6 @@
 # Operating a tenant
 
-Use the published 1.0.0 CLI and confirm `merovingian --version`. In these examples,
+Use the 1.0.1 CLI and confirm `merovingian --version`. In these examples,
 `merovingian` stands for that executable. For development against a matching checkout,
 use `bun /absolute/path/to/merovingian/bin/merovingian.ts` explicitly.
 
@@ -17,7 +17,7 @@ before a deletion is blocked; it is not a transaction. A journal author cannot b
 while referenced: retain the identity and remove assignments if suspending access.
 Do not modify immutable journal history to force deletion.
 
-In the development checkout, planning verifies schema inventory before reading the graph.
+Since 1.0.1, planning verifies schema inventory before reading the graph.
 An absent or schema-only database has an all-create plan, including its configuration singleton.
 An existing graph with missing structural tables stops planning with an upgrade diagnostic;
 verify the target and backup before using `deploy apply` to prepare the schema, then review
