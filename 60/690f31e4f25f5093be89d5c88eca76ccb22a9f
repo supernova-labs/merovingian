@@ -1,0 +1,30 @@
+docs/reference/github-deploy.md
+  s_e7effeab5cddad::t_7897be537c0833 17
+  s_e7effeab5cddad::t_ce0abca2fcc391 27-32,68-70
+src/github/policy.ts
+  s_e7effeab5cddad::t_ce0abca2fcc391 57
+  s_e7effeab5cddad::t_7897be537c0833 14
+src/github/reconcile.ts
+  s_e7effeab5cddad::t_7897be537c0833 88-91,93,98-109,140-142
+test/github.test.ts
+  s_e7effeab5cddad::t_7897be537c0833 50,84,86,88,90,97,101-103,105,114-118,134
+  s_e7effeab5cddad::t_ce0abca2fcc391 167-210
+docs/decisions/consolidadas/0020-reconciliacao-github.md
+  s_e7effeab5cddad::t_ce0abca2fcc391 3,43-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "60690f31e4f25f5093be89d5c88eca76ccb22a9f",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
