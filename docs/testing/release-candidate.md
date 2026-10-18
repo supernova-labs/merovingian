@@ -3,9 +3,9 @@
 Status: code/package checks passed; **not approved for production cutover or publication**.
 Engine runtime reviewed: `c38ac75` on `codex/major-catalog-setup`. Follow-up changes
 correct a stale integration-test assertion and document release evidence; they do not
-change runtime code. The package still reports 0.5.3, matching the last public release,
-so this local artifact must not be published under that version. Proposed major: 1.0.0,
-subject to release approval. Governance plugin is locally prepared as 0.6.0.
+change runtime code. The operator approved version **1.0.0** on 2026-10-18.
+The package version and draft release notes now reflect that decision; publication
+and production cutover remain unapproved. Governance plugin remains 0.6.0.
 
 ## Evidence
 
@@ -27,8 +27,16 @@ subject to release approval. Governance plugin is locally prepared as 0.6.0.
   coverage. No runtime permission was weakened to make a test pass.
 
 This package install resolved dependencies independently of the checkout lockfile,
-including SurrealDB SDK 2.1.1. It complements the locked engine test suite. Pack again
-and repeat artifact smoke after assigning the approved release version.
+including SurrealDB SDK 2.1.1. It complements the locked engine test suite.
+
+## Versioned artifact — 1.0.0
+
+After version approval, a new tarball was generated and extracted in isolation.
+Independent dependency installation, `--version` (1.0.0), help, graph-only init and
+package inventory checks passed. Typecheck and all four CLI tests also passed.
+SHA-256: `5eb2a12ed7a96339a4c25fbfbaedd7e23dceacba195ced5e8274116a1735072f`.
+Only package version and documentation changed since the full runtime/setup checks
+above; no new database or desktop sessions were needed for this version check.
 
 ## Remaining gates
 
@@ -39,8 +47,8 @@ and repeat artifact smoke after assigning the approved release version.
    personal MCP definitions. Earlier project-config desktop operation and current
    personal process/terminal probes are distinct evidence; do not call them a fresh
    personal desktop acceptance test or open new chats without authorization.
-3. Approve the package version and release, update version/release notes, and validate
-   the final artifact before the publication workflow. Do not publish the current 0.5.3.
+3. Approve publication of the versioned 1.0.0 candidate after reviewing
+   [release notes](../releases/1.0.0.md) and the final artifact evidence.
 4. At the agreed cutover window, stop old writers, capture the final historical archive,
    verify a complete operational backup/restore path, then execute reviewed plans.
    The historical archive alone excludes credentials and unrelated tenant tables.
