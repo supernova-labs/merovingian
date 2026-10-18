@@ -58,3 +58,5 @@ These predate the product docs and are kept in Portuguese; they are the rational
 
 - [Catalog and Journal](reference/catalog-and-journal.md) — personal MCP connection, scoped discovery and immutable journals.
 - [ADR 0019](decisions/consolidadas/0019-catalogo-e-journal.md) — direction and remaining implementation work.
+
+- [Desktop MCP smoke evidence](testing/desktop-mcp-smoke.md) — native Claude Code and Codex desktop results and remaining acceptance checks.
