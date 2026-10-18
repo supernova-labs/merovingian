@@ -1,0 +1,43 @@
+docs/README.md
+  s_e7effeab5cddad::t_991b876665d9ce 3-4,32
+docs/testing/release-candidate.md
+  s_e7effeab5cddad::t_991b876665d9ce 3-5,9-10,43
+docs/guides/getting-started.md
+  s_e7effeab5cddad::t_991b876665d9ce 3-5,15
+docs/guides/releasing.md
+  s_e7effeab5cddad::t_991b876665d9ce 3-4
+docs/reference/cli.md
+  s_e7effeab5cddad::t_991b876665d9ce 3-4
+docs/guides/history-and-cutover.md
+  s_e7effeab5cddad::t_991b876665d9ce 3
+README.md
+  s_e7effeab5cddad::t_991b876665d9ce 12,15-16,59-60
+docs/reference/catalog-and-journal.md
+  s_e7effeab5cddad::t_991b876665d9ce 1,3,5,9-10
+docs/releases/1.0.0.md
+  s_e7effeab5cddad::t_991b876665d9ce 3
+.claude-plugin/marketplace.json
+  s_e7effeab5cddad::t_0ba54e4f081845 12
+plugin/.claude-plugin/plugin.json
+  s_e7effeab5cddad::t_bc1d3eac5fb7f3 3
+plugin/agents/architect.md
+  s_e7effeab5cddad::t_1dcbc95021a731 13-15
+plugin/skills/merovingian/SKILL.md
+  s_e7effeab5cddad::t_4a641209757962 9-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "831b182f0ec035ad51bf18a6951fc9b0dd191fae",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
