@@ -1,0 +1,47 @@
+test/login.test.ts
+  s_e7effeab5cddad::t_feed6961814a08 70
+test/auth-gate.test.ts
+  s_e7effeab5cddad::t_feed6961814a08 79,93-94
+  s_e7effeab5cddad::t_add6a848de7e3d 95-96
+src/commands/connection-diagnostic.ts
+  s_e7effeab5cddad::t_feed6961814a08 12,26-28,37-39
+src/provider/surreal.ts
+  s_e7effeab5cddad::t_feed6961814a08 26,34
+src/commands/login.ts
+  s_e7effeab5cddad::t_feed6961814a08 38,44,47,49
+src/graph/apply.ts
+  s_e7effeab5cddad::t_feed6961814a08 77-83,86-87
+test/state-inspection.test.ts
+  s_e7effeab5cddad::t_8fd1f6572cac8b 1,12-13,16-18,39,46,49-59
+  s_e7effeab5cddad::t_692291b1cc17e3 48
+test/connection-diagnostic.test.ts
+  s_e7effeab5cddad::t_8fd1f6572cac8b 29,35-37,43-56
+src/commands/passwd.ts
+  s_e7effeab5cddad::t_feed6961814a08 38,43,52,58,60
+docs/guides/operating-a-tenant.md
+  s_a5ec2944b72ad1::t_e00562f718e14c 24,26-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d475f92b9f179a22a736d58d4fec5b5d9919c8e9",
+  "prompts": {},
+  "sessions": {
+    "s_a5ec2944b72ad1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14ea0-5b34-7260-b669-ba463e6cb267",
+        "model": "unknown"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    },
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
