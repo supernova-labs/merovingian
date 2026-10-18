@@ -1,7 +1,7 @@
 # Getting started from the checkout
 
-Merovingian 1.0.0 is published. For normal tenant operation, install it with
-`bun add -g @supernova-labs/merovingian@1.0.0` and check `merovingian --version`.
+These examples target Merovingian 1.0.1. Once that release is published, install it with
+`bun add -g @supernova-labs/merovingian@1.0.1` and check `merovingian --version`.
 The examples below use the Source checkout for offline development.
 Install Bun 1.3+ and dependencies in the Source checkout:
 
