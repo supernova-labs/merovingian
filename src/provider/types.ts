@@ -127,6 +127,8 @@ export interface DecisionDef {
 
 /** The whole definition for one namespace (tenant). */
 export interface Definition {
+  /** Administrative deployment policy; never exposed by the member catalog. */
+  github?: import("../github/policy.ts").GithubPolicy;
   namespace: string;
   ambient: Ambient;
   purposes: Purpose[];

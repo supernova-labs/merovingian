@@ -1,3 +1,4 @@
+import { GithubPolicySchema } from "../github/policy.ts";
 // Load the tenant graph from its YAML desired-state (ADR 0009) + the tenant
 // library (ADR 0012).
 //
@@ -121,6 +122,7 @@ const MarketplaceSchema = z.union([
 // .strict() everywhere: contract v2 has no back-compat — a leftover `razao:`,
 // bucket `scope:` or `defaultMarketplace:` must fail loudly, not be ignored.
 const GraphSchema = z.object({
+  github: GithubPolicySchema.optional(),
   namespace: z.string(),
   ambient: z.object({ skills: z.array(z.string()).default([]) }).strict().default({ skills: [] }),
   marketplaces: z.record(MarketplaceSchema).default({}),
@@ -341,6 +343,7 @@ export function parseGraph(yamlText: string, library: TenantLibrary = EMPTY_LIBR
   }));
 
   const definition: Definition = {
+    ...(g.github ? { github: g.github } : {}),
     namespace: g.namespace,
     ambient: {
       skills: g.ambient.skills,

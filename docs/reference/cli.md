@@ -493,3 +493,9 @@ a thrown error.
 - [`reference/env-vars`](./env-vars.md) — `SURREAL_*`, `MEROVINGIAN_*`, `CONSOLE_PORT`, `PORT`.
 - [`guides/connection-and-secrets`](../guides/connection-and-secrets.md) — how the CLI reaches SurrealDB and gh.
 - [`guides/authoring-the-graph`](../guides/authoring-the-graph.md) — the plan/apply change loop.
+
+### GitHub permissions and protections
+
+`deploy github-plan` and `deploy github-apply --approve <revision>` reconcile the
+GitHub provider independently of Surreal. See [GitHub deployment](github-deploy.md)
+for graph policy, review teams, scopes, blocking conditions and invitation handling.

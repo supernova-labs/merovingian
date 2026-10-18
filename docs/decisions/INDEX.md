@@ -127,3 +127,6 @@ Vivem no `0009` (o único ativo de peso), todos **roadmap**, não bloqueantes:
   confirmada diferida (`0002`); faseamento do reconcile = audit-todos-providers + apply
   Surreal→gh→marketplace (`0009`). Graduadas pra `consolidadas/`: 0002, 0004, 0005, 0007,
   0008. Marcadas superseded: 0001 (→04/05/09), 0003 (→09). Seguem em fermentação: 0006, 0009.
+
+- [0020 — Reconciliação administrativa do GitHub](consolidadas/0020-reconciliacao-github.md):
+  plano aprovado, permissões por grafo, proteções por equipe e limites do adaptador.

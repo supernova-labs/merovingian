@@ -1,3 +1,4 @@
+import { deployGithub } from "./commands/github.ts";
 // Hand-rolled arg parsing + dispatch (harny house style — no arg-parser dep).
 //
 // Commands:
@@ -41,6 +42,8 @@ Usage:
   merovingian mcp <catalog|journal|inbox|decisions|surreal-data>            run a bundled MCP server (stdio)
   merovingian decisions <namespace> [--all] [--drain [--ids a,b]]   governance drain (root): the in-flight decision log (promotion candidates)
   merovingian console <namespace> [--port N]       serve the Architect console (read-only god-view, 127.0.0.1)
+  merovingian deploy github-plan [--graph P]       audit GitHub ACLs and PR protections; emits an approval revision
+  merovingian deploy github-apply --approve HASH   apply reviewed GitHub plan [--graph P] [--scope all|permissions|protections]
   merovingian deploy plan [--graph P]              audit: diff graph.yaml × Surreal (read-only; exit 1=drift 2=invalid)
   merovingian deploy apply [--graph P] [--yes]     converge Surreal to graph.yaml (structure only; --yes to allow deletes)
   merovingian library update [--graph P] [--yes]   refresh the seeded library from the Source templates (audit-first)
@@ -190,6 +193,10 @@ export function parseArgs(argv: string[]): ParsedArgs {
 }
 
 export async function main(argv = process.argv.slice(2)): Promise<void> {
+  if (argv[0] === "deploy" && ["github-plan", "github-apply"].includes(argv[1] ?? "")) {
+    await deployGithub(argv.slice(1));
+    return;
+  }
   const parsed = parseArgs(argv);
   // overlaps the command's own work; prints (stderr) only after it finishes
   const update = startUpdateCheck(parsed.command);
