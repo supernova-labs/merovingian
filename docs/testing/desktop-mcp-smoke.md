@@ -48,3 +48,31 @@ surfaces, plugin installation/discovery/version diagnosis, authorized KB access,
 setup repetition/conflicts, and integration of historical journals. The process-level
 cross-folder regression in `test/personal-mcp.test.ts` complements this evidence but
 does not replace those end-to-end acceptance checks.
+
+## Follow-up: native plugins and KB reading
+
+On 2026-10-18 UTC, a synthetic local marketplace (`mero-setup-test-20261018`)
+was registered with both native CLIs. Its `mero-setup-probe` plugin version `0.0.1`
+contained one shared skill pointing to one synthetic KB file outside the workspace.
+Claude installed it at user scope; Codex installed it using its native plugin command.
+No `context` links, build stamps, or copied skills were involved.
+
+| Surface | Native installation | Skill discovery and KB marker |
+|---|---|---|
+| Claude Code terminal | Pass, user scope | Pass, Skill and Read |
+| Claude Code desktop, existing Code session | Shared personal installation | Pass, Skill and Read |
+| Codex terminal | Pass | Pass, installed skill then file read |
+| Codex desktop, existing test chat | Shared personal installation | Not discovered in the already-running chat; fresh session pending |
+
+Codex terminal initially rejected an existing unrelated MCP transport configuration
+before starting a session. The successful test used `--ignore-user-config` and
+explicit overrides for only the synthetic plugin and marketplace; the personal
+configuration was not repaired or replaced. This validates installed plugin loading,
+not the compatibility of every existing personal setting with that CLI version.
+
+The Core setup helper now has read-only native inventory and clone diagnostics,
+with 18 regression tests covering repeat execution, wrong origins, dirty clones,
+symlinks, nested repositories, duplicate marketplace names, unavailable inventory,
+disabled or project-scoped plugins, and on-demand version checks pinned to a GitHub commit. These tests do not prove remote repository
+grants, published plugin freshness, or complete personal MCP onboarding. Those
+remain explicit release checks.
