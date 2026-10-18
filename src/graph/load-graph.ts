@@ -75,7 +75,7 @@ const UserSchema = z.object({
 }).strict();
 
 // catalog values are EXTERNAL refs — always explicit plugin@marketplace. Local
-// content needs no catalog entry (it resolves from library/ by convention).
+// library content is no longer loaded or distributed.
 const ExternalRef = z.string().regex(/^[^@\s]+@[^@\s]+$/, {
   message: 'catalog refs are explicit "plugin@marketplace"; local library content is no longer supported',
 });

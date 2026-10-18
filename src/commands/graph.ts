@@ -1,6 +1,6 @@
 // `merovingian graph <namespace> [--backend surreal]` — show the logged-in
 // user's personal access graph: everything they're entitled to. A dry-run
-// projection (full entitlement) via the build service, no files written.
+// projection (full entitlement) via the local access helper, no files written.
 
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";

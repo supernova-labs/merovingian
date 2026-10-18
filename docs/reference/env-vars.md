@@ -1,100 +1,46 @@
-# Reference — environment variables
+# Environment variables
 
-Every environment variable the engine reads, its default, and what it controls. Grouped by where
-they take effect. Defaults are the ones baked into the source; where a default matches
-`docker-compose.yml` it is called out.
+## Operator and optional personal CLI
 
-Related: [machine-layout](machine-layout.md) · [connection-and-secrets](../guides/connection-and-secrets.md) ·
-[going-to-production](../guides/going-to-production.md) · [cli](cli.md)
+| Variable | Default | Use |
+|---|---|---|
+| SURREAL_URL | registry URL, then ws://localhost:8020/rpc | Direct endpoint; explicit invocation/tenant-config override wins |
+| SURREAL_NS | merovingian | Surreal namespace |
+| SURREAL_DB | tenant argument | Database override; verify before any mutation |
+| SURREAL_USER / SURREAL_PASS | root / root | Administrative credentials; defaults for local development |
+| MEROVINGIAN_JWT_SECRET | public dev key only in explicit dev/reset path | Private first-provisioning key; existing identity access is not rotated by routine deploy |
+| MEROVINGIAN_NEW_PASS | stdin | Input for passwd; never place it in command arguments |
+| MEROVINGIAN_PASS | unset | Individual password for login/graph and password-selected data reads |
+| MEROVINGIAN_GRAPH | ./graph.yaml | Authoring graph, overridden by --graph |
+| MEROVINGIAN_BACKEND | surreal | Set stub for the offline acme fixture; --backend wins |
+| CONSOLE_PORT | 8888 | Local console; --port wins |
+| MEROVINGIAN_NO_UPDATE_CHECK | unset | Any value disables passive package-version notice |
+| CI | unset | Also disables passive package-version notice |
 
-## Backend connection (`surrealConfig`)
+History export requires explicit SURREAL_USER/SURREAL_PASS rather than accepting their local
+defaults. Passive update notices are fail-silent and cached for 24 hours; they are not the
+setup's deterministic catalog/plugin diagnosis.
 
-Read by `surrealConfig()` in `src/provider/surreal.ts`. These describe how the engine (or the
-service, or a system MCP) reaches SurrealDB.
+## Catalog and Journal MCPs
 
-| Var | Default | Controls |
-| --- | --- | --- |
-| `SURREAL_URL` | `ws://localhost:8020/rpc` | The SurrealDB RPC endpoint. Matches `docker-compose.yml` (host port `8020` → container `8000`). Resolution: per-invocation override › this env › the per-tenant registration (`merovingian.toml` → `~/.merovingian/<ns>/namespace.json`, see [connection-and-secrets](../guides/connection-and-secrets.md#per-tenant-server-merovingiantoml)) › the default. |
-| `SURREAL_USER` | `root` | Sign-in user for a **root** connection (engine/service side). Matches compose (`--user root`). |
-| `SURREAL_PASS` | `root` | Sign-in password for the root connection. Matches compose (`--pass root`). |
-| `SURREAL_NS` | `merovingian` | The SurrealDB **namespace** — fixed for all tenants. |
-| `SURREAL_DB` | *the tenant name* | The SurrealDB **database** = the merovingian tenant (e.g. `acme`). Defaults to the `tenant`/`namespace` argument passed to `surrealConfig(tenant)`. |
+All five settings are required with no defaults or operator-registry fallback:
+SURREAL_URL, SURREAL_NS, MEROVINGIAN_DB, MEROVINGIAN_USER, MEROVINGIAN_PASS.
+Configure them in private native MCP definitions. MEROVINGIAN_DB is independent of
+SURREAL_DB. These MCPs never use SURREAL_USER/PASS or MEROVINGIAN_JWT_SECRET.
+See [Catalog and Journal](catalog-and-journal.md).
 
-Note the two senses of "namespace": the merovingian *tenant* (the graph, the CLI's `<namespace>`
-argument) maps onto the SurrealDB *database*, while the SurrealDB *namespace* is the fixed
-`merovingian`. See [going-to-production](../guides/going-to-production.md).
+## Generic data diagnostic MCP
 
-## Backend selection
+`surreal-data` requires MEROVINGIAN_DB and MEROVINGIAN_USER. SURREAL_URL defaults to
+ws://localhost:8020/rpc and SURREAL_NS to merovingian. MEROVINGIAN_BUCKETS is a JSON array
+of `{bucket, tables, scope?}`; absent/invalid JSON gives no mounts. Mounts describe the tool
+surface, not authority; the database enforces the query.
 
-| Var | Default | Controls |
-| --- | --- | --- |
-| `MEROVINGIAN_BACKEND` | `surreal` | `defaultBackend()` in `src/service/build-service.ts`: set to `stub` to select the offline `acme` fixture; any other value (or unset) reads the live DB in-process. A `--backend` flag overrides it. |
+MEROVINGIAN_PASS chooses individual SIGNIN. Without it the operator/test path mints a token
+using MEROVINGIAN_JWT_SECRET or the development key; production databases must not trust the
+public development key. This differs from the strict personal MCPs. A configured
+MEROVINGIAN_SERVICE_URL is rejected because remote service authentication was removed.
 
-## Update check
-
-| Var | Default | Controls |
-| --- | --- | --- |
-| `MEROVINGIAN_NO_UPDATE_CHECK` | *(unset)* | Set to any value to disable the passive new-version notice (`src/update-check.ts`). `CI` being set disables it too. The check consults the npm registry at most once per 24h (cache: `~/.merovingian/update-check.json`), is fail-silent, and prints a single stderr line after a command when a newer version exists. |
-
-## JWT signing
-
-Read in `src/provider/surreal.ts` (`mintIdentityJwt`).
-
-| Var | Default | Controls |
-| --- | --- | --- |
-| `MEROVINGIAN_JWT_SECRET` | `merovingian-dev-secret-change-me` (the `DEV_JWT_SECRET` constant, dev/test only) | HS256 secret used to sign the scoped identity JWT, and to bind the `KEY` of `surreal/auth.surql`'s `DEFINE ACCESS identity` at provision time. Signing and provisioning **must use the same value** or the DB rejects the token. A real `deploy apply` **requires** this (it refuses to provision a tenant with the public dev key); `reset` (dev/test) may fall back to the default. In production the service holds it; never commit it. |
-
-## Graph authoring commands
-
-Read in `src/graph/load-graph.ts` (`resolveGraphPath`).
-
-| Var | Default | Controls |
-| --- | --- | --- |
-| `MEROVINGIAN_GRAPH` | `graph.yaml` (in cwd) | Which `graph.yaml` an authoring command (`reset`, `deploy plan/apply`, `library update`) acts on (the tenant `library/` is read from the same folder). Precedence: `--graph <path>` › `MEROVINGIAN_GRAPH` › `./graph.yaml`. Throws if none exists. |
-
-## HTTP servers
-
-| Var | Default | Controls |
-| --- | --- | --- |
-| `PORT` | `8787` | Port for the build/auth service (`startService` in `src/server/service.ts`). Overridable via a `--port`/`port` option. |
-| `CONSOLE_PORT` | `8888` | Port for the read-only console UI (`startConsole` in `src/server/console.ts`, bound to `127.0.0.1`). Overridable via a `port` option. |
-
-## System MCP env (written into `settings.local.json` / `.mcp.json` by `build`)
-
-These are consumed by the bundled system MCPs (`surreal-data`, `inbox`) via `src/mcp/token-source.ts`
-(`cfgFromEnv`, `envTokenSource`). `build` writes them into the workspace's MCP env; you normally do
-not set them by hand. See [emit](../../src/projection/emit.ts) and
-[connection-and-secrets](../guides/connection-and-secrets.md).
-
-| Var | Default | Controls |
-| --- | --- | --- |
-| `MEROVINGIAN_DB` | *(required — throws if unset)* | The SurrealDB database the MCP connects to. Set by `build` to the tenant's db. |
-| `SURREAL_URL` | `ws://localhost:8020/rpc` | RPC endpoint for the MCP connection. |
-| `SURREAL_NS` | `merovingian` | SurrealDB namespace for the MCP connection. |
-| `MEROVINGIAN_SERVICE_URL` | *(unset)* | **Remote/real path.** The build/auth service URL; the MCP fetches a fresh scoped token per call from `<url>/token` using the local `gh` token. When set, the MCP does NOT mint locally. |
-| `MEROVINGIAN_NAMESPACE` | falls back to `MEROVINGIAN_DB` | The merovingian namespace passed to the service's `/token` call. |
-| `MEROVINGIAN_USER` | *(unset)* | The person's user id for the local token paths (password signin or dev-mint). One of `MEROVINGIAN_SERVICE_URL` or `MEROVINGIAN_USER` must be set, or the token source throws. |
-| `MEROVINGIAN_PASS` | *(unset)* | **Password SIGNIN (ADR 0015).** The person's own password: SurrealDB checks the argon2 hash in `credential` and itself issues the scoped token — no signing key on this machine. Order: `MEROVINGIAN_SERVICE_URL` > `MEROVINGIAN_PASS` > dev-mint. Lives in the workspace's gitignored `.env`. |
-| `MEROVINGIAN_NEW_PASS` | *(unset)* | Input for `merovingian passwd <ns> <user>` (operator: set/rotate a person's password; falls back to stdin). |
-| `MEROVINGIAN_BUCKETS` | `[]` (absent/broken JSON = no mounts) | The identity's bucket mounts (a JSON `SurrealMount[]`), read by the `surreal-data` MCP (`mountsFromEnv` in `src/mcp/surreal-data.ts`) as its tool surface (`tables` / `select`). Stamped by `build` from the manifest's surreal mounts — **not user-set**. Affordance only: enforcement stays with the db's PERMISSIONS (ADR 0011). |
-| `MEROVINGIAN_PURPOSES` | `[]` | The projection's visible purposes (a JSON `string[]`), read by the `inbox` MCP (`purposesFromEnv` in `src/mcp/inbox.ts`) as the scope-hint for `friction`/`pending`. Stamped by `build`. Affordance only: read/resolve reach is the db's lineage permission (ADR 0014). |
-
-`MEROVINGIAN_JWT_SECRET` (above) also applies here when the MCP dev-mints.
-
-### Also emitted (not read back by the engine)
-
-`build` writes a few env keys into `settings.local.json` that Claude Code / plugins consume, not the
-engine itself: `MEROVINGIAN_NAMESPACE`, `MEROVINGIAN_USER`, `MEROVINGIAN_TOKEN` (a
-`fake-<user>-token` placeholder), plus any resolved **company keys** (see below). Source:
-`buildSettings` in `src/projection/emit.ts`.
-
-## Company API keys (`${VAR}` refs)
-
-Not a fixed variable list — each tenant's `graph.yaml` `tools:` registry names the vars it needs. A
-tool with `keySource: company` and an `env` entry like `PERPLEXITY_API_KEY: "${PERPLEXITY_API_KEY}"`
-resolves `${PERPLEXITY_API_KEY}` from the **environment where the build service runs** (server-side
-in production) and lands the value in the workspace's `settings.local.json` env. Source:
-`resolveToolEnv` in `src/projection/resolve.ts`, `load-graph.ts` (`ToolSchema`). If the referenced
-var is unset, nothing is emitted for that key (fail-open on the value, silent). See
-[connection-and-secrets](../guides/connection-and-secrets.md) and
-[graph-yaml](graph-yaml.md).
+The engine no longer emits MEROVINGIAN_TOKEN, company keys, purpose hints or client configs.
+Third-party tool credentials use native integrations. Do not put secrets in general instructions,
+marketplaces, graph YAML or shared support logs.

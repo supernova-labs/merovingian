@@ -1,5 +1,8 @@
 # Índice das ADRs — v2 do Merovingian
 
+**Contrato atual da próxima major:** ADRs 0019 e 0020. Referências antigas a build,
+library, service e filas são histórico onde substituídas por essas decisões.
+
 Estado de todas as decisões num lugar só. **Fonte da verdade do status.** O conteúdo
 de cada uma está em `fermentacao/` (em discussão) ou `consolidadas/` (fechadas — lastro
 *ou* superseded).
@@ -17,13 +20,13 @@ de cada uma está em `fermentacao/` (em discussão) ou `consolidadas/` (fechadas
 | 0009 | Topologia de deploy + governança declarativa | 🔵 Fermentação | `fermentacao/` | YAML declarativo; governança=skill; ID estável |
 | 0010 | Governança é tooling de repo, não propósito | 🟢 Consolidada | `consolidadas/` | architect sai do grafo; auth=repo+Surreal; init semeia via marketplace |
 | 0011 | Dados de domínio são do tenant | 🟢 Consolidada | `consolidadas/` | client/by-client saem do motor; inbox fica; deploy provisiona domínio do grafo (impl. entregue 2026-07-02) |
-| 0012 | Library do tenant + distribuição híbrida | 🟢 Consolidada | `consolidadas/` | conteúdo comportamental no tenant repo (build materializa a fatia); marketplace = produto + terceiros; init semeia cópias |
-| 0013 | Domínio de decisões: log + jurisprudência | 🟢 Consolidada | `consolidadas/` | log em voo (padrão inbox, purpose-scoped) · record ratificado (git→db, padrão library) · promoção via drain · `decides:` ganha significado (impl. entregue 2026-07-03) |
-| 0014 | Frictions com escopo + governança local | 🟢 Consolidada | `consolidadas/` | a friction É a task: `scope` (escritor escopa, root re-escopa/pesca) · leitura/resolução por lineage REAL (não origin) · governança local = skill `pending` (humano invoca) · um `drained` só + `resolved_through` (impl. entregue 2026-07-10) |
+| 0012 | Library do tenant + distribuição híbrida | 🟡 Superseded → 0019 | `consolidadas/` | conteúdo comportamental no tenant repo (build materializa a fatia); marketplace = produto + terceiros; init semeia cópias |
+| 0013 | Domínio de decisões: log + jurisprudência | 🟡 Superseded → 0019 | `consolidadas/` | log em voo (padrão inbox, purpose-scoped) · record ratificado (git→db, padrão library) · promoção via drain · `decides:` ganha significado (impl. entregue 2026-07-03) |
+| 0014 | Frictions com escopo + governança local | 🟡 Superseded → 0019 | `consolidadas/` | a friction É a task: `scope` (escritor escopa, root re-escopa/pesca) · leitura/resolução por lineage REAL (não origin) · governança local = skill `pending` (humano invoca) · um `drained` só + `resolved_through` (impl. entregue 2026-07-10) |
 | 0015 | SIGNIN por senha antes do service | 🟢 Consolidada | `consolidadas/` | cada pessoa com a própria senha (argon2 em `credential`, runtime); o banco emite o token (KEY nunca sai); coexiste com JWT externo → service vira sucessor, não pré-requisito; condição: banco em rede privada (impl. entregue 2026-07-24) |
 | 0016 | O grafo também é dado | 🟢 Consolidada | `consolidadas/` | FOR select estrutural pela régua de lineage (0014) + `readers`/`ambient` derivados → build/graph rodam COMO a pessoa (senha), zero credencial de sistema em máquina de membro; regra nova: nunca subquery em permission (não roda com perms do caller — achado 2026-07-25); invariante: paridade byte-a-byte do manifest (impl. entregue 2026-07-25) |
-| 0017 | Projeção multi-harness | 🟢 Consolidada | `consolidadas/` | um manifest neutro → emitters Claude + Codex no mesmo workspace; sessão raiz chama agentes de propósito como subagentes; ownership por arquivo, aplicação transacional e degradação explícita (impl. entregue 2026-07-26) |
-| 0018 | Instruções globais do tenant | 🟢 Consolidada | `consolidadas/` | `library/workspace.md` tenant-owned → `config` → Manifest neutro → mesma seção em `CLAUDE.md` e `AGENTS.md`; alcance tenant-wide, sem segredos (impl. entregue 2026-08-01) |
+| 0017 | Projeção multi-harness | 🟡 Superseded → 0019 | `consolidadas/` | um manifest neutro → emitters Claude + Codex no mesmo workspace; sessão raiz chama agentes de propósito como subagentes; ownership por arquivo, aplicação transacional e degradação explícita (impl. entregue 2026-07-26) |
+| 0018 | Instruções globais do tenant | 🟡 Parcialmente substituída → 0019 | `consolidadas/` | `library/workspace.md` tenant-owned → `config` → Manifest neutro → mesma seção em `CLAUDE.md` e `AGENTS.md`; alcance tenant-wide, sem segredos (impl. entregue 2026-08-01) |
 
 | 0019 | Catálogo autenticado e Journal pessoal | 🟢 Direção consolidada; implementação parcial | `consolidadas/` | catálogo sem build, Journal autor/admin, clean cut na próxima major |
 

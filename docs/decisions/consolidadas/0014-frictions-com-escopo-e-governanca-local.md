@@ -1,5 +1,7 @@
 # ADR 0014 — Frictions com escopo e governança local: subsidiariedade no loop FFF
 
+> **Substituída pela [ADR 0019](0019-catalogo-e-journal.md).** Mecanismo substituído na próxima major; conteúdo abaixo preservado como histórico.
+
 **Status:** Consolidada — implementação entregue em 2026-07-10 (mesmo dia do design: schema +
 permissions por lineage, apply re-scope na deleção de purpose, MCP `pending`/`resolve`/`rescope`,
 CLI `--rescope`, console com scope, skills friction/pending, drain com triagem — plugin 0.4.0).

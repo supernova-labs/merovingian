@@ -1,8 +1,8 @@
 # Catalog and Journal (major-release work in progress)
 
 These MCP servers are available from this checkout. They do not require a workspace
-build. The existing build surfaces remain during implementation and are scheduled
-for removal before the major release; they are not a supported legacy product track.
+build. Workspace emitters and the old inbox/decision runtime have been removed.
+This checkout targets the next major; the published 0.5.x CLI is not interchangeable.
 
 ## Personal connection
 
@@ -80,8 +80,9 @@ access to its target. Direct database writers can create dangling references; th
 are not authorization links. A failed append can have an uncertain result after a
 connection interruption: inspect the list before retrying.
 
-Old inbox and decision records are not imported or made newly visible. Their export,
-retirement, and removal of old runtime surfaces are separate release requirements.
+Old inbox and decision records are not imported or made newly visible. Administrative
+export/verification is available; deploy locks down existing historical tables. Follow
+[History and cutover](../guides/history-and-cutover.md) before deploying to an old tenant.
 The new journal table is runtime data and survives ordinary deploy reconciliation.
 
 ## Required macOS client matrix

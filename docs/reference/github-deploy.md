@@ -75,6 +75,6 @@ No database credential is needed for these commands.
 - Public/internal repositories, unknown/custom roles, unsupported actors and
   invitations without an identifiable user are not silently reconciled.
 
-Tests use a synthetic API double. Live provider/account compatibility still needs
-an isolated GitHub repository before production rollout; no production permissions
-are changed by the test suite.
+Tests use a synthetic API double and do not change production permissions. Before
+rolling out to another account, verify its feature support in an isolated repository;
+inspect the resulting rulesets and require a fresh plan with no unexplained drift.

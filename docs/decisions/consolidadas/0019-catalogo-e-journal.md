@@ -50,9 +50,14 @@ Deploy preserva tabelas históricas existentes, bloqueia identidades do produto 
 não volta a reconciliar decisões nem alterar frictions. Exportação administrativa
 nativa e restauração isolada têm cobertura de integração.
 
-Pendentes: setup e diagnóstico nos quatro clientes em macOS; publicação de plugins e
-fontes de versões; reconciliação GitHub e proteções; exportação do histórico; retirada
-das superfícies antigas; revisão completa de documentação e validação final da major.
+Também implementados: reconciliação GitHub e proteções (ADR 0020), revisão das skills
+administrativas e documentação do corte. As evidências operacionais privadas ficam no
+tenant, sem incorporar seus dados ao Source público.
+
+Pendentes para release: fechar a matriz de aceitação nos quatro clientes em macOS,
+confirmar versões/distribuição de plugins, snapshot final após parar escritores antigos,
+validar o candidato à release e aprovar publicação/corte em produção. Exportação e
+retirada dos mecanismos antigos já existem; não são mais trabalho de implementação.
 
 A política de review por repositório exigirá outra pessoa vinculada a um propósito
 dono, com exceções administrativas explícitas no tenant. Nenhum nome de operador deve

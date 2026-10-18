@@ -82,8 +82,8 @@ jobs:
           FILES=$(tar -tzf "$TARBALL" | sed 's|^package/||' | grep -v '/$')
           missing=""
           for r in package.json bin/merovingian.ts surreal/schema.surql surreal/data.surql \
-                   src/init/templates/library/skills/journal/SKILL.md src/server/console.html \
-                   src/init/templates/library/skills/update-workspace/SKILL.md \
+                   src/init/baseline.ts src/server/console.html surreal/auth.surql \
+                   src/mcp/catalog.ts src/mcp/journal.ts src/history/archive.ts src/history/retire.ts \
                    fixtures/example/graph.yaml; do
             echo "$FILES" | grep -qx "$r" || missing="$missing $r"
           done
@@ -91,7 +91,7 @@ jobs:
             echo "::error::missing from tarball:$missing"
             exit 1
           fi
-          forbidden=$(echo "$FILES" | grep -E '^(docs/|test/|plugin/|\.claude|\.github/)' || true)
+          forbidden=$(echo "$FILES" | grep -E '^(docs/|test/|plugin/|\.claude|\.github/|src/init/templates/|fixtures/example/(library|decisions)/|src/projection/emit|src/server/service\.ts|bin/merovingian-service\.ts)' || true)
           if [ -n "$forbidden" ]; then
             echo "::error::unexpected files in tarball: $forbidden"
             exit 1

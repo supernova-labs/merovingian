@@ -6,12 +6,11 @@ import { restrictLegacyHistory } from "../history/retire.ts";
 //   • deploy apply = applyGraph(reset:false) — surgical converge (prod/governance)
 //
 // Order (apply mode): validate → ensure schema → read current → plan → [--yes gate]
-// → [pre-flight referrer-check, atomic] → upsert desired → reconcile edges → delete.
+// → [pre-flight referrer-check] → upsert desired → reconcile edges → delete.
 //
-// Atomicity without a transaction: apply never touches runtime tables, so a runtime
-// referrer (journal.author) reads identically before/after the upsert; and validateGraph
-// guarantees no surviving structural record references a deleted one. So the referrer
-// check is accurate PRE-WRITE → abort-before-writing is atomic, zero partial state.
+// Referrer checks precede graph writes, but schema preparation and historical
+// permission lockdown have already run. This is not a database transaction.
+// Immutable journal authors must be retained; remove assignments to offboard.
 
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";

@@ -47,6 +47,18 @@ for MCP configuration. General instructions live in `ambient.instructions`; plug
 content stays in marketplaces. Initial release support targets macOS with Claude
 Code and Codex, both terminal and desktop.
 
+## Administrative plugin
+
+For Claude Code, install the repository marketplace plugin:
+
+```text
+/plugin install governance --marketplace supernova-labs/merovingian
+```
+
+The remote install uses the published repository revision. To review this unreleased
+branch, validate/load its local `plugin/` directory instead. The administrative plugin
+is separate from tenant capability plugins and does not grant database access.
+
 ## Documentation
 
 - [Documentation index](docs/README.md)

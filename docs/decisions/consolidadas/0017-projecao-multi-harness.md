@@ -1,5 +1,7 @@
 # ADR 0017 — Projeção multi-harness a partir de um manifest neutro
 
+> **Substituída pela [ADR 0019](0019-catalogo-e-journal.md).** Mecanismo substituído na próxima major; conteúdo abaixo preservado como histórico.
+
 **Status:** Consolidada — implementação entregue em 2026-07-26 na issue #17: manifest
 neutro, emitters Claude/Codex, inventário transacional, plugin sync, compatibilidade de
 frontmatter e goldens multi-harness.
