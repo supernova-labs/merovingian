@@ -62,7 +62,7 @@ No `context` links, build stamps, or copied skills were involved.
 | Claude Code terminal | Pass, user scope | Pass, Skill and Read |
 | Claude Code desktop, existing Code session | Shared personal installation | Pass, Skill and Read |
 | Codex terminal | Pass | Pass, installed skill then file read |
-| Codex desktop, existing test chat | Shared personal installation | Not discovered in the already-running chat; fresh session pending |
+| Codex desktop, fresh test chat | Shared personal installation | Pass, discovered skill then file read |
 
 Codex terminal initially rejected an existing unrelated MCP transport configuration
 before starting a session. The successful test used `--ignore-user-config` and
@@ -76,3 +76,9 @@ symlinks, nested repositories, duplicate marketplace names, unavailable inventor
 disabled or project-scoped plugins, and on-demand version checks pinned to a GitHub commit. These tests do not prove remote repository
 grants, published plugin freshness, or complete personal MCP onboarding. Those
 remain explicit release checks.
+
+A fresh Codex desktop chat subsequently discovered the installed skill in its native
+inventory and read the expected synthetic KB marker. The earlier, already-running
+chat had not refreshed its skill inventory. The synthetic plugin and marketplace
+were removed after verification; the test chat retains the evidence. All four
+surfaces have now passed this local plugin-discovery and KB-read probe.
