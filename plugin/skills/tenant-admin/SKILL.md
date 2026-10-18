@@ -6,8 +6,8 @@ description: Administer a Merovingian tenant. Use for individual accounts, profi
 # Tenant administration
 
 Establish the tenant, intended operation and executable version. These instructions
-require the next-major checkout until that runtime is released; use its absolute
-`bin/merovingian.ts` path rather than assuming the global CLI is current.
+require Merovingian 1.0.0; verify the installed CLI version before proceeding.
+For development, use a matching checkout’s absolute `bin/merovingian.ts` path.
 
 Read the relevant reference:
 
