@@ -1,0 +1,35 @@
+docs/testing/desktop-mcp-smoke.md
+  s_e7effeab5cddad::t_d9c76ee1057e4f 46-49,119-126
+docs/README.md
+  s_e7effeab5cddad::t_d9c76ee1057e4f 32
+docs/testing/release-candidate.md
+  s_e7effeab5cddad::t_d9c76ee1057e4f 1-58
+test/history.test.ts
+  s_7b2419fdd70f9c::t_a1aa7a7f805258 54-56
+test/lineage-read.test.ts
+  s_7b2419fdd70f9c::t_ec89ff03d0ab39 2,92,94-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6eebf77575d7fe55f55db37e7af90cff4e92e29b",
+  "prompts": {},
+  "sessions": {
+    "s_7b2419fdd70f9c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14f21-e972-7053-b370-9b76217a24c9",
+        "model": "unknown"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    },
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
