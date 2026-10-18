@@ -66,10 +66,21 @@ describe("provisioningSecret — the deploy-apply gate", () => {
   });
 
   test("an explicit secret always wins over the dev fallback", () => {
-    withEnv("a-real-secret", () => {
-      expect(provisioningSecret(false)).toBe("a-real-secret");
-      expect(provisioningSecret(true)).toBe("a-real-secret");
+    withEnv("a-real-secret-with-at-least-32-characters", () => {
+      expect(provisioningSecret(false)).toBe("a-real-secret-with-at-least-32-characters");
+      expect(provisioningSecret(true)).toBe("a-real-secret-with-at-least-32-characters");
     });
+  });
+
+  test("real provisioning rejects short or padded secrets without echoing them", () => {
+    for (const value of ["changeme", "x".repeat(31), " ".repeat(32), "  changeme".padEnd(40)]) {
+      withEnv(value, () => {
+        expect(() => provisioningSecret(false)).toThrow(/at least 32/);
+        try { provisioningSecret(false); } catch (error) { expect((error as Error).message).not.toContain(value); }
+        expect(provisioningSecret(true)).toBe(value);
+      });
+    }
+    withEnv("x".repeat(32), () => expect(provisioningSecret(false)).toBe("x".repeat(32)));
   });
 
   test("the public dev key set as a 'private' secret is rejected for a real tenant", () => {
@@ -77,6 +88,10 @@ describe("provisioningSecret — the deploy-apply gate", () => {
       expect(() => provisioningSecret(false)).toThrow(/PUBLIC dev key/);
       expect(provisioningSecret(true)).toBe(DEV_JWT_SECRET); // dev/test may use it
     });
+  });
+
+  test("padding cannot disguise the public development key", () => {
+    withEnv(`  ${DEV_JWT_SECRET}  `, () => expect(() => provisioningSecret(false)).toThrow(/PUBLIC dev key/));
   });
 
   test("an empty secret is treated as unset (not a valid key)", () => {

@@ -1,4 +1,5 @@
-import { AuthenticationError, InternalError, NotAllowedError, NotFoundError } from "surrealdb";
+import { isIdentityAuthRefusal } from "../provider/auth-error.ts";
+import { NotFoundError } from "surrealdb";
 import { connectAsPassword, SurrealProvider, type SurrealConfig } from "../provider/surreal.ts";
 import { CatalogError, resolveCatalog, type CatalogClient } from "./catalog.ts";
 
@@ -21,9 +22,7 @@ export async function readCatalog(config: CatalogConfig, client?: CatalogClient)
   let db;
   try { db = await connectAsPassword(config.cfg, config.user, config.password); }
   catch (error) {
-    // SurrealDB 3.0.1 reports an empty record SIGNIN result as InternalError.
-    // Match this exact tested response, never arbitrary driver message fragments.
-    if ((error instanceof InternalError && error.message === "No record was returned") || error instanceof AuthenticationError || (error instanceof NotAllowedError && (error.isInvalidAuth || error.isTokenExpired))) {
+    if (isIdentityAuthRefusal(error)) {
       throw new CatalogError("invalid_credentials", "Identity connection failed: individual authentication was refused. Verify or rotate the personal credential.");
     }
     if (error instanceof NotFoundError) {

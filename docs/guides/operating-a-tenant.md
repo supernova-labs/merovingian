@@ -17,6 +17,17 @@ before a deletion is blocked; it is not a transaction. A journal author cannot b
 while referenced: retain the identity and remove assignments if suspending access.
 Do not modify immutable journal history to force deletion.
 
+In the development checkout, planning verifies schema inventory before reading the graph.
+An absent or schema-only database has an all-create plan, including its configuration singleton.
+An existing graph with missing structural tables stops planning with an upgrade diagnostic;
+verify the target and backup before using `deploy apply` to prepare the schema, then review
+any deletions before confirming. Missing configuration alongside surviving structure, history or business data
+is an error requiring investigation/restoration, not an empty database. Failed inventory or
+record reads never authorize an all-create plan. Duplicate configuration records or a configuration
+record for a different tenant also stop planning. Use `deploy plan` for this diagnosis:
+`deploy apply` prepares schema and permissions before reading current state, so it can mutate
+the database even when it subsequently refuses an incomplete configuration.
+
 GitHub requires its own `deploy github-plan` and `github-apply --approve <revision>`.
 These manage only explicitly declared repositories, with independently verified credentials.
 See [GitHub deployment](../reference/github-deploy.md) for team and permission prerequisites.
