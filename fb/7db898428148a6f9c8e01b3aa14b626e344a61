@@ -1,0 +1,121 @@
+src/commands/history.ts
+  s_e7effeab5cddad::t_b1fcc1e6317524 3-7,9-19,22-30,32,34-35
+  s_e7effeab5cddad::t_fc9927076c0ccd 1-2
+  s_e7effeab5cddad::t_ecf716ec2b24f2 8
+  s_e7effeab5cddad::t_69ee15e7ebcecf 20-21
+  s_e7effeab5cddad::t_d037bca3b41b87 31
+  s_e7effeab5cddad::t_ff1d22eb10f350 33
+src/service/access.ts
+  s_e7effeab5cddad::t_054cd06c8d8de8 1-39
+src/commands/init.ts
+  s_e7effeab5cddad::t_c9f57270cee94a 3,27,59
+src/cli.ts
+  s_e7effeab5cddad::t_c9f57270cee94a 29
+  s_e7effeab5cddad::t_b1fcc1e6317524 1,26-27,166
+  s_e7effeab5cddad::t_054cd06c8d8de8 20,23,30,35,44,48,52,128,133-134,143,150,155,240,251-252
+  s_e7effeab5cddad::t_710391ea918c21 192,213,232
+test/init.test.ts
+  s_e7effeab5cddad::t_c9f57270cee94a 1-2,9-22,24-25
+src/server/console.html
+  s_e7effeab5cddad::t_5cc6517c190294 187,488,491,497
+test/console.test.ts
+  s_e7effeab5cddad::t_5cc6517c190294 9,11,64-65
+fixtures/example/graph.yaml
+  s_e7effeab5cddad::t_553146bc708e74 1,4-7,9-11,15-18,22-23,31-34,38-39,43-44,48-52,58-72,75,77-80,86-88,95-100,106-114,116-117,120-125,131-136,138-139,142-180,186-189,194-195,200-202
+test/apply.test.ts
+  s_e7effeab5cddad::t_48f6062a1d277e 70,132-136,138-142
+  s_5f46d0531ec415::t_0601ad5bfbe357 9,51,154,158
+src/provider/types.ts
+  s_e7effeab5cddad::t_781d66e14308a7 42
+test/catalog.test.ts
+  s_e7effeab5cddad::t_48f6062a1d277e 40-41
+test/golden.test.ts
+  s_e7effeab5cddad::t_f1e5431ef3153b 12,15,17,19,27,33-34,38,86,88-90,110,112-114,129-130,163-164,183
+test/history.test.ts
+  s_e7effeab5cddad::t_0117e54e58f37d 1-43,51,66
+  s_e7effeab5cddad::t_e5bc6d8db9624e 44-45
+  s_e7effeab5cddad::t_4f80f2c628d13d 49-50
+  s_e7effeab5cddad::t_2f61f7dee6be1b 52-54,63-65
+  s_5f46d0531ec415::t_11282d7729d66d 47,55-62
+test/plan.test.ts
+  s_e7effeab5cddad::t_97c40a1eeb05e4 9
+README.md
+  s_e7effeab5cddad::t_81087710cecff6 3-4,6-10,12-15,17,19,21-25,28-30,32,34-35,38-42,44-48,52-55,57-58
+src/graph/apply.ts
+  s_e7effeab5cddad::t_781d66e14308a7 12,90,100,102,122
+  s_e7effeab5cddad::t_b33b97381353fe 1,125,240
+src/init/baseline.ts
+  s_e7effeab5cddad::t_c9f57270cee94a 1,3,5,10-12,14-17,19-21,23-24,28,33-34
+  s_e7effeab5cddad::t_d231e9bc193fa0 35
+test/lineage-read.test.ts
+  s_e7effeab5cddad::t_054cd06c8d8de8 19,41
+  s_5f46d0531ec415::t_b33fe832daa734 87,90,93,95,141
+src/graph/records.ts
+  s_e7effeab5cddad::t_97c40a1eeb05e4 8
+docs/decisions/consolidadas/0019-catalogo-e-journal.md
+  s_e7effeab5cddad::t_81087710cecff6 46-51
+package.json
+  s_e7effeab5cddad::t_054cd06c8d8de8 4
+src/mcp/token-source.ts
+  s_e7effeab5cddad::t_781d66e14308a7 19-20
+  s_e7effeab5cddad::t_a7f8a1d62a8421 21-23
+src/commands/graph.ts
+  s_e7effeab5cddad::t_054cd06c8d8de8 8,17,40
+src/history/archive.ts
+  s_e7effeab5cddad::t_b1fcc1e6317524 1-94
+docs/README.md
+  s_e7effeab5cddad::t_81087710cecff6 3-9
+docs/guides/history-and-cutover.md
+  s_e7effeab5cddad::t_81087710cecff6 1-70
+src/commands/login.ts
+  s_e7effeab5cddad::t_f1e5431ef3153b 4,45
+  s_e7effeab5cddad::t_054cd06c8d8de8 6
+test/login.test.ts
+  s_e7effeab5cddad::t_5cc6517c190294 13,33,44,52-55,57,68
+src/provider/surreal.ts
+  s_e7effeab5cddad::t_97c40a1eeb05e4 9
+src/server/console.ts
+  s_e7effeab5cddad::t_054cd06c8d8de8 12
+test/cli.test.ts
+  s_e7effeab5cddad::t_054cd06c8d8de8 32-45
+src/graph/load-graph.ts
+  s_e7effeab5cddad::t_c9f57270cee94a 106
+  s_e7effeab5cddad::t_781d66e14308a7 154,227
+  s_e7effeab5cddad::t_553146bc708e74 2-4,80,116,155,158,167,229
+src/transport.ts
+  s_e7effeab5cddad::t_2a0472594a58ba 18-19
+src/commands/data.ts
+  s_5f46d0531ec415::t_1f52ec4c5faf63 25
+src/history/retire.ts
+  s_5f46d0531ec415::t_fff3397adff1ed 1-11
+surreal/data.surql
+  s_5f46d0531ec415::t_259bdc4f98dedf 1
+test/graph-yaml.test.ts
+  s_5f46d0531ec415::t_380a86e8bb11d3 1-3,5-7,9-18,20-28
+test/tenant-config.test.ts
+  s_5f46d0531ec415::t_c6454b35114f9b 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fb7db898428148a6f9c8e01b3aa14b626e344a61",
+  "prompts": {},
+  "sessions": {
+    "s_5f46d0531ec415": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14f0e-9c09-7d32-929b-dd84f9e1ba8e",
+        "model": "unknown"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    },
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
