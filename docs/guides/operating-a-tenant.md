@@ -24,7 +24,9 @@ verify the target and backup before using `deploy apply` to prepare the schema, 
 any deletions before confirming. Missing configuration alongside surviving structure, history or business data
 is an error requiring investigation/restoration, not an empty database. Failed inventory or
 record reads never authorize an all-create plan. Duplicate configuration records or a configuration
-record for a different tenant also stop planning.
+record for a different tenant also stop planning. Use `deploy plan` for this diagnosis:
+`deploy apply` prepares schema and permissions before reading current state, so it can mutate
+the database even when it subsequently refuses an incomplete configuration.
 
 GitHub requires its own `deploy github-plan` and `github-apply --approve <revision>`.
 These manage only explicitly declared repositories, with independently verified credentials.

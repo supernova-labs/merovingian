@@ -176,9 +176,10 @@ export function userDoc(u: User): RecordDoc {
 }
 
 /** Every structural record for a Definition + users (NO responsible edges — those
- *  are reconciled separately). Order is irrelevant (upsert by id, no FK enforcement). */
+ *  are reconciled separately). Config comes first so interrupted initial provisioning
+ *  remains distinguishable from an orphaned database; other records have no FK ordering. */
 export function structuralRecords(def: Definition, users: Record<string, User>): RecordDoc[] {
-  const docs: RecordDoc[] = [];
+  const docs: RecordDoc[] = [configDoc(def.namespace, def.ambient)];
   const readers = readersOf(def);
   // ambient skills go into EVERY workspace — flagged so any authenticated identity
   // reads them (and the marketplace of an ambient PLUGIN skill inherits the flag).
@@ -188,7 +189,6 @@ export function structuralRecords(def: Definition, users: Record<string, User>):
     docs.push(marketplaceDoc(name, repo, readers.marketplace.get(name), ambientMarketplaces.has(name)));
   for (const [name, s] of Object.entries(def.skillCatalog))
     docs.push(skillDoc(name, s, readers.skill.get(name), ambientSkills.has(name)));
-  docs.push(configDoc(def.namespace, def.ambient));
   for (const b of def.buckets) docs.push(bucketDoc(b, readers.bucket.get(b.id)));
   const lin = lineageOf(def.purposes);
   for (const p of def.purposes) docs.push(purposeDoc(p, def.agentByPurpose[p.id], lin.get(p.id) ?? [p.id]));

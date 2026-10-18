@@ -47,6 +47,23 @@ const up = await surrealReachable(cfg);
     await db.query("DELETE config");
     await expect(readCurrentState(db, "acme")).rejects.toThrow(/config is missing but \w+ contains records/);
   });
+  test("interrupted first provisioning retains config and can be retried", async () => {
+    let writes = 0;
+    const interrupted = new Proxy(db, {
+      get(target, key) {
+        if (key === "upsert") return (...args: Parameters<Surreal["upsert"]>) => {
+          if (++writes === 2) return { content: async () => { throw new Error("synthetic interruption"); } };
+          return target.upsert(...args);
+        };
+        const value = Reflect.get(target, key, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    await expect(applyGraph(interrupted, exampleDefinition, exampleUsers)).rejects.toThrow(/synthetic interruption/);
+    expect((await readCurrentState(db, "acme")).configExists).toBe(true);
+    await applyGraph(db, exampleDefinition, exampleUsers);
+    expect(planGraph(desiredState(exampleDefinition, exampleUsers), await readCurrentState(db, "acme"))).toEqual({ create: [], update: [], delete: [], warnings: [] });
+  });
   test("duplicate or wrong-tenant config records block planning", async () => {
     await applyGraph(db, exampleDefinition, exampleUsers);
     await db.query("CREATE config:other CONTENT { ambient: [] }");
