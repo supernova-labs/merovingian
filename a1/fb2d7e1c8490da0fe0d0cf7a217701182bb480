@@ -1,0 +1,45 @@
+src/github/policy.ts
+  s_e7effeab5cddad::t_c9ecc71c096ac2 11
+docs/decisions/consolidadas/0020-reconciliacao-github.md
+  s_e7effeab5cddad::t_0c561afe481784 49-50
+.github/workflows/publish.yml
+  s_e7effeab5cddad::t_c9ecc71c096ac2 87
+src/catalog/session.ts
+  s_e7effeab5cddad::t_c9ecc71c096ac2 25
+src/provider/operation-error.ts
+  s_e7effeab5cddad::t_c9ecc71c096ac2 6,10,13
+src/github/teams.ts
+  s_e7effeab5cddad::t_c9ecc71c096ac2 20-21,29-43,45,47-48,50,58
+docs/decisions/fermentacao/0021-equipes-github-gerenciadas.md
+  s_e7effeab5cddad::t_0c561afe481784 1-50
+src/github/reconcile.ts
+  s_e7effeab5cddad::t_ec856bddaf275e 204-207,209-211
+  s_e7effeab5cddad::t_550a094a127a8c 203,208,213-214
+  s_e7effeab5cddad::t_c9ecc71c096ac2 1,130-142,159,170,173-178
+docs/decisions/INDEX.md
+  s_e7effeab5cddad::t_0c561afe481784 3-4,137-140
+test/github-teams.test.ts
+  s_e7effeab5cddad::t_550a094a127a8c 259-273
+  s_e7effeab5cddad::t_0c561afe481784 174,221-258
+test/mcp-errors.test.ts
+  s_e7effeab5cddad::t_0c561afe481784 85-91
+src/provider/surreal.ts
+  s_e7effeab5cddad::t_c9ecc71c096ac2 101,104,108,111,114,128,131,170-172
+  s_e7effeab5cddad::t_0c561afe481784 5,105-106,109-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a1fb2d7e1c8490da0fe0d0cf7a217701182bb480",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
