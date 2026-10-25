@@ -1,0 +1,37 @@
+src/provider/surreal.ts
+  s_e7effeab5cddad::t_8c39efe64393f2 5,101,126,168-170
+src/provider/operation-error.ts
+  s_e7effeab5cddad::t_8b7596b0c0bf4a 1-33
+src/catalog/session.ts
+  s_e7effeab5cddad::t_7837399a895d8e 29-35
+  s_e7effeab5cddad::t_de7e08bd24089e 24-25,39-41
+  s_e7effeab5cddad::t_7b6ea5c7d2358a 1,28,36
+docs/reference/catalog-and-journal.md
+  s_e7effeab5cddad::t_7837399a895d8e 58-60,85-99
+  s_e7effeab5cddad::t_94f60f93d53791 100
+src/mcp/journal.ts
+  s_e7effeab5cddad::t_a8da7b66dd2a0a 25,27-28,32-34
+  s_e7effeab5cddad::t_de7e08bd24089e 6,15,18,23,26,29-31,35-38,40,43,47,49,59
+  s_e7effeab5cddad::t_97b6ef7288745d 46,50,52,60
+src/catalog/catalog.ts
+  s_e7effeab5cddad::t_de7e08bd24089e 7
+test/mcp-errors.test.ts
+  s_e7effeab5cddad::t_dcd5b74835bb06 1-40,42-84
+  s_e7effeab5cddad::t_bf195e05af1cf2 41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "eb7e750ad25ceb42ab6da6a5fb2f075261a16d02",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
