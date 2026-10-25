@@ -171,7 +171,7 @@ test("required approver remains a singleton and obsolete member removal is verif
   expect(review.bypass_actors).toEqual([{actor_id:2,actor_type:"Team",bypass_mode:"pull_request"}]);
   expect(api.rules["acme/kb"]!.find(r=>r.name==="merovingian-branch-integrity")!.bypass_actors).toEqual([]);
 });
-test("team drift requires all scope; fresh revision covers team access and invitations",async()=>{
+test("team drift requires all scope; fresh revision covers team access",async()=>{
   const api=new Api(),g=graph();
   for(const scope of ["permissions","protections"] as const)expect((await planGithub(api,g.definition,g.users,scope)).blockers.join()).toContain("--scope all");
   const p=await prepare(api);api.teams[0]!.grants["acme/other"]="pull";
@@ -217,4 +217,57 @@ test("team inventory rejects restricted or unverifiable credential visibility",a
   const api=new Api();api.assertTeamInventoryAccess=async()=>{throw new Error("not visible");};
   expect((await prepare(api)).blockers.join()).toContain("restricted tokens");
   await expect(apply(api)).rejects.toThrow("blocked");expect(api.writes).toEqual([]);
+});
+
+
+test("fresh approval includes pending invitation inventory",async()=>{
+  const api=new Api(),g=graph();const p=await prepare(api,g);
+  api.teams[0]!.invitations=[{id:7,login:"ben"}];
+  await expect(applyGithub(api,g.definition,g.users,p.revision)).rejects.toThrow("changed");
+  expect(api.writes).toEqual([]);
+});
+test("organization names normalize consistently in repositories and managed teams",async()=>{
+  const api=new Api(),g=graph();g.definition.github!.managedTeams=["Acme/reviewers"];
+  g.definition.github!.repositories["Acme/kb"]=g.definition.github!.repositories["acme/kb"]!;
+  delete g.definition.github!.repositories["acme/kb"];
+  expect((await prepare(api,g)).blockers).toEqual([]);
+  expect((await apply(api,g)).status).toBe("applied");
+});
+test("direct access reductions across all repositories precede new grants",async()=>{
+  const api=new Api(),g=graph();api.teams[0]!.grants["acme/kb2"]="push";
+  api.direct["acme/kb2"]={cleo:"admin",former:"push"};
+  g.definition.github!.repositories["acme/kb2"]={reviewTeam:"reviewers",allowApproverPullRequestBypass:false};
+  const p=await prepare(api,g);expect(p.blockers).toEqual([]);
+  const addition=p.changes.findIndex(c=>c.path==="/repos/acme/kb/collaborators/cleo");
+  expect(p.changes.findIndex(c=>c.path==="/repos/acme/kb2/collaborators/cleo")).toBeLessThan(addition);
+  expect(p.changes.findIndex(c=>c.path==="/repos/acme/kb2/collaborators/former")).toBeLessThan(addition);
+  expect((await apply(api,g)).status).toBe("applied");
+});
+test("batch onboarding does not reread every member role after each mutation",async()=>{
+  const api=new Api(),g=graph();
+  for(let i=0;i<25;i++) {
+    const id=`writer-${i}`;g.users[id]={...g.users.ben!,id,github:id};api.orgMembers.push(id);
+  }
+  let roleReads=0;const original=api.request.bind(api);
+  api.request=async(method,path,body)=>{
+    if(method==="GET" && path.includes("/teams/") && path.includes("/memberships/"))roleReads++;
+    return original(method,path,body);
+  };
+  expect((await apply(api,g)).status).toBe("applied");
+  // Two plans with one existing member, 26 targeted addition checks, final audit with 27 members.
+  expect(roleReads).toBe(55);
+});
+
+
+test("final audit detects out-of-band role changes without corrupting the plan revision",async()=>{
+  const api=new Api();let changed=false;const original=api.request.bind(api);
+  api.request=async(method,path,body)=>{
+    const result=await original(method,path,body);
+    if(method==="PUT" && path.endsWith("collaborators/cleo"))changed=true;
+    if(changed && method==="GET" && path.endsWith("memberships/ada"))return {role:"maintainer",state:"active"};
+    return result;
+  };
+  const report=await apply(api);expect(report.status).toBe("drift");
+  expect("auditBlockers" in report && report.auditBlockers?.join()).toContain("existing role for ada changed");
+  expect(report.remaining?.revision).toBe((await prepare(api)).revision);
 });

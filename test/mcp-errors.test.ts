@@ -82,3 +82,10 @@ test("catalog MCP preserves safe actionable error codes",async()=>{
     expect(result.isError).toBe(true);expect(JSON.parse((result.content as {text:string}[])[0]!.text).error.code).toBe("timeout");
   } finally {await client.close();await server.close();}
 });
+
+
+test("CLI timeout retains safe phase and duration without returning driver details",async()=>{
+  await expect(bounded(new Promise(()=>{}),5,"authenticate identity")).rejects.toThrow("Database authenticate identity timed out after 5ms");
+  const safe=operationError(new OperationTimeout("authenticate identity",5),true);
+  expect(safe.code).toBe("timeout");expect(safe.message).not.toContain("authenticate identity");
+});

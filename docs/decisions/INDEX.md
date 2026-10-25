@@ -1,6 +1,7 @@
 # Índice das ADRs — v2 do Merovingian
 
-**Contrato atual da próxima major:** ADRs 0019 e 0020. Referências antigas a build,
+**Contrato atual da próxima major:** ADRs 0019 e 0020. A extensão de equipes
+gerenciadas está em revisão na ADR 0021, sem consolidação implícita. Referências antigas a build,
 library, service e filas são histórico onde substituídas por essas decisões.
 
 Estado de todas as decisões num lugar só. **Fonte da verdade do status.** O conteúdo
@@ -133,3 +134,7 @@ Vivem no `0009` (o único ativo de peso), todos **roadmap**, não bloqueantes:
 
 - [0020 — Reconciliação administrativa do GitHub](consolidadas/0020-reconciliacao-github.md):
   plano aprovado, permissões por grafo, proteções por equipe e limites do adaptador.
+
+- [0021 — Gestão explícita das equipes de revisão do GitHub](fermentacao/0021-equipes-github-gerenciadas.md):
+  🔵 Em revisão; proposta implementada na PR #46. Adoção explícita, fronteiras de
+  equipes compartilhadas, convites e ordenação segura; estende a ADR 0020.

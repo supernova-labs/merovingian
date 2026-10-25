@@ -3,14 +3,14 @@ import { AuthenticationError, CallTerminatedError, ConnectionUnavailableError, H
 import { isIdentityAuthRefusal } from "./auth-error.ts";
 
 export class OperationTimeout extends Error {
-  constructor() { super("Database operation timed out"); }
+  constructor(phase = "operation", ms?: number) { super(`Database ${phase} timed out${ms === undefined ? "" : ` after ${ms}ms`}`); }
 }
 
 /** A timeout bounds waiting; it cannot prove cancellation of a submitted write. */
-export function bounded<T>(work: Promise<T>, ms: number): Promise<T> {
+export function bounded<T>(work: Promise<T>, ms: number, phase = "operation"): Promise<T> {
   let timer: ReturnType<typeof setTimeout>;
   return Promise.race([work, new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new OperationTimeout()), ms);
+    timer = setTimeout(() => reject(new OperationTimeout(phase, ms)), ms);
   })]).finally(() => clearTimeout(timer));
 }
 

@@ -22,7 +22,7 @@ export async function readCatalog(config: CatalogConfig, client?: CatalogClient)
   try { db = await connectAsPassword(config.cfg, config.user, config.password); }
   catch (error) {
     const failure = operationError(error, true);
-    throw new CatalogError(failure.code, failure.message);
+    throw new CatalogError(failure.code, `${failure.message} No empty catalog or access removal was inferred.`);
   }
   try {
     return await bounded((async () => {

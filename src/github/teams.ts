@@ -17,6 +17,22 @@ export interface ManagedTeam {
   expected: string[]; targets: string[];
 }
 
+/** Paginated boundary read without a separate membership-role request per person. */
+export async function inspectTeamBoundary(api: GithubApi, key: string) {
+  const [org, slug] = key.split("/") as [string, string];
+  const base = `/orgs/${org}/teams/${slug}`;
+  const team = z.object({ id: z.number().int(), slug: z.literal(slug), parent: z.object({ id: z.number().int() }).nullable() })
+    .parse(await api.request("GET", base));
+  const children = z.array(z.object({ id: z.number().int() })).parse(await list(api, `${base}/teams`));
+  const repositories = z.array(z.object({ full_name: z.string() })).parse(await list(api, `${base}/repos`));
+  const people = z.array(person).parse(await list(api, `${base}/members?role=all`));
+  return { key, id: team.id, slug, parent: team.parent?.id ?? null, children: children.map(t => t.id).sort((a,b)=>a-b),
+    repositories: repositories.map(r=>r.full_name.toLowerCase()).sort(), members: people.map(p=>p.login.toLowerCase()).sort(),
+    invitations: normalizeInvitations(await list(api, `${base}/invitations`)) };
+}
+function normalizeInvitations(items: unknown[]) {
+  return z.array(invitation).parse(items).map(i => ({ ...i, login: i.login?.toLowerCase() ?? null })).sort((a,b) => a.id-b.id);
+}
 /** Full organization-admin inventory is required: a repo admin may not see other private grants. */
 export async function inspectManagedTeam(api: GithubApi, key: string, expected: string[], targets: string[]): Promise<ManagedTeam> {
   if (!api.assertTeamInventoryAccess) throw new Error("Cannot establish credential visibility");
@@ -24,23 +40,14 @@ export async function inspectManagedTeam(api: GithubApi, key: string, expected: 
   const [org, slug] = key.split("/") as [string, string];
   const authority = z.object({ state: z.literal("active"), role: z.literal("admin") });
   authority.parse(await api.request("GET", `/user/memberships/orgs/${org}`));
-  const base = `/orgs/${org}/teams/${slug}`;
-  const team = z.object({ id: z.number().int(), slug: z.literal(slug), parent: z.object({ id: z.number().int() }).nullable() })
-    .parse(await api.request("GET", base));
-  const children = z.array(z.object({ id: z.number().int() })).parse(await list(api, `${base}/teams`));
-  const repositories = z.array(z.object({ full_name: z.string() })).parse(await list(api, `${base}/repos`));
-  const people = z.array(person).parse(await list(api, `${base}/members?role=all`));
+  const boundary = await inspectTeamBoundary(api, key);
   const members: ManagedTeam["members"] = [];
-  for (const p of people) {
+  for (const login of boundary.members) {
     const m = z.object({ role: z.enum(["member", "maintainer"]), state: z.enum(["active", "pending"]) })
-      .parse(await api.request("GET", `${base}/memberships/${encodeURIComponent(p.login)}`));
-    members.push({ login: p.login.toLowerCase(), ...m });
+      .parse(await api.request("GET", `/orgs/${org}/teams/${slug}/memberships/${encodeURIComponent(login)}`));
+    members.push({ login, ...m });
   }
-  const normalizeInvitations = (items: unknown[]) => z.array(invitation).parse(items)
-    .map(i => ({ ...i, login: i.login?.toLowerCase() ?? null })).sort((a,b) => a.id-b.id);
-  return { key, id: team.id, slug, parent: team.parent?.id ?? null, children: children.map(t => t.id).sort((a,b)=>a-b),
-    repositories: repositories.map(r=>r.full_name.toLowerCase()).sort(), members: members.sort((a,b)=>a.login.localeCompare(b.login)),
-    invitations: normalizeInvitations(await list(api, `${base}/invitations`)),
+  return { ...boundary, members,
     organizationMembers: z.array(person).parse(await list(api, `/orgs/${org}/members?role=all`)).map(p=>p.login.toLowerCase()).sort(),
     organizationInvitations: normalizeInvitations(await list(api, `/orgs/${org}/invitations`)), expected, targets };
 }
@@ -48,7 +55,7 @@ export async function inspectManagedTeam(api: GithubApi, key: string, expected: 
 export async function planTeams(api: GithubApi, def: Definition, users: Record<string, User>, desired: DesiredRepository[], snapshots: Snapshot[], scope: Scope) {
   const inventory: ManagedTeam[] = [], changes: Change[] = [], blockers: string[] = [];
   const projected = structuredClone(snapshots);
-  const managed = def.github?.managedTeams ?? [];
+  const managed = (def.github?.managedTeams ?? []).map(key=>key.toLowerCase());
   if (new Set(managed).size !== managed.length) blockers.push("Duplicate managedTeams declarations");
   for (const key of [...new Set(managed)].sort()) {
     const [org, slug] = key.split("/");

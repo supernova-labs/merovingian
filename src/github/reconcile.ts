@@ -1,4 +1,4 @@
-import { inspectManagedTeam, planTeams, type ManagedTeam } from "./teams.ts";
+import { inspectTeamBoundary, planTeams, type ManagedTeam } from "./teams.ts";
 import type { Definition, User } from "../provider/types.ts";
 import { canonical, revisionOf } from "../catalog/catalog.ts";
 import { githubDesired, type DesiredRepository } from "./policy.ts";
@@ -127,9 +127,19 @@ export async function planGithub(api: GithubApi, def: Definition, users: Record<
     changes.push(...plan.changes); blockers.push(...plan.blockers);
   }
   // Remove obsolete team members before enabling any new bypass. Protect before grants/additions.
-  const priority = (c: Change) => c.path.includes("/memberships/") && c.method === "DELETE" ? 0
-    : c.path.includes("/rulesets") ? 1 : c.path.includes("/teams/") && c.path.includes("/repos/") ? 2
-    : c.path.includes("/memberships/") ? 3 : 4;
+  const priority = (c: Change) => {
+    if (c.method === "DELETE") return 0;
+    if (c.path.includes("/collaborators/") && c.method === "PUT") {
+      const login = decodeURIComponent(c.path.split("/").at(-1)!);
+      const snapshot = snapshots.find(s=>s.repository===c.repository)!;
+      const current = snapshot.direct.find(m=>m.login===login)?.role_name;
+      const next = (c.body as { permission: string }).permission;
+      if (current && level[next]! < level[current]!) return 0;
+    }
+    if (c.path.includes("/rulesets")) return 1;
+    if (c.path.includes("/teams/") && c.path.includes("/repos/")) return 2;
+    return c.path.includes("/memberships/") ? 3 : 4;
+  };
   changes.sort((a,b) => priority(a)-priority(b));
   const content = { scope, desired, snapshots, teams: teams.inventory, changes, blockers };
   return { revision: revisionOf(content), ...content };
@@ -146,7 +156,7 @@ export async function applyGithub(api: GithubApi, def: Definition, users: Record
       if (change.path.startsWith("/orgs/") && change.path.includes("/teams/")) {
         const [, , org, , slug] = change.path.split("/");
         const expected = plan.teams.find(t=>t.key===`${org}/${slug}`)!;
-        const actual = await inspectManagedTeam(api, expected.key, expected.expected, expected.targets);
+        const actual = await inspectTeamBoundary(api, expected.key);
         if (actual.id !== expected.id || actual.parent !== null || actual.children.length || actual.repositories.some(r=>!expected.targets.includes(r)) || actual.invitations.length) {
           throw new Error("Team scope changed or membership is pending");
         }
@@ -157,11 +167,15 @@ export async function applyGithub(api: GithubApi, def: Definition, users: Record
           if (done.method === "PUT") expectedMembers.push({ login, role: "member", state: "active" });
         }
         expectedMembers.sort((a,b)=>a.login.localeCompare(b.login));
-        if (canonical(actual.members) !== canonical(expectedMembers)) throw new Error("Team membership changed unexpectedly");
+        if (canonical(actual.members) !== canonical(expectedMembers.map(m=>m.login))) throw new Error("Team membership changed unexpectedly");
         if (change.path.includes("/memberships/")) {
           const login = decodeURIComponent(change.path.split("/").at(-1)!);
-          const member = actual.members.find(m=>m.login===login);
-          if (change.method === "DELETE" ? Boolean(member) : member?.state !== "active") throw new Error("Team membership was not enforced");
+          if (change.method === "DELETE") {
+            if (actual.members.includes(login)) throw new Error("Team removal was not enforced");
+          } else {
+            const member = await api.request("GET", change.path) as { state?: string; role?: string } | null;
+            if (member?.state !== "active" || member.role !== "member") throw new Error("Team addition was not enforced");
+          }
         } else {
           const snapshot = await inspectRepository(api, change.repository);
           const grant = snapshot.teams.find(t=>t.id===actual.id);
@@ -186,7 +200,16 @@ export async function applyGithub(api: GithubApi, def: Definition, users: Record
   let after: GithubPlan;
   try { after = await planGithub(api, def, users, scope); }
   catch { return { status: "partial" as const, applied, message: "Writes completed but the final audit failed. Effective access is unverified; re-plan before retrying." }; }
+  const auditBlockers: string[] = [];
+  for (const before of plan.teams) {
+    const actual = after.teams.find(t=>t.key===before.key);
+    for (const member of before.members.filter(m=>before.expected.includes(m.login))) {
+      if (actual?.members.find(m=>m.login===member.login)?.role !== member.role) {
+        auditBlockers.push(`${before.key}: existing role for ${member.login} changed during apply; inspect a fresh plan`);
+      }
+    }
+  }
   const pendingInvitations = after.snapshots.flatMap(s => s.invitations.map(i => ({ repository: s.repository, login: i.invitee?.login })));
-  return { status: after.blockers.length || after.changes.length ? "drift" as const : pendingInvitations.length ? "awaiting-invitations" as const : "applied" as const,
-    applied, remaining: after, pendingInvitations };
+  return { status: auditBlockers.length || after.blockers.length || after.changes.length ? "drift" as const : pendingInvitations.length ? "awaiting-invitations" as const : "applied" as const,
+    applied, remaining: after, pendingInvitations, auditBlockers };
 }
