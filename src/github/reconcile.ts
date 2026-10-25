@@ -1,11 +1,12 @@
+import { inspectManagedTeam, planTeams, type ManagedTeam } from "./teams.ts";
 import type { Definition, User } from "../provider/types.ts";
 import { canonical, revisionOf } from "../catalog/catalog.ts";
 import { githubDesired, type DesiredRepository } from "./policy.ts";
 import { inspectRepository, type GithubApi, type Snapshot } from "./api.ts";
 
 export type Scope = "all" | "permissions" | "protections";
-export interface Change { repository: string; description: string; method: "PUT" | "POST" | "DELETE"; path: string; body?: unknown }
-export interface GithubPlan { revision: string; scope: Scope; desired: DesiredRepository[]; snapshots: Snapshot[]; changes: Change[]; blockers: string[] }
+export interface Change { repository: string; affectedRepositories?: string[]; description: string; method: "PUT" | "POST" | "DELETE"; path: string; body?: unknown }
+export interface GithubPlan { revision: string; scope: Scope; desired: DesiredRepository[]; snapshots: Snapshot[]; teams: ManagedTeam[]; changes: Change[]; blockers: string[] }
 const level: Record<string, number> = { none: 0, read: 1, pull: 1, triage: 2, write: 3, push: 3, maintain: 4, admin: 5 };
 /** Compare required fields while tolerating API-added defaults; never ignore extra rules or bypass actors. */
 function rulesMatch(actual: unknown, expected: unknown): boolean {
@@ -118,12 +119,19 @@ export async function planGithub(api: GithubApi, def: Definition, users: Record<
   for (const target of desired) {
     const snapshot = await inspectRepository(api, target.repository);
     snapshots.push(snapshot);
-    const plan = planRepository(target, snapshot, users, scope);
+  }
+  const teams = await planTeams(api, def, users, desired, snapshots, scope);
+  changes.push(...teams.changes); blockers.push(...teams.blockers);
+  for (const target of desired) {
+    const plan = planRepository(target, teams.projected.find(s=>s.repository===target.repository)!, users, scope);
     changes.push(...plan.changes); blockers.push(...plan.blockers);
   }
-  // Protection changes precede every ACL grant across the complete plan.
-  changes.sort((a,b) => Number(!a.path.includes("/rulesets")) - Number(!b.path.includes("/rulesets")));
-  const content = { scope, desired, snapshots, changes, blockers };
+  // Remove obsolete team members before enabling any new bypass. Protect before grants/additions.
+  const priority = (c: Change) => c.path.includes("/memberships/") && c.method === "DELETE" ? 0
+    : c.path.includes("/rulesets") ? 1 : c.path.includes("/teams/") && c.path.includes("/repos/") ? 2
+    : c.path.includes("/memberships/") ? 3 : 4;
+  changes.sort((a,b) => priority(a)-priority(b));
+  const content = { scope, desired, snapshots, teams: teams.inventory, changes, blockers };
   return { revision: revisionOf(content), ...content };
 }
 export async function applyGithub(api: GithubApi, def: Definition, users: Record<string, User>, approval: string, scope: Scope = "all") {
@@ -135,6 +143,31 @@ export async function applyGithub(api: GithubApi, def: Definition, users: Record
   for (const change of plan.changes) {
     try {
       await api.request(change.method, change.path, change.body); applied.push(change);
+      if (change.path.startsWith("/orgs/") && change.path.includes("/teams/")) {
+        const [, , org, , slug] = change.path.split("/");
+        const expected = plan.teams.find(t=>t.key===`${org}/${slug}`)!;
+        const actual = await inspectManagedTeam(api, expected.key, expected.expected, expected.targets);
+        if (actual.id !== expected.id || actual.parent !== null || actual.children.length || actual.repositories.some(r=>!expected.targets.includes(r)) || actual.invitations.length) {
+          throw new Error("Team scope changed or membership is pending");
+        }
+        let expectedMembers = structuredClone(expected.members);
+        for (const done of applied.filter(c=>c.path.startsWith(`/orgs/${org}/teams/${slug}/memberships/`))) {
+          const login = decodeURIComponent(done.path.split("/").at(-1)!);
+          expectedMembers = expectedMembers.filter(m=>m.login!==login);
+          if (done.method === "PUT") expectedMembers.push({ login, role: "member", state: "active" });
+        }
+        expectedMembers.sort((a,b)=>a.login.localeCompare(b.login));
+        if (canonical(actual.members) !== canonical(expectedMembers)) throw new Error("Team membership changed unexpectedly");
+        if (change.path.includes("/memberships/")) {
+          const login = decodeURIComponent(change.path.split("/").at(-1)!);
+          const member = actual.members.find(m=>m.login===login);
+          if (change.method === "DELETE" ? Boolean(member) : member?.state !== "active") throw new Error("Team membership was not enforced");
+        } else {
+          const snapshot = await inspectRepository(api, change.repository);
+          const grant = snapshot.teams.find(t=>t.id===actual.id);
+          if (!grant || !["push", "write"].includes(grant.permission)) throw new Error("Team grant was not enforced");
+        }
+      }
       if (change.path.includes("/rulesets")) {
         const snapshot = await inspectRepository(api, change.repository);
         const expected = change.body as { name: string };
@@ -142,7 +175,13 @@ export async function applyGithub(api: GithubApi, def: Definition, users: Record
         if (matches.length !== 1 || !rulesMatch(matches[0], expected)) throw new Error("Protection was not enforced");
       }
     }
-    catch { return { status: "partial" as const, applied, failed: change, message: "This operation failed or its protection could not be verified. No subsequent operations ran. Re-plan before retrying." }; }
+    catch {
+      // Read-only recovery evidence; a failed request may still have reached GitHub.
+      let remaining: GithubPlan | undefined;
+      try { remaining = await planGithub(api, def, users, scope); } catch { /* Inventory may also be unavailable. */ }
+      return { status: "partial" as const, applied, failed: change, remaining,
+        message: "This operation failed or its resulting protection/team state could not be verified. It may have reached GitHub. No subsequent operations ran. Inspect remaining drift or obtain a fresh plan before retrying." };
+    }
   }
   let after: GithubPlan;
   try { after = await planGithub(api, def, users, scope); }
