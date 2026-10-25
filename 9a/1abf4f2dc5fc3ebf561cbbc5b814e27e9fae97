@@ -1,0 +1,21 @@
+test/github-teams.test.ts
+  s_e7effeab5cddad::t_db9ba07692c468 242-246,265-266,271,275,277
+src/github/reconcile.ts
+  s_e7effeab5cddad::t_db9ba07692c468 206-209
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9a1abf4f2dc5fc3ebf561cbbc5b814e27e9fae97",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
