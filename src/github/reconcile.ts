@@ -203,9 +203,10 @@ export async function applyGithub(api: GithubApi, def: Definition, users: Record
   const auditBlockers: string[] = [];
   for (const before of plan.teams) {
     const actual = after.teams.find(t=>t.key===before.key);
-    for (const member of before.members.filter(m=>before.expected.includes(m.login))) {
-      if (actual?.members.find(m=>m.login===member.login)?.role !== member.role) {
-        auditBlockers.push(`${before.key}: existing role for ${member.login} changed during apply; inspect a fresh plan`);
+    for (const login of before.expected) {
+      const expectedRole = before.members.find(m=>m.login===login)?.role ?? "member";
+      if (actual?.members.find(m=>m.login===login)?.role !== expectedRole) {
+        auditBlockers.push(`${before.key}: role for ${login} changed during apply; inspect a fresh plan`);
       }
     }
   }

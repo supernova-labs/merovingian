@@ -239,8 +239,11 @@ test("direct access reductions across all repositories precede new grants",async
   g.definition.github!.repositories["acme/kb2"]={reviewTeam:"reviewers",allowApproverPullRequestBypass:false};
   const p=await prepare(api,g);expect(p.blockers).toEqual([]);
   const addition=p.changes.findIndex(c=>c.path==="/repos/acme/kb/collaborators/cleo");
-  expect(p.changes.findIndex(c=>c.path==="/repos/acme/kb2/collaborators/cleo")).toBeLessThan(addition);
-  expect(p.changes.findIndex(c=>c.path==="/repos/acme/kb2/collaborators/former")).toBeLessThan(addition);
+  const downgrade=p.changes.findIndex(c=>c.path==="/repos/acme/kb2/collaborators/cleo");
+  const revocation=p.changes.findIndex(c=>c.path==="/repos/acme/kb2/collaborators/former");
+  for(const index of [addition,downgrade,revocation])expect(index).toBeGreaterThanOrEqual(0);
+  expect(downgrade).toBeLessThan(addition);
+  expect(revocation).toBeLessThan(addition);
   expect((await apply(api,g)).status).toBe("applied");
 });
 test("batch onboarding does not reread every member role after each mutation",async()=>{
@@ -259,15 +262,17 @@ test("batch onboarding does not reread every member role after each mutation",as
 });
 
 
-test("final audit detects out-of-band role changes without corrupting the plan revision",async()=>{
+test("final audit detects existing and newly added member role changes without corrupting the plan revision",async()=>{
+  for(const login of ["ada","ben"]) {
   const api=new Api();let changed=false;const original=api.request.bind(api);
   api.request=async(method,path,body)=>{
     const result=await original(method,path,body);
     if(method==="PUT" && path.endsWith("collaborators/cleo"))changed=true;
-    if(changed && method==="GET" && path.endsWith("memberships/ada"))return {role:"maintainer",state:"active"};
+    if(changed && method==="GET" && path.endsWith(`memberships/${login}`))return {role:"maintainer",state:"active"};
     return result;
   };
   const report=await apply(api);expect(report.status).toBe("drift");
-  expect("auditBlockers" in report && report.auditBlockers?.join()).toContain("existing role for ada changed");
+  expect("auditBlockers" in report && report.auditBlockers?.join()).toContain(`role for ${login} changed`);
   expect(report.remaining?.revision).toBe((await prepare(api)).revision);
+  }
 });
