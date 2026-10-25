@@ -2,6 +2,7 @@
 // back out of SurrealDB and reassembles the Definition. Lives behind the build
 // service; same interface as the stub, so the projection is source-agnostic.
 
+import { bounded as withTimeout } from "./operation-error.ts";
 import { createHmac } from "node:crypto";
 import { Surreal, RecordId } from "surrealdb";
 import { registeredSurrealUrl } from "../transport.ts";
@@ -90,19 +91,6 @@ export function surrealConfig(tenant: string, overrides: Partial<SurrealConfig> 
   } };
 }
 
-/** Reject if `p` doesn't settle within `ms` (the ws client has no connect timeout).
- *  The timer is cleared on settle — a pending timeout would otherwise hold the event
- *  loop open and stall CLI exit for the full window. */
-function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
-  let timer: ReturnType<typeof setTimeout>;
-  return Promise.race([
-    p,
-    new Promise<T>((_, reject) => {
-      timer = setTimeout(() => reject(new Error(`timeout: ${label} (${ms}ms)`)), ms);
-    }),
-  ]).finally(() => clearTimeout(timer));
-}
-
 /** Connect + signin + use. Caller owns close(). Tries the credential at ROOT scope
  *  first (the dev default), then NAMESPACE, then DATABASE — so a real server can hand
  *  the operator a db-scoped system user (least privilege; a db OWNER can deploy/drain
@@ -110,7 +98,7 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 export async function connectSurreal(cfg: SurrealConfig, timeoutMs = 4000): Promise<Surreal> {
   const db = new Surreal();
   try {
-    await withTimeout(db.connect(cfg.url), timeoutMs, `connect ${cfg.url}`);
+    await withTimeout(db.connect(cfg.url), timeoutMs);
     const { username, password } = cfg;
     try {
       await db.signin({ username, password });
@@ -135,11 +123,10 @@ export async function connectSurreal(cfg: SurrealConfig, timeoutMs = 4000): Prom
 export async function signinIdentity(cfg: SurrealConfig, userId: string, pass: string, timeoutMs = 6000): Promise<string> {
   const db = new Surreal();
   try {
-    await withTimeout(db.connect(cfg.url), timeoutMs, `connect ${cfg.url}`);
+    await withTimeout(db.connect(cfg.url), timeoutMs);
     const ret: unknown = await withTimeout(
       db.signin({ namespace: cfg.ns, database: cfg.db, access: "identity", variables: { user: userId, pass } } as never),
       timeoutMs,
-      "signin identity",
     );
     const token = typeof ret === "string" ? ret : (ret as { access?: string })?.access;
     if (!token) throw new Error("signin succeeded but no token in the response");
@@ -178,9 +165,9 @@ export function mintIdentityJwt(cfg: SurrealConfig, userId: string, secret = env
 export async function connectWithToken(cfg: SurrealConfig, token: string, timeoutMs = 4000): Promise<Surreal> {
   const db = new Surreal();
   try {
-    await withTimeout(db.connect(cfg.url), timeoutMs, `connect ${cfg.url}`);
-    await db.use({ namespace: cfg.ns, database: cfg.db });
-    await db.authenticate(token);
+    await withTimeout(db.connect(cfg.url), timeoutMs);
+    await withTimeout(db.use({ namespace: cfg.ns, database: cfg.db }), timeoutMs);
+    await withTimeout(db.authenticate(token), timeoutMs);
     return db;
   } catch (err) {
     await db.close().catch(() => {});
