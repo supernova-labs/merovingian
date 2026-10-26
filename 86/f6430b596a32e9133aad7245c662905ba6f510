@@ -1,0 +1,32 @@
+test/github-teams.test.ts
+  s_e7effeab5cddad::t_469cf537dfd961 279-308
+docs/reference/github-deploy.md
+  s_e7effeab5cddad::t_469cf537dfd961 99-101
+src/github/teams.ts
+  s_e7effeab5cddad::t_469cf537dfd961 15,52-53
+docs/reference/catalog-and-journal.md
+  s_e7effeab5cddad::t_469cf537dfd961 90-91
+src/github/reconcile.ts
+  s_e7effeab5cddad::t_469cf537dfd961 8,26-30,145,191
+test/mcp-errors.test.ts
+  s_e7effeab5cddad::t_469cf537dfd961 2,92-99
+  s_e7effeab5cddad::t_87a455330fa989 100
+src/mcp/journal.ts
+  s_e7effeab5cddad::t_469cf537dfd961 4,33,37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "86f6430b596a32e9133aad7245c662905ba6f510",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
