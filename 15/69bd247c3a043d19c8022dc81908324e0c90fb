@@ -1,0 +1,21 @@
+docs/reference/catalog-and-journal.md
+  s_c38bae3699322c::t_1449a24980718f 90-92
+docs/reference/github-deploy.md
+  s_c38bae3699322c::t_ab3625617e63b4 100-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1569bd247c3a043d19c8022dc81908324e0c90fb",
+  "prompts": {},
+  "sessions": {
+    "s_c38bae3699322c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a17878-e3cf-71a1-8321-0434399dde47",
+        "model": "unknown"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
