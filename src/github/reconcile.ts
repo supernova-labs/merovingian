@@ -5,6 +5,7 @@ import { githubDesired, type DesiredRepository } from "./policy.ts";
 import { inspectRepository, type GithubApi, type Snapshot } from "./api.ts";
 
 export type Scope = "all" | "permissions" | "protections";
+/** affectedRepositories is part of the printed plan: shared-team impact must be reviewable. */
 export interface Change { repository: string; affectedRepositories?: string[]; description: string; method: "PUT" | "POST" | "DELETE"; path: string; body?: unknown }
 export interface GithubPlan { revision: string; scope: Scope; desired: DesiredRepository[]; snapshots: Snapshot[]; teams: ManagedTeam[]; changes: Change[]; blockers: string[] }
 const level: Record<string, number> = { none: 0, read: 1, pull: 1, triage: 2, write: 3, push: 3, maintain: 4, admin: 5 };
@@ -21,6 +22,11 @@ function rulesMatch(actual: unknown, expected: unknown): boolean {
   return actual === expected;
 }
 const ruleName = "merovingian-reviewed-changes";
+
+function isRulesetChange(change: Change): boolean {
+  const base = `/repos/${change.repository}/rulesets`;
+  return change.path === base || change.path.startsWith(`${base}/`);
+}
 
 export function planRepository(target: DesiredRepository, current: Snapshot, users: Record<string, User>, scope: Scope) {
   const changes: Change[] = [], blockers: string[] = [];
@@ -136,7 +142,7 @@ export async function planGithub(api: GithubApi, def: Definition, users: Record<
       const next = (c.body as { permission: string }).permission;
       if (current && level[next]! < level[current]!) return 0;
     }
-    if (c.path.includes("/rulesets")) return 1;
+    if (isRulesetChange(c)) return 1;
     if (c.path.includes("/teams/") && c.path.includes("/repos/")) return 2;
     return c.path.includes("/memberships/") ? 3 : 4;
   };
@@ -182,7 +188,7 @@ export async function applyGithub(api: GithubApi, def: Definition, users: Record
           if (!grant || !["push", "write"].includes(grant.permission)) throw new Error("Team grant was not enforced");
         }
       }
-      if (change.path.includes("/rulesets")) {
+      if (isRulesetChange(change)) {
         const snapshot = await inspectRepository(api, change.repository);
         const expected = change.body as { name: string };
         const matches = snapshot.rulesets.filter(r => r.name === expected.name && r.source_type === "Repository");

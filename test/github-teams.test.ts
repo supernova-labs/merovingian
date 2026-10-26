@@ -276,3 +276,33 @@ test("final audit detects existing and newly added member role changes without c
   expect(report.remaining?.revision).toBe((await prepare(api)).revision);
   }
 });
+
+
+test("unrelated organization members and invitations are neither printed nor revisioned",async()=>{
+  const api=new Api(),g=graph();const before=await prepare(api,g);
+  api.orgMembers.push("unrelated-private-member");api.orgInvitations.push({id:98,login:"unrelated-private-invite"},{id:99,login:null});
+  const after=await prepare(api,g);
+  expect(after.revision).toBe(before.revision);
+  expect(JSON.stringify(after)).not.toContain("unrelated-private");
+  expect(after.teams[0]!.organizationMembers).toEqual(["ada","ben"]);
+  api.orgMembers=api.orgMembers.filter(m=>m!=="ben");api.orgInvitations.push({id:100,login:"ben"});
+  const changed=await prepare(api,g);expect(changed.revision).not.toBe(before.revision);
+  expect(changed.blockers.join()).toContain("organization invitation pending");
+});
+
+test("repositories starting with rulesets do not turn access changes into protection writes",async()=>{
+  for(const name of ["rulesets","rulesets-example"]) {
+    const api=new Api(),g=graph(),repository=`acme/${name}`;
+    g.definition.buckets[0]!.repo=repository;
+    g.definition.github!.repositories[repository]=g.definition.github!.repositories["acme/kb"]!;
+    delete g.definition.github!.repositories["acme/kb"];
+    api.rules[repository]=[];api.direct[repository]={};delete api.teams[0]!.grants["acme/kb"];
+    const p=await prepare(api,g);expect(p.blockers).toEqual([]);
+    const rules=p.changes.findIndex(c=>(c.body as any)?.name==="merovingian-reviewed-changes");
+    const grant=p.changes.findIndex(c=>c.path===`/orgs/acme/teams/reviewers/repos/${repository}`);
+    expect(rules).toBeGreaterThanOrEqual(0);expect(grant).toBeGreaterThan(rules);
+    expect((await apply(api,g)).status).toBe("applied");
+    expect(api.direct[repository]!.cleo).toBe("pull");
+    expect((await prepare(api,g)).changes).toEqual([]);
+  }
+});

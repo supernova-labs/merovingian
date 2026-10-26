@@ -87,6 +87,8 @@ Journal errors include a safe `code`, `operation` (`append` or `list`), `phase`
 
 - `not_submitted`: connection, authentication or reference validation failed before
   any append was submitted. Fix the reported problem before trying again.
+- `refused`: the database explicitly rejected the CREATE for lack of permission;
+  no entry was committed. Resolve the access problem before trying again.
 - `unknown`: the append was submitted but its result was not confirmed. It may have
   completed. List journals and verify before retrying; there is no automatic append retry.
 - `not_applicable`: this was a list operation; retry the read after resolving the error.

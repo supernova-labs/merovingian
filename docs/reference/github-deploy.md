@@ -96,7 +96,9 @@ that a team has no grants to other private repositories.
 
 For each managed team, the plan includes members and roles, pending invitations,
 repository grants, hierarchy, organization membership, and every affected repository.
-The complete inventory participates in the approved revision. New members are added
+The team boundary inventory participates in the approved revision. Organization
+membership and invitation data is limited to expected reviewers; unrelated people
+and invitations are not printed and do not invalidate approval. New members are added
 with the `member` role; existing team roles are preserved. Removed graph assignments
 remove obsolete team membership, while any remaining read access is reconciled separately.
 No organization invitation is issued implicitly.

@@ -12,6 +12,7 @@ export interface ManagedTeam {
   members: { login: string; role: "member" | "maintainer"; state: "active" | "pending" }[];
   invitations: { id: number; login: string | null }[];
   repositories: string[];
+  // Only expected reviewers: unrelated organization changes do not affect approval.
   organizationMembers: string[];
   organizationInvitations: { id: number; login: string | null }[];
   expected: string[]; targets: string[];
@@ -48,8 +49,8 @@ export async function inspectManagedTeam(api: GithubApi, key: string, expected: 
     members.push({ login, ...m });
   }
   return { ...boundary, members,
-    organizationMembers: z.array(person).parse(await list(api, `/orgs/${org}/members?role=all`)).map(p=>p.login.toLowerCase()).sort(),
-    organizationInvitations: normalizeInvitations(await list(api, `/orgs/${org}/invitations`)), expected, targets };
+    organizationMembers: z.array(person).parse(await list(api, `/orgs/${org}/members?role=all`)).map(p=>p.login.toLowerCase()).filter(login=>expected.includes(login)).sort(),
+    organizationInvitations: normalizeInvitations(await list(api, `/orgs/${org}/invitations`)).filter(i=>i.login !== null && expected.includes(i.login)), expected, targets };
 }
 
 export async function planTeams(api: GithubApi, def: Definition, users: Record<string, User>, desired: DesiredRepository[], snapshots: Snapshot[], scope: Scope) {

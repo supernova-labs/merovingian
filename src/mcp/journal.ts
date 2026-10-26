@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { RecordId, type Surreal } from "surrealdb";
+import { NotAllowedError, RecordId, type Surreal } from "surrealdb";
 import { connectAsPassword } from "../provider/surreal.ts";
 import { bounded, operationError } from "../provider/operation-error.ts";
 import { catalogConfig } from "../catalog/session.ts";
@@ -30,10 +30,11 @@ export function createJournalServer(connect: () => Promise<Surreal>, timeoutMs =
       const failure = error instanceof ReferenceUnavailable
         ? { code: "reference_unavailable", message: "The previous journal entry does not exist or is not visible to you. Verify its id." }
         : operationError(error, state.phase === "connect");
-      const writeOutcome = operation === "list" ? "not_applicable" : state.phase === "write" ? "unknown" : "not_submitted";
+      const writeOutcome = operation === "list" ? "not_applicable" : state.phase === "write" ? error instanceof NotAllowedError ? "refused" : "unknown" : "not_submitted";
       return respond({ error: { ...failure, operation, phase: state.phase, writeOutcome,
         message: failure.message + (writeOutcome === "unknown"
           ? " The append may have completed. List journals and verify the entry before retrying; do not automatically repeat the append."
+          : writeOutcome === "refused" ? " The database refused the append; no journal entry was committed. Resolve the access problem before retrying."
           : writeOutcome === "not_submitted" ? " No journal write was submitted." : " No journal write was attempted; retry the list after resolving the problem.") } }, true);
     } finally { try { await db?.close(); } catch { /* Cleanup cannot replace the result. */ } }
   }

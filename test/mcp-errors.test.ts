@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { AuthenticationError, ConnectionUnavailableError, InternalError, NotFoundError, type Surreal } from "surrealdb";
+import { AuthenticationError, NotAllowedError, ConnectionUnavailableError, InternalError, NotFoundError, type Surreal } from "surrealdb";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createJournalServer } from "../src/mcp/journal.ts";
@@ -88,4 +88,13 @@ test("CLI timeout retains safe phase and duration without returning driver detai
   await expect(bounded(new Promise(()=>{}),5,"authenticate identity")).rejects.toThrow("Database authenticate identity timed out after 5ms");
   const safe=operationError(new OperationTimeout("authenticate identity",5),true);
   expect(safe.code).toBe("timeout");expect(safe.message).not.toContain("authenticate identity");
+});
+
+
+test("explicit CREATE permission refusal is not an uncertain append",async()=>{
+  let writes=0;
+  const result=await call(async()=>db(async()=>{writes++;throw new NotAllowedError({kind:"NotAllowed",message:"SECRET query"});}),"append-journal",{text:"note"});
+  expect(result.error.writeOutcome).toBe("refused");expect(result.error.phase).toBe("write");
+  expect(result.error.code).toBe("access_denied");expect(result.error.message).toContain("no journal entry was committed");
+  expect(result.error.message).not.toContain("List journals");expect(JSON.stringify(result)).not.toContain("SECRET");expect(writes).toBe(1);
 });
