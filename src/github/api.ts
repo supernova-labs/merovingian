@@ -2,9 +2,24 @@ import { z } from "zod";
 
 export interface GithubApi {
   request(method: "GET" | "PUT" | "POST" | "DELETE", path: string, body?: unknown): Promise<unknown>;
+  /** Required for team adoption: prove the credential cannot hide private repository grants. */
+  assertTeamInventoryAccess?(): Promise<void>;
+}
+export function requireTeamInventoryScopes(headers: string): void {
+  const scopes = new Set((headers.match(/^x-oauth-scopes:\s*([^\r\n]*)/im)?.[1] ?? "").split(",").map(s=>s.trim()));
+  if (!scopes.has("repo") || !["read:org", "write:org", "admin:org"].some(s=>scopes.has(s))) {
+    throw new Error("Managed team inventory requires a classic/OAuth credential with repo and organization scopes; restricted or unprovable token visibility is unsupported.");
+  }
 }
 /** gh owns authentication. Neither credentials nor raw error bodies enter reports. */
 export class GhApi implements GithubApi {
+  async assertTeamInventoryAccess(): Promise<void> {
+    const proc = Bun.spawn(["gh", "api", "--hostname", "github.com", "--include", "/user"], { stdout: "pipe", stderr: "pipe" });
+    const [output, , code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+    if (code !== 0) throw new Error("Cannot verify GitHub credential visibility");
+    // Only response headers are inspected. User data and authentication are never reported.
+    requireTeamInventoryScopes(output.split(/\r?\n\r?\n/, 1)[0]!);
+  }
   async request(method: "GET" | "PUT" | "POST" | "DELETE", path: string, body?: unknown): Promise<unknown> {
     if (!path.startsWith("/") || path.includes("..")) throw new Error("Invalid GitHub API path");
     const proc = Bun.spawn(["gh", "api", "--hostname", "github.com", "--method", method, path,

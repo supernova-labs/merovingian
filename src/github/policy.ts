@@ -7,6 +7,8 @@ export const repositoryName = /^[A-Za-z0-9-]+\/[A-Za-z0-9_.-]+$/;
 export const GithubPolicySchema = z.object({
   // User IDs, not free-form GitHub identities. Explicit operational exceptions.
   administrators: z.array(z.string()).default([]),
+  // Explicit adoption of existing, non-nested teams. Keys are organization/slug.
+  managedTeams: z.array(z.string().regex(/^[A-Za-z0-9-]+\/[a-z0-9-]+$/).transform(key => key.toLowerCase())).optional(),
   repositories: z.record(z.string().regex(repositoryName), z.object({
     reviewTeam: z.string().regex(/^[a-z0-9-]+$/),
     requiredApprover: z.string().optional(),

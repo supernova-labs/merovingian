@@ -55,7 +55,9 @@ Connection and read failures are errors, never an authoritative empty catalog or
 signal to revoke local resources. `invalid_credentials` means individual authentication
 was refused; `invalid_configuration` covers missing connection settings or tenant/auth
 configuration; `access_denied` covers an unavailable identity or no assignments;
-`unavailable` leaves other connection/read failures unclassified. Unknown driver errors
+`timeout` means the operation exceeded its wait limit; `connection_failed` identifies
+recognized transport failures; `unavailable` leaves other service/read failures
+unclassified. Check network/VPN reachability and service health for transport errors. Unknown driver errors
 are not guessed to be authentication failures. Driver details and credentials are not returned.
 Tenant instructions are available to callers; MCP availability alone does not ensure
 that a client loads them into every conversation.
@@ -79,6 +81,25 @@ that the referenced entry is visible before writing. A reference does not grant
 access to its target. Direct database writers can create dangling references; these
 are not authorization links. A failed append can have an uncertain result after a
 connection interruption: inspect the list before retrying.
+
+Journal errors include a safe `code`, `operation` (`append` or `list`), `phase`
+(`connect`, `read`, or `write`), and `writeOutcome`:
+
+- `not_submitted`: connection, authentication or reference validation failed before
+  any append was submitted. Fix the reported problem before trying again.
+- `refused`: the database explicitly rejected the CREATE because authentication or
+  authorization was refused (including invalid or expired credentials). No entry
+  was committed. Resolve the reported credential or access problem before retrying.
+- `unknown`: the append was submitted but its result was not confirmed. It may have
+  completed. List journals and verify before retrying; there is no automatic append retry.
+- `not_applicable`: this was a list operation; retry the read after resolving the error.
+
+An invisible or nonexistent previous entry returns `reference_unavailable` without
+revealing which case applies. Query waits are bounded to 15 seconds; identity connection
+stages have individual 6-second limits. A timeout does not guarantee cancellation of a
+submitted write. No raw driver message, private URL, password or journal text appears
+in these diagnostics. These improvements are in the development source after 1.0.1;
+installed clients need a release containing them before they receive these errors.
 
 Old inbox and decision records are not imported or made newly visible. Administrative
 export/verification is available; deploy locks down existing historical tables. Follow

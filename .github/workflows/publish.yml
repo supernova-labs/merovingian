@@ -84,6 +84,7 @@ jobs:
           for r in package.json bin/merovingian.ts surreal/schema.surql surreal/data.surql \
                    src/init/baseline.ts src/server/console.html surreal/auth.surql \
                    src/commands/connection-diagnostic.ts src/provider/auth-error.ts \
+                   src/provider/operation-error.ts src/github/teams.ts \
                    src/mcp/catalog.ts src/mcp/journal.ts src/history/archive.ts src/history/retire.ts \
                    fixtures/example/graph.yaml; do
             echo "$FILES" | grep -qx "$r" || missing="$missing $r"

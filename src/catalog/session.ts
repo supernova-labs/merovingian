@@ -1,5 +1,4 @@
-import { isIdentityAuthRefusal } from "../provider/auth-error.ts";
-import { NotFoundError } from "surrealdb";
+import { bounded, operationError } from "../provider/operation-error.ts";
 import { connectAsPassword, SurrealProvider, type SurrealConfig } from "../provider/surreal.ts";
 import { CatalogError, resolveCatalog, type CatalogClient } from "./catalog.ts";
 
@@ -22,24 +21,22 @@ export async function readCatalog(config: CatalogConfig, client?: CatalogClient)
   let db;
   try { db = await connectAsPassword(config.cfg, config.user, config.password); }
   catch (error) {
-    if (isIdentityAuthRefusal(error)) {
-      throw new CatalogError("invalid_credentials", "Identity connection failed: individual authentication was refused. Verify or rotate the personal credential.");
-    }
-    if (error instanceof NotFoundError) {
-      throw new CatalogError("invalid_configuration", "Identity connection failed: tenant or authentication configuration was not found. Verify the administrator-provided connection details.");
-    }
-    throw new CatalogError("unavailable", "Identity connection failed. Verify database reachability; no catalog state was inferred.");
+    const failure = operationError(error, true);
+    throw new CatalogError(failure.code, `${failure.message} No empty catalog or access removal was inferred.`);
   }
   try {
-    const [rows] = await db.query<[{ id: string }[]]>("SELECT record::id(id) AS id FROM user WHERE id = $auth");
-    if (rows.length !== 1 || rows[0]!.id !== config.user) throw new CatalogError("access_denied", "Authenticated identity is unavailable.");
-    const [assignments] = await db.query<[unknown[]]>("SELECT id FROM responsible WHERE in = $auth LIMIT 1");
-    if (!assignments.length) throw new CatalogError("access_denied", "No purpose assignments are available for this identity.");
-    const provider = new SurrealProvider(db, config.cfg.db);
-    const user = await provider.resolveUser(rows[0]!.id);
-    return resolveCatalog(await provider.getDefinition(), user, client);
+    return await bounded((async () => {
+      const [rows] = await db.query<[{ id: string }[]]>("SELECT record::id(id) AS id FROM user WHERE id = $auth");
+      if (rows.length !== 1 || rows[0]!.id !== config.user) throw new CatalogError("access_denied", "Authenticated identity is unavailable.");
+      const [assignments] = await db.query<[unknown[]]>("SELECT id FROM responsible WHERE in = $auth LIMIT 1");
+      if (!assignments.length) throw new CatalogError("access_denied", "No purpose assignments are available for this identity.");
+      const provider = new SurrealProvider(db, config.cfg.db);
+      const user = await provider.resolveUser(rows[0]!.id);
+      return resolveCatalog(await provider.getDefinition(), user, client);
+    })(), 15_000);
   } catch (error) {
     if (error instanceof CatalogError) throw error;
-    throw new CatalogError("unavailable", "Unable to read the authenticated catalog. No empty catalog or access removal was inferred.");
-  } finally { await db.close(); }
+    const failure = operationError(error, false);
+    throw new CatalogError(failure.code, `${failure.message} No empty catalog or access removal was inferred.`);
+  } finally { await db.close().catch(() => {}); }
 }
