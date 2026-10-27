@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta name="console-token" content="__CONSOLE_TOKEN__" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Architect Console — Merovingian</title>
 <style>
@@ -164,7 +165,7 @@
 <div id="catalogview" class="view" hidden></div>
   <div id="journalsview" class="view" hidden></div>
 </main>
-<script nonce="__CONSOLE_TOKEN__">
+<script nonce="__CONSOLE_NONCE__">
 let G = null;            // { definition, assignments }
 let P = new Map();       // id -> purpose
 let children = new Map(); // parentId -> [purpose]
@@ -297,11 +298,13 @@ function select(id) {
   selected = id; selectedPerson = null;
   for (const n of document.querySelectorAll(".node")) n.classList.toggle("sel", n.dataset.id === id);
   renderDetail(P.get(id));
+  updateGraphSelection();
 }
 function selectPerson(uid) {
   selectedPerson = uid; selected = null;
   for (const n of document.querySelectorAll(".node")) n.classList.remove("sel");
   renderPerson(uid);
+  updateGraphSelection();
 }
 function pluginChip(ref) {
   if (!ref) return null;
@@ -549,7 +552,7 @@ function ensureGraph() {
   const host = document.getElementById("graph");
   host.replaceChildren();
   const svgEl = (tag, attrs = {}) => { const n = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const [k,v] of Object.entries(attrs)) n.setAttribute(k, v); return n; };
-  const svg = svgEl("svg", { viewBox: "-250 -80 1500 950", role: "img", "aria-label": "Purpose and people graph. Drag to pan; scroll to zoom." });
+  const svg = svgEl("svg", { viewBox: "-250 -80 1500 950", role: "group", "aria-label": "Purpose and people graph. Drag to pan; scroll to zoom." });
   const scene = svgEl("g"); svg.appendChild(scene); host.appendChild(svg);
   const data = graphData(), positions = new Map();
   const purposes = data.nodes.filter(n => n.kind === "purpose"), people = data.nodes.filter(n => n.kind === "human");
@@ -565,12 +568,14 @@ function ensureGraph() {
   for (const n of data.nodes) {
     const pos = positions.get(n.id), group = svgEl("g", { transform: `translate(${pos.x},${pos.y})`, tabindex: "0", role: "button", "aria-label": n.label });
     group.style.cursor = "pointer";
+    group.dataset.graphId = n.id;
     group.appendChild(svgEl(n.kind === "human" ? "rect" : "circle", n.kind === "human" ? { x:-6,y:-6,width:12,height:12,fill:n.owner ? "#22D3EE" : "#7e8799" } : { r:7,fill:n.gap ? "#e5534b" : "#A78BFA" }));
     const label = svgEl("text", { y:22,"text-anchor":"middle",fill:"#EAEDF4","font-size":17 }); label.textContent = n.label; group.appendChild(label);
     const choose = () => n.kind === "human" ? selectPerson(n.uid) : select(n.pid);
     group.onclick = choose; group.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(); } };
     scene.appendChild(group);
   }
+  updateGraphSelection();
   let zoom = 1, x = 0, y = 0, drag;
   const transform = () => scene.setAttribute("transform", `translate(${x},${y}) scale(${zoom})`);
   svg.onwheel = e => { e.preventDefault(); zoom = Math.min(3, Math.max(.3, zoom * (e.deltaY > 0 ? .9 : 1.1))); transform(); };
@@ -579,8 +584,17 @@ function ensureGraph() {
   svg.onpointerup = svg.onpointercancel = () => { drag = null; };
 }
 
+function updateGraphSelection() {
+  for (const node of document.querySelectorAll("#graph [data-graph-id]")) {
+    const active = node.dataset.graphId === "p:" + selected || node.dataset.graphId === "u:" + selectedPerson;
+    node.setAttribute("aria-pressed", String(active));
+    node.firstElementChild.setAttribute("stroke", active ? "#fff" : "none");
+    node.firstElementChild.setAttribute("stroke-width", "3");
+  }
+}
+
 async function api(path) {
-  const res = await fetch(path, { headers: { "x-console-token": "__CONSOLE_TOKEN__" } });
+  const res = await fetch(path, { headers: { "x-console-token": document.querySelector('meta[name="console-token"]').content } });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Unable to read data. Please retry.");
   return data;

@@ -39,7 +39,7 @@ describe("/graph handler (stub)", () => {
   const rawHandler = makeConsoleHandler("acme", "stub");
   const handler = async (req: Request) => {
     const html = await (await rawHandler(new Request("http://127.0.0.1/"))).text();
-    req.headers.set("x-console-token", html.match(/nonce="([^"]+)"/)![1]!);
+    req.headers.set("x-console-token", html.match(/name="console-token" content="([^"]+)"/)![1]!);
     return rawHandler(req);
   };
 
@@ -106,7 +106,7 @@ for (const source of ["stub", "surreal"] as const) (source === "stub" || dbUp ? 
     const handler = makeConsoleHandler("acme", backend, undefined, { graph, ...dependencies });
     const page = await handler(new Request("http://127.0.0.1/"));
     const html = await page.text();
-    const token = html.match(/nonce="([^"]+)"/)![1]!;
+    const token = html.match(/name="console-token" content="([^"]+)"/)![1]!;
     const get = (path: string, init?: RequestInit) => handler(new Request("http://127.0.0.1" + path,
       { ...init, headers: { "x-console-token": token, ...init?.headers } }));
     return { handler, get, page, html };
@@ -122,6 +122,13 @@ for (const source of ["stub", "surreal"] as const) (source === "stub" || dbUp ? 
     expect(page.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
     expect(html).not.toContain("https://unpkg.com");
     expect(html).not.toContain("__CONSOLE_TOKEN__");
+    const nonce = html.match(/nonce="([^"]+)"/)![1]!;
+    const token = html.match(/name="console-token" content="([^"]+)"/)![1]!;
+    expect(nonce).not.toBe(token);
+    expect(page.headers.get("content-security-policy")).toContain(`script-src 'nonce-${nonce}'`);
+    const otherPage = await (await handler(new Request("http://127.0.0.1/"))).text();
+    expect(otherPage.match(/nonce="([^"]+)"/)![1]).not.toBe(nonce);
+    expect(otherPage.match(/name="console-token" content="([^"]+)"/)![1]).toBe(token);
   });
   test("browser projection excludes executable tool config, library content and deployment policy", async () => {
     const data = structuredClone(await graph());
@@ -139,6 +146,7 @@ for (const source of ["stub", "surreal"] as const) (source === "stub" || dbUp ? 
     const body = await res.json();
     expect(body.mode).toBe("administrative_preview");
     expect(body.identity.id).toBe("ben");
+    expect(body.repositories).toHaveLength(3);
     expect(body.repositories.every((r: { effectiveAccess: string }) => r.effectiveAccess === "not_verified")).toBe(true);
     expect((await get("/catalog?user=missing")).status).toBe(404);
   });

@@ -43,7 +43,7 @@ MCPs. See [migration](../guides/history-and-cutover.md). No automatic legacy com
 
 Run `bun bin/merovingian.ts console <tenant>` from the source checkout, or
 `merovingian console <tenant>` with the installed CLI. The server binds only to
-`127.0.0.1` (port 8888 by default). This is a trusted local operator tool, not a
+`127.0.0.1` (port 8888 by default; override with `CONSOLE_PORT` or the higher-priority `--port` flag). This is a trusted local operator tool, not a
 hosted multi-user administration application. Do not expose or proxy it to a network.
 
 Tree and Graph show purposes, assignments, plugins, tools and knowledge bases.

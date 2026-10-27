@@ -81,7 +81,7 @@ export function makeConsoleHandler(namespace: string, backend: Backend,
   const load = dependencies.graph ?? (() => loadGraph(namespace, backend));
   const headers = {
     "cache-control": "no-store", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer",
-    "content-security-policy": `default-src 'none'; script-src 'nonce-${token}'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`,
+    "content-security-policy": `default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`,
   };
   const json = (status: number, body: unknown) => new Response(JSON.stringify(body), {
     status, headers: { ...headers, "content-type": "application/json" },
@@ -97,8 +97,11 @@ export function makeConsoleHandler(namespace: string, backend: Backend,
     if (req.method !== "GET") return json(405, { error: "Read-only console." });
     if (url.pathname === "/favicon.ico") return new Response(null, { status: 204, headers });
     if (url.pathname === "/" || url.pathname === "/index.html") {
-      const html = (await Bun.file(htmlUrl).text()).replaceAll("__CONSOLE_TOKEN__", token);
-      return new Response(html, { headers: { ...headers, "content-type": "text/html; charset=utf-8" } });
+      const nonce = crypto.randomUUID();
+      const html = (await Bun.file(htmlUrl).text()).replaceAll("__CONSOLE_TOKEN__", token).replaceAll("__CONSOLE_NONCE__", nonce);
+      return new Response(html, { headers: { ...headers, "content-type": "text/html; charset=utf-8",
+        "content-security-policy": headers["content-security-policy"].replace("script-src 'none'", `script-src 'nonce-${nonce}'`),
+      } });
     }
     if (!["/graph", "/catalog", "/journals"].includes(url.pathname)) return json(404, { error: "Not found." });
     if (req.headers.get("x-console-token") !== token) return json(403, { error: "Reload the console to authorize this local session." });
