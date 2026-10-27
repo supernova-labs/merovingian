@@ -4,6 +4,7 @@
 // against BOTH backends — stub always, surreal when a DB is reachable.
 
 import { describe, test, expect } from "bun:test";
+import { journalActivity } from "../src/journal/read.ts";
 import { join } from "node:path";
 import { stubProviderFor } from "../src/provider/stub.ts";
 import { SurrealProvider, surrealConfig, surrealReachable, connectSurreal } from "../src/provider/surreal.ts";
@@ -161,12 +162,18 @@ for (const source of ["stub", "surreal"] as const) (source === "stub" || dbUp ? 
     expect(await res.text()).not.toContain("TOPSECRET");
   });
   test("activity calendar accepts local DST boundaries and preserves empty days", async () => {
-    const { get } = await session();
+    let queriedDatabase = false;
+    const { get } = await session(source, { journalActivity: async (boundaries: string[], author?: string) => {
+      const db = await connectSurreal(cfg);
+      try { queriedDatabase = true; return await journalActivity(db, boundaries, author); }
+      finally { await db.close(); }
+    } });
     const dates = [new Date("2026-10-01T04:00:00.000Z").toISOString()];
     for (let i=1;i<=30;i++) dates.push(new Date(Date.parse(dates[i-1]!) + (i===15?23:i===16?25:24)*3600_000).toISOString());
     const response = await get("/journal-activity?boundaries="+encodeURIComponent(JSON.stringify(dates)));
     expect(response.status).toBe(200);
     const body = await response.json();
+    expect(queriedDatabase).toBe(source === "surreal");
     expect(body.days).toHaveLength(30);
     expect(body.days[14]).toEqual({from:dates[14],until:dates[15],count:0});
     expect(body.days[15]).toEqual({from:dates[15],until:dates[16],count:0});

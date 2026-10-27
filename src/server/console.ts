@@ -110,6 +110,7 @@ function activityBoundaries(raw: string | null): string[] {
 }
 
 interface ConsoleDependencies {
+  journalActivity?: (boundaries: string[], author?: string) => Promise<unknown>;
   graph?: () => Promise<GraphPayload>;
   journals?: (cursor: JournalCursor | undefined, limit: number, filter: JournalFilter) => Promise<unknown>;
 }
@@ -170,7 +171,7 @@ export function makeConsoleHandler(namespace: string, backend: Backend,
         try { boundaries = activityBoundaries(url.searchParams.get("boundaries")); }
         catch { return json(400, { error: "Invalid calendar range." }); }
         if (backend === "stub") return json(200, { identity: null, scope: "demo", days: boundaries.slice(0,-1).map((from,i)=>({from,until:boundaries[i+1],count:0})) });
-        return json(200, await readConsoleJournalActivity(namespace, boundaries, filter.author));
+        return json(200, await (dependencies.journalActivity ?? ((b, a) => readConsoleJournalActivity(namespace, b, a)))(boundaries, filter.author));
       }
       let cursor: JournalCursor | undefined;
       try { cursor = parseJournalCursor(url.searchParams.get("cursor")); }
