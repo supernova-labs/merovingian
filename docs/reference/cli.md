@@ -63,6 +63,20 @@ all tenant entries. There is no fallback to administrative credentials. Missing 
 invalid personal configuration disables journal reading without disabling the graph.
 The offline stub shows an explicitly empty demo instead of accessing a real journal.
 
+Journal content renders as sanitized Markdown (headings, lists, tables, code and safe
+external links); scripts, active HTML and remote images are not loaded. Previous-entry
+links and the detail panel's visible continuations let operators navigate a sequence.
+The panel shows at most twenty direct continuations, with an explicit truncation notice.
+Following a link ignores the list's date/person filter but never bypasses identity permissions.
+
+A person selector filters the list and activity calendar together. The calendar offers
+30 or 60 days, with day boundaries supplied by the browser's local timezone (including
+23/25-hour daylight-saving days). Clicking a day filters the list to that half-open date
+range; All dates clears it. Activity counts are computed through the same personal
+connection as entry reads, never through administrative graph credentials. Refresh reloads
+activity and the newest list page. The chronological index is provisioned by the next
+normal deploy; opening the console does not migrate the database.
+
 The console serves no external scripts, prevents framing/cross-origin API access,
 and requires a per-process page token for data requests. This protects the local
 browser boundary; it does not authenticate other users or processes on the machine.

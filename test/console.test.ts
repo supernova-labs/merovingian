@@ -154,10 +154,22 @@ for (const source of ["stub", "surreal"] as const) (source === "stub" || dbUp ? 
     let calls = 0;
     const { get } = await session("surreal", { journals: async () => { calls++; throw new Error("password=TOPSECRET at private-host"); } });
     for (const q of ["offset=-1", "limit=101", "limit=0", "offset=NaN", "offset=1.2", "cursor=not-json", "cursor=%7B%7D"]) expect((await get("/journals?" + q)).status).toBe(400);
+    for (const path of ["/journal?id=bad:record", "/journal-activity?boundaries=[]", "/journals?from=2026-01-01", "/journals?from=bad&until=bad"]) expect((await get(path)).status).toBe(400);
     expect(calls).toBe(0);
     const res = await get("/journals");
     expect(res.status).toBe(502);
     expect(await res.text()).not.toContain("TOPSECRET");
+  });
+  test("activity calendar accepts local DST boundaries and preserves empty days", async () => {
+    const { get } = await session();
+    const dates = [new Date("2026-10-01T04:00:00.000Z").toISOString()];
+    for (let i=1;i<=30;i++) dates.push(new Date(Date.parse(dates[i-1]!) + (i===15?23:i===16?25:24)*3600_000).toISOString());
+    const response = await get("/journal-activity?boundaries="+encodeURIComponent(JSON.stringify(dates)));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.days).toHaveLength(30);
+    expect(body.days[14]).toEqual({from:dates[14],until:dates[15],count:0});
+    expect(body.days[15]).toEqual({from:dates[15],until:dates[16],count:0});
   });
   test("journals refuse missing personal credentials, never fall back to system credentials", async () => {
     await expect(readConsoleJournals("acme", undefined, 50, { SURREAL_URL: "ws://127.0.0.1:8000", SURREAL_NS: "merovingian", MEROVINGIAN_DB: "acme", SURREAL_USER: "root", SURREAL_PASS: "root" })).rejects.toThrow("Set MEROVINGIAN_USER");

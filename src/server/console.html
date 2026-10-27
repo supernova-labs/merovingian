@@ -93,7 +93,24 @@
 
   #catalogview, #journalsview { overflow: auto; padding: 24px; }
   .entry { border: 1px solid var(--line); padding: 16px; margin-bottom: 12px; }
-  .entry pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+  .entry > pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+  .markdown { font-family: system-ui, sans-serif; font-size: 15px; line-height: 1.65; overflow-wrap: anywhere; }
+  .markdown h1, .markdown h2, .markdown h3 { margin: 20px 0 8px; color: var(--ink); }
+  .markdown h1 { font-size: 23px; } .markdown h2 { font-size: 20px; } .markdown h3 { font-size: 17px; }
+  .markdown pre { overflow-x: auto; padding: 12px; background: #070c14; border-radius: 4px; }
+  .markdown code { font-family: var(--mono); font-size: 12px; }
+  .markdown blockquote { border-left: 3px solid var(--violet); margin-left: 0; padding-left: 16px; color: var(--dim); }
+  .markdown a { color: var(--cyan); } .markdown table { border-collapse: collapse; display: block; overflow-x: auto; }
+  .markdown th, .markdown td { border: 1px solid var(--line); padding: 6px 12px; }
+  .calendar { display: grid; grid-template-rows: repeat(7, 22px); grid-auto-flow: column; grid-auto-columns: 22px; gap: 5px; width: max-content; margin: 12px 0; }
+  .calendar button { padding: 0; border-radius: 3px; background: #151e2b; border: 1px solid #2a3442; }
+  .calendar button[data-level="1"] { background: #16424a; } .calendar button[data-level="2"] { background: #1a6970; }
+  .calendar button[data-level="3"] { background: #21969c; } .calendar button[data-level="4"] { background: #22d3ce; }
+  .calendar button[aria-pressed="true"] { outline: 2px solid white; outline-offset: 1px; }
+  .calendar button:hover, .calendar button:focus-visible { border-color: white; }
+  .journal-detail { border: 1px solid var(--violet); padding: 16px; margin: 18px 0; }
+  .journal-detail:empty { display: none; }
+  .journal-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
   .entry .meta { color: var(--dim); margin-bottom: 8px; }
   button, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); padding: 6px 12px; cursor: pointer; }
   button:disabled { opacity: .5; cursor: default; }
@@ -239,7 +256,7 @@ function purposeGaps(p) {
   const d = G.definition, gaps = [];
 
   for (const s of p.skills || []) if (!d.skillCatalog[s]) gaps.push("undistributed skill: " + s);
-  for (const ref of [...purposePlugins(p), ...ambientPlugins()]) {
+  for (const ref of new Set([...purposePlugins(p), ...ambientPlugins()])) {
     const marketplace = d.marketplaces[ref.split("@")[1]];
     if (!marketplace) gaps.push("missing marketplace: " + ref);
     else if (!Object.values(marketplace).some(binding => binding.status === "available")) gaps.push("no supported distribution: " + ref);
@@ -643,36 +660,112 @@ async function renderCatalog(uid = "") {
   const instructions = preview ? preview.instructions : d.ambient.instructions;
   if (instructions) { const section = el("section"); section.appendChild(el("h3",null,"Tenant instructions")); const pre = el("pre",null,instructions); pre.style.whiteSpace="pre-wrap"; section.appendChild(pre); box.appendChild(section); }
 }
-let journalRequest = 0;
+let journalRequest = 0, journalDetailRequest = 0;
 let journalCursors = [null];
+let journalAuthor = "", journalRange = 60, journalDay = null;
+const calendarCache = new Map();
+function journalName(id) { return assignByUser.get(id)?.user.name || id; }
+function journalCard(entry, detail = false) {
+  const card = el("article","entry");
+  card.appendChild(el("div","meta",journalName(entry.author) + " · " + new Date(entry.at).toLocaleString()));
+  const body = el("div","markdown");
+  // Only the server's sanitized Markdown output is inserted as HTML.
+  if (typeof entry.html === "string") body.innerHTML = entry.html;
+  else body.textContent = entry.text;
+  card.appendChild(body);
+  card.appendChild(el("div","meta","ID: " + entry.id + (entry.origin ? " · Origin: " + entry.origin : "")));
+  const links = el("div","journal-links");
+  if (entry.previous != null) { const previous = el("button",null,"← Previous journal"); previous.onclick = () => openJournal(entry.previous); links.appendChild(previous); }
+  if (!detail) { const sequence = el("button",null,"Open journal & continuations"); sequence.onclick = () => openJournal(entry.id); links.appendChild(sequence); }
+  card.appendChild(links); return card;
+}
+async function openJournal(id) {
+  const request = ++journalDetailRequest, host = document.getElementById("journal-detail");
+  if (!host) return;
+  host.replaceChildren(el("p","notice","Loading linked journal…")); host.scrollIntoView({block:"start",behavior:"smooth"});
+  try {
+    const data = await api("/journal?id=" + encodeURIComponent(JSON.stringify(id)));
+    if (request !== journalDetailRequest || !host.isConnected) return;
+    host.replaceChildren();
+    const close = el("button",null,"Close linked journal"); close.onclick = () => { journalDetailRequest++; host.replaceChildren(); }; host.appendChild(close);
+    host.appendChild(el("p","notice","Linked journals can be outside the current date/person filter. Your read permissions still apply."));
+    host.appendChild(journalCard(data.entry,true));
+    host.appendChild(el("h3",null,"Continued by"));
+    if (!data.continuations.length) host.appendChild(el("p","none","No visible continuations."));
+    for (const child of data.continuations) {
+      const title = child.text.split("\n").find(line=>line.trim()) || child.id;
+      const button = el("button",null,journalName(child.author) + " · " + new Date(child.at).toLocaleDateString() + " · " + title.replace(/^#+\s*/,"").slice(0,100));
+      button.onclick = () => openJournal(child.id); const line = el("div","resource"); line.appendChild(button); host.appendChild(line);
+    }
+    if (data.moreContinuations) host.appendChild(el("p","notice","Showing the 20 most recent visible continuations."));
+  } catch (e) { if (request === journalDetailRequest && host.isConnected) { host.replaceChildren(el("p","gapline",e.message)); const close=el("button",null,"Close"); close.onclick=()=>host.replaceChildren(); host.appendChild(close); } }
+}
+function calendarBoundaries() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Array.from({length:journalRange+1},(_,i)=>new Date(today.getFullYear(),today.getMonth(),today.getDate()-journalRange+1+i).toISOString());
+}
+async function renderJournalCalendar(host, request) {
+  const boundaries = calendarBoundaries(), key = JSON.stringify([journalAuthor,boundaries]);
+  host.appendChild(el("p","notice","Loading activity…"));
+  try {
+    let data = calendarCache.get(key);
+    if (!data) { data = await api("/journal-activity?boundaries="+encodeURIComponent(JSON.stringify(boundaries))+(journalAuthor?"&author="+encodeURIComponent(journalAuthor):"")); calendarCache.set(key,data); }
+    if (request !== journalRequest) return;
+    host.replaceChildren();
+    host.appendChild(el("p","notice","Last " + journalRange + " days · " + Intl.DateTimeFormat().resolvedOptions().timeZone + " · click a day to filter"));
+    const grid=el("div","calendar"); grid.setAttribute("aria-label","Journal activity calendar");
+    const max=Math.max(1,...data.days.map(d=>d.count));
+    for(let i=0;i<new Date(boundaries[0]).getDay();i++) grid.appendChild(el("span"));
+    for (const day of data.days) {
+      const label = new Date(day.from).toLocaleDateString(undefined,{weekday:"short",year:"numeric",month:"short",day:"numeric"}) + ": " + day.count + " journal"+(day.count===1?"":"s");
+      const button=el("button"); button.title=label; button.setAttribute("aria-label",label); button.setAttribute("aria-pressed",String(journalDay?.from===day.from));
+      button.dataset.level=String(day.count ? Math.max(1,Math.ceil(day.count/max*4)):0);
+      button.onclick=()=>{journalDay={from:day.from,until:day.until};renderJournals(0);}; grid.appendChild(button);
+    }
+    host.appendChild(grid); host.appendChild(el("div","notice",data.days.reduce((n,d)=>n+d.count,0)+" visible journals · darker: less activity · brighter: more activity"));
+  } catch(e) { if(request===journalRequest) host.replaceChildren(el("p","gapline","Activity unavailable: "+e.message)); }
+}
 async function renderJournals(pageIndex) {
   if (pageIndex === 0) journalCursors = [null];
   const cursor = journalCursors[pageIndex];
-  const request = ++journalRequest, box = document.getElementById("journalsview"); box.replaceChildren(el("p","notice","Loading journals…"));
+  const request = ++journalRequest; journalDetailRequest++;
+  const box = document.getElementById("journalsview"); box.replaceChildren(el("p","notice","Loading journals…"));
   try {
-    const data = await api("/journals?limit=50" + (cursor ? "&cursor=" + encodeURIComponent(JSON.stringify(cursor)) : ""));
+    const query = new URLSearchParams({limit:"50"});
+    if(cursor) query.set("cursor",JSON.stringify(cursor));
+    if(journalAuthor) query.set("author",journalAuthor);
+    if(journalDay) { query.set("from",journalDay.from); query.set("until",journalDay.until); }
+    const data = await api("/journals?" + query);
     if (request !== journalRequest) return;
-    box.replaceChildren();
-    box.appendChild(el("h2",null,"Journals"));
-    box.appendChild(el("p","notice",data.scope === "demo" ? "Offline demo: no journals are loaded." : "Authenticated as " + data.identity + " · " + (data.scope === "tenant" ? "all tenant journals" : "own journals only") + ". Immutable, read-only entries."));
-    const bar = el("div","toolbar");
-    const back = el("button",null,"Previous"), next = el("button",null,"Next"), refresh = el("button",null,"Refresh");
-    back.disabled = pageIndex === 0; back.onclick = () => renderJournals(pageIndex-1);
-    next.disabled = data.nextCursor === null; next.onclick = () => { journalCursors[pageIndex+1] = data.nextCursor; renderJournals(pageIndex+1); };
-    refresh.onclick = () => renderJournals(0); bar.append(back,next,refresh); box.appendChild(bar);
-    if (!data.entries.length) box.appendChild(el("p","none","No visible journal entries on this page."));
-    for (const entry of data.entries) {
-      const card = el("article","entry");
-      card.appendChild(el("div","meta",entry.author + " · " + new Date(entry.at).toLocaleString()));
-      card.appendChild(el("pre",null,entry.text));
-      card.appendChild(el("div","meta","ID: " + entry.id + (entry.origin ? " · Origin: " + entry.origin : "")));
-      if (entry.previous) card.appendChild(el("div","meta","Continues journal: " + entry.previous));
-      box.appendChild(card);
-    }
-  } catch (e) {
-    if (request !== journalRequest) return;
-    box.replaceChildren(el("p","gapline",e.message),el("p","notice","Journals require personal MEROVINGIAN_USER / MEROVINGIAN_PASS and matching tenant connection settings on the console server. Administrative credentials are never used as a fallback."));
-    const retry = el("button",null,"Retry"); retry.onclick=()=>renderJournals(pageIndex); box.appendChild(retry);
+    box.replaceChildren(); box.appendChild(el("h2",null,"Journals"));
+    box.appendChild(el("p","notice",data.scope === "demo" ? "Offline demo: no journals are loaded." : "Authenticated as " + journalName(data.identity) + " · " + (data.scope === "tenant" ? "all tenant journals" : "own journals only") + ". Immutable, read-only entries."));
+    const filters=el("div","toolbar"), authors=el("select"), range=el("select");
+    authors.setAttribute("aria-label","Filter by person"); range.setAttribute("aria-label","Activity period");
+    const all=el("option",null,"All visible people"); all.value=""; authors.appendChild(all);
+    const people=new Map();
+    if(data.scope==="tenant" || data.scope==="demo") for(const {user} of assignByUser.values()) people.set(user.id,user.name);
+    for(const entry of data.entries) people.set(entry.author,journalName(entry.author));
+    if(data.identity) people.set(data.identity,journalName(data.identity));
+    if(journalAuthor && !people.has(journalAuthor)) people.set(journalAuthor,journalName(journalAuthor));
+    for(const [id,name] of [...people].sort((a,b)=>a[1].localeCompare(b[1]))) { const option=el("option",null,name); option.value=id; authors.appendChild(option); }
+    authors.value=journalAuthor; authors.onchange=()=>{journalAuthor=authors.value;renderJournals(0);};
+    for(const days of [30,60]) {const option=el("option",null,"Last "+days+" days");option.value=String(days);range.appendChild(option);}
+    range.value=String(journalRange);range.onchange=()=>{journalRange=Number(range.value);journalDay=null;renderJournals(0);};
+    const clear=el("button",null,"All dates"); clear.disabled=!journalDay;clear.onclick=()=>{journalDay=null;renderJournals(0);};
+    const refresh=el("button",null,"Refresh");refresh.onclick=()=>{calendarCache.clear();renderJournals(0);};
+    filters.append(authors,range,clear,refresh);box.appendChild(filters);
+    const calendar=el("section");box.appendChild(calendar);renderJournalCalendar(calendar,request);
+    if(journalDay)box.appendChild(el("p","notice","Showing "+new Date(journalDay.from).toLocaleDateString()+" · "+(journalAuthor?journalName(journalAuthor):"all visible people")));
+    const detail=el("section","journal-detail");detail.id="journal-detail";box.appendChild(detail);
+    const bar=el("div","toolbar"),back=el("button",null,"Previous page"),next=el("button",null,"Next page");
+    back.disabled=pageIndex===0;back.onclick=()=>renderJournals(pageIndex-1);
+    next.disabled=data.nextCursor===null;next.onclick=()=>{journalCursors[pageIndex+1]=data.nextCursor;renderJournals(pageIndex+1);};bar.append(back,next);box.appendChild(bar);
+    if(!data.entries.length)box.appendChild(el("p","none","No visible journal entries for these filters."));
+    for(const entry of data.entries)box.appendChild(journalCard(entry));
+  } catch(e) {
+    if(request!==journalRequest)return;
+    box.replaceChildren(el("p","gapline",e.message),el("p","notice","Journals require personal credentials and matching tenant connection settings on the console server. Administrative credentials are never used as a fallback."));
+    const retry=el("button",null,"Retry");retry.onclick=()=>renderJournals(pageIndex);box.appendChild(retry);
   }
 }
 

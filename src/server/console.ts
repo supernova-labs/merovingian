@@ -7,7 +7,9 @@ import type { Definition, AssignmentRow } from "../provider/types.ts";
 import { CatalogError, resolveCatalog } from "../catalog/catalog.ts";
 import { catalogConfig } from "../catalog/session.ts";
 import { bounded, operationError } from "../provider/operation-error.ts";
-import { pageJournals, parseJournalCursor, type JournalCursor } from "../journal/read.ts";
+import { journalMarkdown } from "../journal/markdown.ts";
+import type { Surreal } from "surrealdb";
+import { pageJournals, parseJournalCursor, type JournalCursor, type JournalFilter, type JournalId, parseJournalId, journalActivity, journalDetail } from "../journal/read.ts";
 
 export interface GraphPayload { definition: Definition; assignments: AssignmentRow[] }
 export async function loadGraph(namespace: string, backend: Backend): Promise<GraphPayload> {
@@ -47,8 +49,7 @@ export function browserGraph({ definition: d, assignments }: GraphPayload) {
   } };
 }
 
-export async function readConsoleJournals(namespace: string, cursor: JournalCursor | undefined, limit: number,
-  env: Record<string, string | undefined> = process.env) {
+async function withJournalIdentity<T extends object>(namespace: string, env: Record<string, string | undefined>, read: (db: Surreal) => Promise<T>) {
   const config = catalogConfig(env);
   // Never let a console for one tenant silently read a different configured tenant.
   const graphConfig = surrealConfig(namespace);
@@ -66,14 +67,51 @@ export async function readConsoleJournals(namespace: string, cursor: JournalCurs
     const [users] = await bounded(db.query<[{ id: string; journalAdmin?: boolean }[]]>(
       "SELECT record::id(id) AS id, journalAdmin FROM user WHERE id = $auth"), 15_000);
     if (users.length !== 1 || users[0]!.id !== config.user) throw new CatalogError("access_denied", "Authenticated identity is unavailable.");
-    return { ...await pageJournals(db, cursor, limit), identity: config.user,
+    return { ...await read(db), identity: config.user,
       scope: users[0]!.journalAdmin === true ? "tenant" : "personal" };
   } finally { await db.close().catch(() => {}); }
 }
 
+export async function readConsoleJournals(namespace: string, cursor: JournalCursor | undefined, limit: number,
+  env: Record<string, string | undefined> = process.env, filter: JournalFilter = {}) {
+  return withJournalIdentity(namespace, env, async db => {
+    const page = await pageJournals(db, cursor, limit, 15_000, filter);
+    return { ...page, entries: page.entries.map(entry => ({ ...entry, html: journalMarkdown(entry.text) })) };
+  });
+}
+export async function readConsoleJournalActivity(namespace: string, boundaries: string[], author?: string,
+  env: Record<string, string | undefined> = process.env) {
+  return withJournalIdentity(namespace, env, db => journalActivity(db, boundaries, author));
+}
+export async function readConsoleJournalDetail(namespace: string, id: JournalId,
+  env: Record<string, string | undefined> = process.env) {
+  return withJournalIdentity(namespace, env, async db => {
+    const detail = await journalDetail(db, id);
+    return { ...detail, entry: detail.entry ? { ...detail.entry, html: journalMarkdown(detail.entry.text) } : null };
+  });
+}
+function journalFilter(params: URLSearchParams): JournalFilter {
+  const author = params.get("author") || undefined;
+  if (author && (author.length > 128 || /[\x00-\x1f]/.test(author))) throw new Error("Invalid author");
+  const from = params.get("from") || undefined, until = params.get("until") || undefined;
+  if (Boolean(from) !== Boolean(until) || (from && (from.length > 64 || until!.length > 64 || !/^\d{4}-\d{2}-\d{2}T/.test(from) || !/^\d{4}-\d{2}-\d{2}T/.test(until!) || !Number.isFinite(Date.parse(from)) || !Number.isFinite(Date.parse(until!)) || Date.parse(from) >= Date.parse(until!)))) throw new Error("Invalid dates");
+  return { author, from, until };
+}
+function activityBoundaries(raw: string | null): string[] {
+  if (!raw || raw.length > 5000) throw new Error("Invalid calendar");
+  const dates: unknown = JSON.parse(raw);
+  if (!Array.isArray(dates) || ![31, 61].includes(dates.length)) throw new Error("Invalid calendar");
+  for (let i = 0; i < dates.length; i++) {
+    const value = dates[i];
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) || !Number.isFinite(Date.parse(value))) throw new Error("Invalid calendar");
+    if (i && (Date.parse(value) - Date.parse(dates[i-1]) < 20*3600_000 || Date.parse(value) - Date.parse(dates[i-1]) > 28*3600_000)) throw new Error("Invalid calendar");
+  }
+  return dates;
+}
+
 interface ConsoleDependencies {
   graph?: () => Promise<GraphPayload>;
-  journals?: (cursor: JournalCursor | undefined, limit: number) => Promise<unknown>;
+  journals?: (cursor: JournalCursor | undefined, limit: number, filter: JournalFilter) => Promise<unknown>;
 }
 export function makeConsoleHandler(namespace: string, backend: Backend,
   htmlUrl: URL = new URL("./console.html", import.meta.url), dependencies: ConsoleDependencies = {}) {
@@ -103,7 +141,7 @@ export function makeConsoleHandler(namespace: string, backend: Backend,
         "content-security-policy": headers["content-security-policy"].replace("script-src 'none'", `script-src 'nonce-${nonce}'`),
       } });
     }
-    if (!["/graph", "/catalog", "/journals"].includes(url.pathname)) return json(404, { error: "Not found." });
+    if (!["/graph", "/catalog", "/journals", "/journal", "/journal-activity"].includes(url.pathname)) return json(404, { error: "Not found." });
     if (req.headers.get("x-console-token") !== token) return json(403, { error: "Reload the console to authorize this local session." });
     try {
       if (url.pathname === "/graph") return json(200, browserGraph(await load()));
@@ -116,6 +154,24 @@ export function makeConsoleHandler(namespace: string, backend: Backend,
           assignments: rows.map(({ purpose, role, scope }) => ({ purpose, role, scope })) });
         return json(200, { ...catalog, mode: "administrative_preview" });
       }
+      let filter: JournalFilter;
+      try { filter = journalFilter(url.searchParams); }
+      catch { return json(400, { error: "Invalid journal filters." }); }
+      if (url.pathname === "/journal") {
+        let id: JournalId;
+        try { id = parseJournalId(JSON.parse(url.searchParams.get("id") ?? "null")); }
+        catch { return json(400, { error: "Invalid journal identifier." }); }
+        if (backend === "stub") return json(404, { error: "Journal not found or not visible." });
+        const detail = await readConsoleJournalDetail(namespace, id);
+        return detail.entry ? json(200, detail) : json(404, { error: "Journal not found or not visible." });
+      }
+      if (url.pathname === "/journal-activity") {
+        let boundaries: string[];
+        try { boundaries = activityBoundaries(url.searchParams.get("boundaries")); }
+        catch { return json(400, { error: "Invalid calendar range." }); }
+        if (backend === "stub") return json(200, { identity: null, scope: "demo", days: boundaries.slice(0,-1).map((from,i)=>({from,until:boundaries[i+1],count:0})) });
+        return json(200, await readConsoleJournalActivity(namespace, boundaries, filter.author));
+      }
       let cursor: JournalCursor | undefined;
       try { cursor = parseJournalCursor(url.searchParams.get("cursor")); }
       catch { return json(400, { error: "Invalid journal cursor." }); }
@@ -124,7 +180,7 @@ export function makeConsoleHandler(namespace: string, backend: Backend,
         return json(400, { error: "Invalid pagination." });
       }
       if (backend === "stub") return json(200, { entries: [], nextCursor: null, identity: null, scope: "demo" });
-      return json(200, await (dependencies.journals ?? ((o, l) => readConsoleJournals(namespace, o, l)))(cursor, limit));
+      return json(200, await (dependencies.journals ?? ((o, l, f) => readConsoleJournals(namespace, o, l, process.env, f)))(cursor, limit, filter));
     } catch (error) {
       const failure = error instanceof CatalogError ? { code: error.code, message: error.message } : operationError(error, false);
       return json(502, { error: failure.message, code: failure.code });

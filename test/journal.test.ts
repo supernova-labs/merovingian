@@ -5,7 +5,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { applyGraph } from "../src/graph/apply.ts";
 import { surrealConfig, surrealReachable, connectSurreal, connectAsPassword } from "../src/provider/surreal.ts";
 import { exampleDefinition, exampleUsers } from "../fixtures/example/graph.ts";
-import { pageJournals } from "../src/journal/read.ts";
+import { pageJournals, journalActivity, journalDetail, parseJournalCursor } from "../src/journal/read.ts";
 import { readConsoleJournals } from "../src/server/console.ts";
 import { createJournalServer } from "../src/mcp/journal.ts";
 const cfg = surrealConfig("acme_journal_test");
@@ -71,12 +71,36 @@ const available = await surrealReachable(cfg);
     expect(typeof personal.entries[0]!.at.toISOString()).toBe("string");
     await member.query("CREATE journal SET text = 'Concurrent append'");
     const older = await readConsoleJournals(cfg.db, personal.nextCursor!, 50, env("cleo"));
+    expect(older.entries.length).toBeGreaterThan(0);
     expect(older.entries.some(e => e.id === personal.entries[0]!.id || e.text === "Concurrent append")).toBe(false);
     const invisible = await readConsoleJournals(cfg.db, undefined, 50, env("ben"));
     expect(invisible.entries).toHaveLength(0);
     const all = await readConsoleJournals(cfg.db, undefined, 50, env("ada"));
     expect(all.scope).toBe("tenant"); expect(all.entries.length).toBeGreaterThan(1);
     await expect(readConsoleJournals(cfg.db, undefined, 1, { ...env("ada"), MEROVINGIAN_DB: "other_tenant" })).rejects.toThrow("same connection and tenant");
+  });
+  test("calendar, date/person filters and linked details preserve identity permissions", async () => {
+    const [visible] = await pageJournals(member, undefined, 100).then(p => [p.entries]);
+    const from = new Date(); from.setHours(0, 0, 0, 0); from.setDate(from.getDate()-29);
+    const boundaries = Array.from({length:31}, (_,i)=>new Date(from.getFullYear(),from.getMonth(),from.getDate()+i).toISOString());
+    const own = await journalActivity(member, boundaries);
+    const hidden = await journalActivity(other, boundaries);
+    expect(own.days.reduce((n,d)=>n+d.count,0)).toBe(visible!.length);
+    expect(hidden.days.every(d=>d.count===0)).toBe(true);
+    const scoped = await pageJournals(admin, undefined, 100, 15_000, { author: "cleo", from: boundaries[0], until: boundaries.at(-1) });
+    expect(scoped.entries.length).toBe(visible!.length);
+    expect((await pageJournals(member, undefined, 100, 15_000, { author: "ben" })).entries).toHaveLength(0);
+    expect((await journalActivity(other, boundaries, "cleo")).days.every(d=>d.count===0)).toBe(true);
+    const detail = await journalDetail(member, String(first.id));
+    expect(detail.entry?.id).toBe(String(first.id));
+    expect(detail.continuations.length).toBeGreaterThan(0);
+    expect((await journalDetail(other, String(first.id))).entry).toBeNull();
+    const [adminChild] = await admin.query<[{ id: RecordId }[]]>("CREATE journal SET text = 'Admin continuation', previous = $previous", { previous: first });
+    expect((await journalDetail(member, String(first.id))).continuations.some(e=>e.id===String(adminChild[0]!.id.id))).toBe(false);
+    expect((await journalDetail(admin, String(first.id))).continuations.some(e=>e.id===String(adminChild[0]!.id.id))).toBe(true);
+    // A selected local day is half-open: records exactly at the end belong to the next day.
+    const stamp = detail.entry!.at.toISOString();
+    expect((await pageJournals(member, undefined, 100, 15_000, { from: boundaries[0], until: stamp })).entries.some(e=>e.id===String(first.id))).toBe(false);
   });
   test("journal cursor keeps nanosecond precision and orders tied timestamps by id", async () => {
     // Root fixture only: freeze database-stamped time to exercise the tie-breaker.
@@ -94,10 +118,25 @@ const available = await surrealReachable(cfg);
       expect(info.indexes.journal_at).toContain("FIELDS at");
     } finally { await root.query("DEFINE FIELD OVERWRITE at ON journal TYPE datetime VALUE $before OR time::now()"); }
   });
+  test("console cursors and detail preserve dotted and numeric record ids", async () => {
+    await root.query("DEFINE FIELD OVERWRITE at ON journal TYPE datetime VALUE $before OR d'2032-01-01T00:00:00Z'");
+    try {
+      for (const id of ["note.with.dot", 42, 0]) await member.query("CREATE type::record('journal', $id) SET text = 'Typed id fixture'", { id });
+      let cursor; const seen = [];
+      for (let i = 0; i < 3; i++) {
+        const page = await pageJournals(member, cursor, 1);
+        expect(page.entries).toHaveLength(1);
+        seen.push(page.entries[0]!.id);
+        expect((await journalDetail(member, page.entries[0]!.id)).entry?.id).toBe(page.entries[0]!.id);
+        cursor = parseJournalCursor(JSON.stringify(page.nextCursor));
+      }
+      expect(seen).toContain("note.with.dot"); expect(seen).toContain(42); expect(seen).toContain(0);
+    } finally { await root.query("DEFINE FIELD OVERWRITE at ON journal TYPE datetime VALUE $before OR time::now()"); }
+  });
   test("deploy preserves journal entries and revokes administrative reading", async () => {
     const users = structuredClone(exampleUsers);
     await applyGraph(root, { ...structuredClone(exampleDefinition), namespace: cfg.db }, users);
-    expect((await admin.query<[unknown[]]>("SELECT * FROM journal"))[0]).toHaveLength(0);
+    expect((await admin.query<[{author: RecordId}[]]>("SELECT * FROM journal"))[0].every(e=>String(e.author)==="user:ada")).toBe(true);
     expect((await member.query<[unknown[]]>("SELECT * FROM journal"))[0].length).toBeGreaterThan(0);
   });
 
