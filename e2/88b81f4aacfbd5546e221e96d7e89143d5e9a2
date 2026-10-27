@@ -1,0 +1,47 @@
+.github/workflows/publish.yml
+  s_e7effeab5cddad::t_3ff6d39ba54053 87
+src/server/console.html
+  s_e7effeab5cddad::t_0d11a50a6798ac 259,678,687
+  s_e7effeab5cddad::t_0f287b9d65a5b3 96-113,663,665-677,679-686,688-727,731-732,734-738,740-768
+src/server/console.ts
+  s_e7effeab5cddad::t_0d11a50a6798ac 12,86,161-163
+  s_e7effeab5cddad::t_4c30198ddd8118 97
+  s_e7effeab5cddad::t_e56ad7221e992a 10-11,52,70,75-85,87-96,98-111,114,144,157-160,164-174,183
+src/journal/markdown.ts
+  s_e7effeab5cddad::t_e56ad7221e992a 1-9,15-16
+  s_e7effeab5cddad::t_0f287b9d65a5b3 10-14
+test/journal.test.ts
+  s_e7effeab5cddad::t_0d11a50a6798ac 8,74,121-133
+  s_e7effeab5cddad::t_3ff6d39ba54053 82-104,135,139
+  s_e7effeab5cddad::t_8881038f60432c 134
+test/journal-markdown.test.ts
+  s_e7effeab5cddad::t_3ff6d39ba54053 1-16
+package.json
+  s_e7effeab5cddad::t_4d5cff0c28a18b 4,57,63-64
+src/journal/read.ts
+  s_e7effeab5cddad::t_0d11a50a6798ac 5-6,16-21,27,29,67
+  s_e7effeab5cddad::t_e56ad7221e992a 33-44,47,51-66,68-74
+test/console.test.ts
+  s_e7effeab5cddad::t_c723ef9cec0e61 163-173
+  s_e7effeab5cddad::t_3ff6d39ba54053 157
+bun.lock
+  s_e7effeab5cddad::t_bc6b5623bd852b 9-10,17,34-35,64-65,70-77,84-85,94-95,130-131,142-143,154-157,170-171,182-183,190-191,194-195,210-211,230-231
+docs/reference/cli.md
+  s_e7effeab5cddad::t_202cf2300bddf2 66-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e288b81f4aacfbd5546e221e96d7e89143d5e9a2",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
