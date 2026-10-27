@@ -62,6 +62,7 @@ const available = await surrealReachable(cfg);
   test("console reads journals as the personal identity and respects pagination", async () => {
     const env = (user: string) => ({ SURREAL_URL: cfg.url, SURREAL_NS: cfg.ns,
       MEROVINGIAN_DB: cfg.db, MEROVINGIAN_USER: user, MEROVINGIAN_PASS: "journal-test-password" });
+    await expect(readConsoleJournals(cfg.db, 0, 1, { ...env("cleo"), MEROVINGIAN_PASS: "wrong-password" })).rejects.toMatchObject({ code: "invalid_credentials" });
     const personal = await readConsoleJournals(cfg.db, 0, 1, env("cleo"));
     expect(personal.identity).toBe("cleo"); expect(personal.scope).toBe("personal");
     expect(personal.entries).toHaveLength(1); expect(personal.nextOffset).toBe(1);

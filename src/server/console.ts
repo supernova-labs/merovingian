@@ -56,7 +56,12 @@ export async function readConsoleJournals(namespace: string, offset: number, lim
       new URL(config.cfg.url).toString() !== new URL(graphConfig.url).toString()) {
     throw new CatalogError("invalid_configuration", "Journal identity must use the same connection and tenant as this console.");
   }
-  const db = await connectAsPassword(config.cfg, config.user, config.password);
+  let db;
+  try { db = await connectAsPassword(config.cfg, config.user, config.password); }
+  catch (error) {
+    const failure = operationError(error, true);
+    throw new CatalogError(failure.code, failure.message);
+  }
   try {
     const [users] = await bounded(db.query<[{ id: string; journalAdmin?: boolean }[]]>(
       "SELECT record::id(id) AS id, journalAdmin FROM user WHERE id = $auth"), 15_000);
