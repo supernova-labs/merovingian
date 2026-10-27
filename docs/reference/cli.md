@@ -19,7 +19,7 @@ The table omits that common prefix. Commands target a tenant database, not a Git
 | `data <tenant> <table>` | Read up to 20 visible rows using configured identity token source |
 | `mcp catalog`, `mcp journal` | Strict personal stdio MCP servers |
 | `mcp surreal-data` | Generic read-only domain-data MCP; mounts from MEROVINGIAN_BUCKETS |
-| `console <tenant> [--backend stub\|surreal] [--port N]` | Full graph administrative view on localhost, default 8888; no authentication |
+| `console <tenant> [--backend stub\|surreal] [--port N]` | Local graph/catalog (no browser login) and Journals (personal SIGNIN), default 8888 |
 | `history export --graph PATH --output DIR` | Read-only administrative archive; new private destination required |
 | `history verify --archive DIR` | Verify manifest format and payload hashes/sizes |
 | `reset [--graph PATH]` | Dev/test structural wipe and provisioning; never for production or recovery |
@@ -54,7 +54,7 @@ GitHub access, or inspect plugin installation/version state. KB ownership and
 readership describe purpose relationships; assignment owner/member describes
 accountability, not a separate repository access level.
 
-Journals is a paginated, newest-first read-only view. Configure personal
+Journals is a paginated, newest-first read-only view using an `(at, id)` cursor so concurrent appends do not shift older pages. Refresh starts a new traversal. Configure personal
 `MEROVINGIAN_USER`, `MEROVINGIAN_PASS`, `MEROVINGIAN_DB`, `SURREAL_URL` and `SURREAL_NS`
 in the **server process**, using the same connection and tenant as the graph.
 Credentials never go to the browser. Journal reads use personal SIGNIN and database

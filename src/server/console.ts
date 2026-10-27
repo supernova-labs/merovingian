@@ -7,7 +7,7 @@ import type { Definition, AssignmentRow } from "../provider/types.ts";
 import { CatalogError, resolveCatalog } from "../catalog/catalog.ts";
 import { catalogConfig } from "../catalog/session.ts";
 import { bounded, operationError } from "../provider/operation-error.ts";
-import { listJournals } from "../journal/read.ts";
+import { pageJournals, parseJournalCursor, type JournalCursor } from "../journal/read.ts";
 
 export interface GraphPayload { definition: Definition; assignments: AssignmentRow[] }
 export async function loadGraph(namespace: string, backend: Backend): Promise<GraphPayload> {
@@ -47,7 +47,7 @@ export function browserGraph({ definition: d, assignments }: GraphPayload) {
   } };
 }
 
-export async function readConsoleJournals(namespace: string, offset: number, limit: number,
+export async function readConsoleJournals(namespace: string, cursor: JournalCursor | undefined, limit: number,
   env: Record<string, string | undefined> = process.env) {
   const config = catalogConfig(env);
   // Never let a console for one tenant silently read a different configured tenant.
@@ -66,14 +66,14 @@ export async function readConsoleJournals(namespace: string, offset: number, lim
     const [users] = await bounded(db.query<[{ id: string; journalAdmin?: boolean }[]]>(
       "SELECT record::id(id) AS id, journalAdmin FROM user WHERE id = $auth"), 15_000);
     if (users.length !== 1 || users[0]!.id !== config.user) throw new CatalogError("access_denied", "Authenticated identity is unavailable.");
-    return { ...await listJournals(db, offset, limit), identity: config.user,
+    return { ...await pageJournals(db, cursor, limit), identity: config.user,
       scope: users[0]!.journalAdmin === true ? "tenant" : "personal" };
   } finally { await db.close().catch(() => {}); }
 }
 
 interface ConsoleDependencies {
   graph?: () => Promise<GraphPayload>;
-  journals?: (offset: number, limit: number) => Promise<unknown>;
+  journals?: (cursor: JournalCursor | undefined, limit: number) => Promise<unknown>;
 }
 export function makeConsoleHandler(namespace: string, backend: Backend,
   htmlUrl: URL = new URL("./console.html", import.meta.url), dependencies: ConsoleDependencies = {}) {
@@ -113,13 +113,15 @@ export function makeConsoleHandler(namespace: string, backend: Backend,
           assignments: rows.map(({ purpose, role, scope }) => ({ purpose, role, scope })) });
         return json(200, { ...catalog, mode: "administrative_preview" });
       }
-      const offset = Number(url.searchParams.get("offset") ?? 0);
+      let cursor: JournalCursor | undefined;
+      try { cursor = parseJournalCursor(url.searchParams.get("cursor")); }
+      catch { return json(400, { error: "Invalid journal cursor." }); }
       const limit = Number(url.searchParams.get("limit") ?? 50);
-      if (!Number.isInteger(offset) || offset < 0 || offset > 1_000_000 || !Number.isInteger(limit) || limit < 1 || limit > 100) {
+      if (url.searchParams.has("offset") || !Number.isInteger(limit) || limit < 1 || limit > 100) {
         return json(400, { error: "Invalid pagination." });
       }
-      if (backend === "stub") return json(200, { entries: [], nextOffset: null, identity: null, scope: "demo" });
-      return json(200, await (dependencies.journals ?? ((o, l) => readConsoleJournals(namespace, o, l)))(offset, limit));
+      if (backend === "stub") return json(200, { entries: [], nextCursor: null, identity: null, scope: "demo" });
+      return json(200, await (dependencies.journals ?? ((o, l) => readConsoleJournals(namespace, o, l)))(cursor, limit));
     } catch (error) {
       const failure = error instanceof CatalogError ? { code: error.code, message: error.message } : operationError(error, false);
       return json(502, { error: failure.message, code: failure.code });

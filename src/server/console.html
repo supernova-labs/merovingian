@@ -238,7 +238,11 @@ function purposeGaps(p) {
   const d = G.definition, gaps = [];
 
   for (const s of p.skills || []) if (!d.skillCatalog[s]) gaps.push("undistributed skill: " + s);
-  for (const ref of purposePlugins(p)) if (!d.marketplaces[ref.split("@")[1]]) gaps.push("missing marketplace: " + ref);
+  for (const ref of [...purposePlugins(p), ...ambientPlugins()]) {
+    const marketplace = d.marketplaces[ref.split("@")[1]];
+    if (!marketplace) gaps.push("missing marketplace: " + ref);
+    else if (!Object.values(marketplace).some(binding => binding.status === "available")) gaps.push("no supported distribution: " + ref);
+  }
   for (const tool of p.tools || []) if (!d.toolCatalog[tool]) gaps.push("unavailable tool: " + tool);
   if (!effectiveOwner(p.id)) gaps.push("no effective owner (neither it nor any ancestor has one)");
   // ADR 0008: an owner can't be scoped — a scoped slice must become a sub-purpose.
@@ -626,18 +630,21 @@ async function renderCatalog(uid = "") {
   if (instructions) { const section = el("section"); section.appendChild(el("h3",null,"Tenant instructions")); const pre = el("pre",null,instructions); pre.style.whiteSpace="pre-wrap"; section.appendChild(pre); box.appendChild(section); }
 }
 let journalRequest = 0;
-async function renderJournals(offset) {
+let journalCursors = [null];
+async function renderJournals(pageIndex) {
+  if (pageIndex === 0) journalCursors = [null];
+  const cursor = journalCursors[pageIndex];
   const request = ++journalRequest, box = document.getElementById("journalsview"); box.replaceChildren(el("p","notice","Loading journals…"));
   try {
-    const data = await api("/journals?offset=" + offset + "&limit=50");
+    const data = await api("/journals?limit=50" + (cursor ? "&cursor=" + encodeURIComponent(JSON.stringify(cursor)) : ""));
     if (request !== journalRequest) return;
     box.replaceChildren();
     box.appendChild(el("h2",null,"Journals"));
     box.appendChild(el("p","notice",data.scope === "demo" ? "Offline demo: no journals are loaded." : "Authenticated as " + data.identity + " · " + (data.scope === "tenant" ? "all tenant journals" : "own journals only") + ". Immutable, read-only entries."));
     const bar = el("div","toolbar");
     const back = el("button",null,"Previous"), next = el("button",null,"Next"), refresh = el("button",null,"Refresh");
-    back.disabled = offset === 0; back.onclick = () => renderJournals(Math.max(0,offset-50));
-    next.disabled = data.nextOffset === null; next.onclick = () => renderJournals(data.nextOffset);
+    back.disabled = pageIndex === 0; back.onclick = () => renderJournals(pageIndex-1);
+    next.disabled = data.nextCursor === null; next.onclick = () => { journalCursors[pageIndex+1] = data.nextCursor; renderJournals(pageIndex+1); };
     refresh.onclick = () => renderJournals(0); bar.append(back,next,refresh); box.appendChild(bar);
     if (!data.entries.length) box.appendChild(el("p","none","No visible journal entries on this page."));
     for (const entry of data.entries) {
@@ -651,7 +658,7 @@ async function renderJournals(offset) {
   } catch (e) {
     if (request !== journalRequest) return;
     box.replaceChildren(el("p","gapline",e.message),el("p","notice","Journals require personal MEROVINGIAN_USER / MEROVINGIAN_PASS and matching tenant connection settings on the console server. Administrative credentials are never used as a fallback."));
-    const retry = el("button",null,"Retry"); retry.onclick=()=>renderJournals(offset); box.appendChild(retry);
+    const retry = el("button",null,"Retry"); retry.onclick=()=>renderJournals(pageIndex); box.appendChild(retry);
   }
 }
 

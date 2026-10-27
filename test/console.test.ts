@@ -93,8 +93,15 @@ if (dbUp) await reset({ graph: EXAMPLE_YAML, surrealDb: TEST_DB });
 });
 
 
-describe("console boundary", () => {
-  const graph = () => loadGraph("acme", "stub");
+for (const source of ["stub", "surreal"] as const) (source === "stub" || dbUp ? describe : describe.skip)(`console boundary (${source})`, () => {
+  const graph = async () => {
+    if (source === "stub") return loadGraph("acme", "stub");
+    const db = await connectSurreal(cfg);
+    try {
+      const provider = new SurrealProvider(db, "acme");
+      return { definition: await provider.getDefinition(), assignments: await provider.listAssignments() };
+    } finally { await db.close(); }
+  };
   async function session(backend: "stub" | "surreal" = "stub", dependencies = {}) {
     const handler = makeConsoleHandler("acme", backend, undefined, { graph, ...dependencies });
     const page = await handler(new Request("http://127.0.0.1/"));
@@ -138,13 +145,13 @@ describe("console boundary", () => {
   test("journal pagination is bounded and failure cannot expose SDK details", async () => {
     let calls = 0;
     const { get } = await session("surreal", { journals: async () => { calls++; throw new Error("password=TOPSECRET at private-host"); } });
-    for (const q of ["offset=-1", "limit=101", "limit=0", "offset=NaN", "offset=1.2"]) expect((await get("/journals?" + q)).status).toBe(400);
+    for (const q of ["offset=-1", "limit=101", "limit=0", "offset=NaN", "offset=1.2", "cursor=not-json", "cursor=%7B%7D"]) expect((await get("/journals?" + q)).status).toBe(400);
     expect(calls).toBe(0);
     const res = await get("/journals");
     expect(res.status).toBe(502);
     expect(await res.text()).not.toContain("TOPSECRET");
   });
   test("journals refuse missing personal credentials, never fall back to system credentials", async () => {
-    await expect(readConsoleJournals("acme", 0, 50, { SURREAL_USER: "root", SURREAL_PASS: "root" })).rejects.toThrow("Set SURREAL_URL");
+    await expect(readConsoleJournals("acme", undefined, 50, { SURREAL_URL: "ws://127.0.0.1:8000", SURREAL_NS: "merovingian", MEROVINGIAN_DB: "acme", SURREAL_USER: "root", SURREAL_PASS: "root" })).rejects.toThrow("Set MEROVINGIAN_USER");
   });
 });

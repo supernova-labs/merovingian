@@ -5,6 +5,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { applyGraph } from "../src/graph/apply.ts";
 import { surrealConfig, surrealReachable, connectSurreal, connectAsPassword } from "../src/provider/surreal.ts";
 import { exampleDefinition, exampleUsers } from "../fixtures/example/graph.ts";
+import { pageJournals } from "../src/journal/read.ts";
 import { readConsoleJournals } from "../src/server/console.ts";
 import { createJournalServer } from "../src/mcp/journal.ts";
 const cfg = surrealConfig("acme_journal_test");
@@ -62,16 +63,36 @@ const available = await surrealReachable(cfg);
   test("console reads journals as the personal identity and respects pagination", async () => {
     const env = (user: string) => ({ SURREAL_URL: cfg.url, SURREAL_NS: cfg.ns,
       MEROVINGIAN_DB: cfg.db, MEROVINGIAN_USER: user, MEROVINGIAN_PASS: "journal-test-password" });
-    await expect(readConsoleJournals(cfg.db, 0, 1, { ...env("cleo"), MEROVINGIAN_PASS: "wrong-password" })).rejects.toMatchObject({ code: "invalid_credentials" });
-    const personal = await readConsoleJournals(cfg.db, 0, 1, env("cleo"));
+    await expect(readConsoleJournals(cfg.db, undefined, 1, { ...env("cleo"), MEROVINGIAN_PASS: "wrong-password" })).rejects.toMatchObject({ code: "invalid_credentials" });
+    const personal = await readConsoleJournals(cfg.db, undefined, 1, env("cleo"));
     expect(personal.identity).toBe("cleo"); expect(personal.scope).toBe("personal");
-    expect(personal.entries).toHaveLength(1); expect(personal.nextOffset).toBe(1);
+    expect(personal.entries).toHaveLength(1); expect(personal.nextCursor).not.toBeNull();
     expect(personal.entries[0]!.author).toBe("cleo");
-    const invisible = await readConsoleJournals(cfg.db, 0, 50, env("ben"));
+    expect(typeof personal.entries[0]!.at.toISOString()).toBe("string");
+    await member.query("CREATE journal SET text = 'Concurrent append'");
+    const older = await readConsoleJournals(cfg.db, personal.nextCursor!, 50, env("cleo"));
+    expect(older.entries.some(e => e.id === personal.entries[0]!.id || e.text === "Concurrent append")).toBe(false);
+    const invisible = await readConsoleJournals(cfg.db, undefined, 50, env("ben"));
     expect(invisible.entries).toHaveLength(0);
-    const all = await readConsoleJournals(cfg.db, 0, 50, env("ada"));
+    const all = await readConsoleJournals(cfg.db, undefined, 50, env("ada"));
     expect(all.scope).toBe("tenant"); expect(all.entries.length).toBeGreaterThan(1);
-    await expect(readConsoleJournals(cfg.db, 0, 1, { ...env("ada"), MEROVINGIAN_DB: "other_tenant" })).rejects.toThrow("same connection and tenant");
+    await expect(readConsoleJournals(cfg.db, undefined, 1, { ...env("ada"), MEROVINGIAN_DB: "other_tenant" })).rejects.toThrow("same connection and tenant");
+  });
+  test("journal cursor keeps nanosecond precision and orders tied timestamps by id", async () => {
+    // Root fixture only: freeze database-stamped time to exercise the tie-breaker.
+    await root.query("DEFINE FIELD OVERWRITE at ON journal TYPE datetime VALUE $before OR d'2030-01-01T00:00:00.123456789Z'");
+    try {
+      for (const id of ["cursor_a", "cursor_b", "cursor_c"]) await member.query("CREATE type::record('journal', $id) SET text = 'Cursor fixture'", { id });
+      const firstPage = await pageJournals(member, undefined, 1);
+      expect(firstPage.entries[0]!.id).toBe("cursor_c");
+      expect(firstPage.nextCursor!.at).toBe("2030-01-01T00:00:00.123456789Z");
+      const secondPage = await pageJournals(member, firstPage.nextCursor!, 1);
+      expect(secondPage.entries[0]!.id).toBe("cursor_b");
+      const thirdPage = await pageJournals(member, secondPage.nextCursor!, 1);
+      expect(thirdPage.entries[0]!.id).toBe("cursor_a");
+      const [info] = await root.query<[{ indexes: Record<string, string> }]>("INFO FOR TABLE journal");
+      expect(info.indexes.journal_at).toContain("FIELDS at");
+    } finally { await root.query("DEFINE FIELD OVERWRITE at ON journal TYPE datetime VALUE $before OR time::now()"); }
   });
   test("deploy preserves journal entries and revokes administrative reading", async () => {
     const users = structuredClone(exampleUsers);
