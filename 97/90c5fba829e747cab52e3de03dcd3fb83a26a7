@@ -1,0 +1,39 @@
+src/server/console.html
+  s_e7effeab5cddad::t_67a8c515ddba5b 233
+  s_e7effeab5cddad::t_abd17746a97593 495
+  s_e7effeab5cddad::t_b25a777228838a 42,565
+  s_e7effeab5cddad::t_aa9e33022b2bb7 93-105,144-145,164-165,167,212-213,239-242,255,328-330,337,348-350,408-412,477,481-483,486-487,492-493,514,543-544,546-564,566-630,632-650,652-654
+docs/reference/env-vars.md
+  s_e7effeab5cddad::t_67a8c515ddba5b 32-39
+src/journal/read.ts
+  s_e7effeab5cddad::t_8a4b148934a907 1-12
+test/journal.test.ts
+  s_e7effeab5cddad::t_abd17746a97593 8,62-73
+  s_e7effeab5cddad::t_542673f9a45b46 74
+.github/workflows/publish.yml
+  s_e7effeab5cddad::t_abd17746a97593 87
+src/server/console.ts
+  s_e7effeab5cddad::t_8a4b148934a907 1-3,7-10,12,18,20,27-66,69-84,86-93,95-96,98-109,111-120,125-126
+src/mcp/journal.ts
+  s_e7effeab5cddad::t_8a4b148934a907 7,60
+docs/reference/cli.md
+  s_e7effeab5cddad::t_61a536d9616e3c 41-72
+test/console.test.ts
+  s_e7effeab5cddad::t_75fe011d29367b 11,39-44,94-150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9790c5fba829e747cab52e3de03dcd3fb83a26a7",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
