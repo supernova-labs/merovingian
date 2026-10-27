@@ -1,7 +1,7 @@
 {
   "name": "@supernova-labs/merovingian",
   "version": "1.0.1",
-  "description": "Merovingian OS \u2014 purpose-based access, catalog and journal for agent workflows.",
+  "description": "Merovingian OS — purpose-based access, catalog and journal for agent workflows.",
   "license": "MIT",
   "author": "Luis Novo <lfnovo@gmail.com>",
   "homepage": "https://github.com/supernova-labs/merovingian#readme",
@@ -54,11 +54,14 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/sanitize-html": "^2.16.2",
     "bun-types": "^1.3.9",
     "typescript": "^5.7.2"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "marked": "^18.1.2",
+    "sanitize-html": "^2.18.1",
     "surrealdb": "^2.0.4",
     "yaml": "^2.9.0",
     "zod": "3.25.76"
