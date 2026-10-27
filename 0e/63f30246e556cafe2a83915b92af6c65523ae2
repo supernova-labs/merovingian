@@ -1,0 +1,21 @@
+test/console.test.ts
+  s_e7effeab5cddad::t_994c66a007be98 7,165-170,176
+src/server/console.ts
+  s_e7effeab5cddad::t_994c66a007be98 113,174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0e63f30246e556cafe2a83915b92af6c65523ae2",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
