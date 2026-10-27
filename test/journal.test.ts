@@ -5,6 +5,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { applyGraph } from "../src/graph/apply.ts";
 import { surrealConfig, surrealReachable, connectSurreal, connectAsPassword } from "../src/provider/surreal.ts";
 import { exampleDefinition, exampleUsers } from "../fixtures/example/graph.ts";
+import { readConsoleJournals } from "../src/server/console.ts";
 import { createJournalServer } from "../src/mcp/journal.ts";
 const cfg = surrealConfig("acme_journal_test");
 const available = await surrealReachable(cfg);
@@ -57,6 +58,19 @@ const available = await surrealReachable(cfg);
       const body = JSON.parse((listed.content as { text: string }[])[0]!.text);
       expect(body.entries).toHaveLength(1); expect(body.nextOffset).toBe(1);
     } finally { await client.close(); await server.close(); }
+  });
+  test("console reads journals as the personal identity and respects pagination", async () => {
+    const env = (user: string) => ({ SURREAL_URL: cfg.url, SURREAL_NS: cfg.ns,
+      MEROVINGIAN_DB: cfg.db, MEROVINGIAN_USER: user, MEROVINGIAN_PASS: "journal-test-password" });
+    const personal = await readConsoleJournals(cfg.db, 0, 1, env("cleo"));
+    expect(personal.identity).toBe("cleo"); expect(personal.scope).toBe("personal");
+    expect(personal.entries).toHaveLength(1); expect(personal.nextOffset).toBe(1);
+    expect(personal.entries[0]!.author).toBe("cleo");
+    const invisible = await readConsoleJournals(cfg.db, 0, 50, env("ben"));
+    expect(invisible.entries).toHaveLength(0);
+    const all = await readConsoleJournals(cfg.db, 0, 50, env("ada"));
+    expect(all.scope).toBe("tenant"); expect(all.entries.length).toBeGreaterThan(1);
+    await expect(readConsoleJournals(cfg.db, 0, 1, { ...env("ada"), MEROVINGIAN_DB: "other_tenant" })).rejects.toThrow("same connection and tenant");
   });
   test("deploy preserves journal entries and revokes administrative reading", async () => {
     const users = structuredClone(exampleUsers);

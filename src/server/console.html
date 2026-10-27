@@ -4,9 +4,6 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Architect Console — Merovingian</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
   :root {
     --bg: #0a0f1a; --panel: #0c121e; --ink: #EAEDF4;
@@ -42,7 +39,7 @@
   main { position: relative; z-index: 3; display: block; height: calc(100vh - 47px); }
   .view { position: absolute; inset: 0; }
   #treeview { display: grid; grid-template-columns: 320px 1fr; }
-  #graphview[hidden], #treeview[hidden] { display: none; }
+  .view[hidden] { display: none !important; }
   #tree { overflow: auto; border-right: 1px solid var(--line); padding: 10px 0; }
   #detail { overflow: auto; padding: 20px 26px; }
   #graph { position: absolute; inset: 0; }
@@ -93,31 +90,19 @@
   .tab:hover { color: var(--ink); }
   .tab.active { color: var(--ink); border-color: var(--violet); }
 
-  /* inbox view */
-  #inboxview { overflow: auto; }
-  .inboxwrap { max-width: 860px; margin: 0 auto; padding: 18px 26px 60px; }
-  .inboxbar { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; }
-  .inboxbar .count { color: var(--dim); font-size: 11px; margin-left: auto; letter-spacing: .04em; }
-  .entry { border: 1px solid var(--line); border-radius: 3px; background: rgba(255,255,255,.018);
-           padding: 12px 16px; margin: 0 0 10px; }
-  .entry.drained { opacity: .55; }
-  .entry .head { display: flex; align-items: baseline; gap: 10px; margin: 0 0 6px; font-size: 11px; }
-  .entry .kind { text-transform: uppercase; letter-spacing: .12em; font-weight: 600; }
-  .entry .kind.journal { color: var(--cyan); }
-  .entry .kind.friction { color: var(--warn); }
-  .entry .who { color: var(--ink); }
-  .entry .origin { color: var(--violet); }
-  .entry .scope { color: var(--cyan); }
-  .entry .scope.rootq { color: var(--dim); }
-  .inboxscopes { color: var(--dim); font-size: 11px; letter-spacing: .04em; margin: 0 0 12px; }
-  .inboxscopes b { color: var(--warn); font-weight: 600; }
-  .entry .when { color: var(--faint); }
-  .entry .stamp { color: var(--faint); font-style: italic; margin-left: auto; }
-  .entry .stamp.live { color: var(--gap); font-style: normal; }
-  .entry .text { white-space: pre-wrap; font-size: 12.5px; color: var(--ink); }
-  .entry .text.clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .entry .more { display: inline-block; margin-top: 6px; font-size: 11px; color: var(--violet); cursor: pointer; user-select: none; }
-  .entry .more:hover { text-decoration: underline; }
+  #catalogview, #journalsview { overflow: auto; padding: 24px; }
+  .entry { border: 1px solid var(--line); padding: 16px; margin-bottom: 12px; }
+  .entry pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+  .entry .meta { color: var(--dim); margin-bottom: 8px; }
+  button, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); padding: 6px 12px; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+  .notice { color: var(--dim); margin: 10px 0 20px; }
+  .resource { border-bottom: 1px solid var(--line); padding: 10px 0; overflow-wrap: anywhere; }
+  .resource a { color: var(--cyan); }
+  #graph svg { width: 100%; height: 100%; touch-action: none; }
+  #graphview .floatcard { width: 300px; }
+  @media(max-width: 900px) { header { flex-wrap: wrap; } main { height: calc(100vh - 100px); } #treeview { grid-template-columns: 240px 1fr; } #graphview .floatcard { width: 220px; } }
 
   /* people control (graph view) */
   .peoplectl { position: absolute; left: 14px; top: 14px; font-size: 11px;
@@ -156,6 +141,8 @@
   <span class="tabs">
     <button id="tab-tree" class="tab active">Tree</button>
     <button id="tab-graph" class="tab">Graph</button>
+    <button id="tab-catalog" class="tab">Catalog</button>
+    <button id="tab-journals" class="tab">Journals</button>
   </span>
   <span class="meta" id="meta">loading…</span>
   <span class="gaps" id="gapsum"></span>
@@ -174,8 +161,10 @@
       <div><span class="sq" style="background:#22D3EE"></span>owner &nbsp; <span class="sq" style="background:#7e8799"></span>member</div>
     </div>
   </div>
+<div id="catalogview" class="view" hidden></div>
+  <div id="journalsview" class="view" hidden></div>
 </main>
-<script>
+<script nonce="__CONSOLE_TOKEN__">
 let G = null;            // { definition, assignments }
 let P = new Map();       // id -> purpose
 let children = new Map(); // parentId -> [purpose]
@@ -185,7 +174,6 @@ let userSpread = new Map();       // userId -> count of assignments
 let selected = null;             // selected purpose id
 let selectedPerson = null;       // selected user id
 let view = "tree";                // "tree" | "graph"
-let fg = null;                    // force-graph instance (lazy)
 let showPeople = true;            // graph view: people layer on/off
 const hiddenPeople = new Set();   // graph view: individually hidden user ids
 
@@ -221,9 +209,8 @@ function gravitationalCoverage(uid) {
 }
 
 async function load() {
-  const res = await fetch("/graph");
-  G = await res.json();
-  if (!res.ok) { document.getElementById("detail").innerHTML = '<div class="empty">Error: ' + (G.error || res.status) + '</div>'; return; }
+  try { G = await api("/graph"); }
+  catch (error) { document.getElementById("detail").replaceChildren(el("div", "empty", error.message)); return; }
   const d = G.definition;
   P = new Map(d.purposes.map(p => [p.id, p]));
   children = new Map();
@@ -243,13 +230,16 @@ async function load() {
     d.namespace + " · " + d.purposes.length + " purposes · " + G.assignments.length + " assignments";
   renderGapSummary();
   renderTree();
+  if (view !== "tree") setView(view);
 }
 
 // ---- gap detection (pure, over the payload) ----
 function purposeGaps(p) {
   const d = G.definition, gaps = [];
-  if (!d.agentByPurpose[p.id]) gaps.push("no agent");
-  for (const s of p.skills || []) if (!d.skillCatalog[s]) gaps.push("unresolved skill: " + s);
+
+  for (const s of p.skills || []) if (!d.skillCatalog[s]) gaps.push("undistributed skill: " + s);
+  for (const ref of purposePlugins(p)) if (!d.marketplaces[ref.split("@")[1]]) gaps.push("missing marketplace: " + ref);
+  for (const tool of p.tools || []) if (!d.toolCatalog[tool]) gaps.push("unavailable tool: " + tool);
   if (!effectiveOwner(p.id)) gaps.push("no effective owner (neither it nor any ancestor has one)");
   // ADR 0008: an owner can't be scoped — a scoped slice must become a sub-purpose.
   for (const a of assignByPurpose.get(p.id) || []) {
@@ -262,7 +252,7 @@ function globalGaps() {
   for (const p of d.purposes) for (const g of purposeGaps(p)) out.push(p.id + ": " + g);
   for (const b of d.buckets) if (!P.has(b.owner)) out.push("orphan bucket: " + b.id + " (owner " + b.owner + ")");
   for (const a of G.assignments) if (!P.has(a.purpose)) out.push("human in nonexistent purpose: " + a.user.name + " → " + a.purpose);
-  for (const [uid, n] of userSpread) if (n > 1) out.push("spread human: " + uid + " (" + n + " purposes)");
+
   return out;
 }
 function renderGapSummary() {
@@ -335,26 +325,16 @@ function renderDetail(p) {
   lin.appendChild(linbody);
   box.appendChild(lin);
 
-  // agent
-  const ag = el("section");
-  ag.appendChild(el("h3", null, "agent"));
-  const adef = d.agentByPurpose[p.id];
-  if (adef) ag.appendChild(chip(pluginChip(adef), "chip plugin"));
-  else ag.appendChild(chip("no agent", "chip gap"));
-  box.appendChild(ag);
-
-  // skills
-  box.appendChild(chipSection("skills", (p.skills || []), s => {
-    const def = d.skillCatalog[s];
-    return def ? { text: s + " → " + pluginChip(def), cls: "chip plugin" } : { text: s + " · unresolved", cls: "chip gap" };
-  }));
+  box.appendChild(chipSection("plugins", purposePlugins(p), text => ({ text, cls: "chip plugin" })));
+  const ambient = ambientPlugins();
+  box.appendChild(chipSection("tenant-wide plugins", ambient, text => ({ text, cls: "chip plugin" })));
 
   // tools
   box.appendChild(chipSection("tools", (p.tools || []), t => ({ text: t, cls: "chip" })));
 
   // buckets
   const bsec = el("section");
-  bsec.appendChild(el("h3", null, "buckets"));
+  bsec.appendChild(el("h3", null, "knowledge bases & data"));
   const owns = new Set(p.owns || []), reads = new Set(p.reads || []);
   const ids = [...new Set([...(p.owns||[]), ...(p.reads||[])])].sort();
   if (!ids.length) bsec.appendChild(el("span", "none", "none"));
@@ -365,7 +345,9 @@ function renderDetail(p) {
     row.appendChild(document.createTextNode(bid + " "));
     if (b) {
       const loc = b.backend === "okf-repo" ? b.repo : (b.backend === "surreal" ? (b.tables||[]).join(",") : b.backend);
-      row.appendChild(el("span", "tag", "[" + b.backend + (loc ? ": " + loc : "") + "] "));
+      if (b.backend === "okf-repo" && b.repo) row.appendChild(repoLink(b.repo));
+      else row.appendChild(el("span", "tag", "[" + b.backend + (loc ? ": " + loc : "") + "] "));
+      row.appendChild(el("span", "tag", " · owner: " + b.owner + " · "));
       row.appendChild(el("span", "sens-" + b.sens, b.sens));
       if (b.rowScope) row.appendChild(el("span", "tag", " · row-scope: " + b.rowScope));
     } else { row.appendChild(el("span", "gapline", "(definition missing)")); }
@@ -423,7 +405,11 @@ function renderPerson(uid) {
   if (!entry) { box.appendChild(el("div", "empty", "unknown person")); return; }
   const u = entry.user;
   box.appendChild(el("h2", null, u.name));
-  box.appendChild(el("p", "reason", u.github ? "@" + u.github : ""));
+  box.appendChild(el("p", "reason", [u.github ? "@" + u.github : "", u.email, u.slackId ? "Slack: " + u.slackId : ""].filter(Boolean).join(" · ")));
+  box.appendChild(el("p", "notice", "Journal access: " + (u.journalAdmin ? "tenant administrator" : "own entries only")));
+  const preview = el("button", null, "Preview available resources");
+  preview.onclick = () => { setView("catalog"); renderCatalog(uid); };
+  box.appendChild(preview);
 
   const owns = entry.rows.filter(r => r.role === "owner");
   const members = entry.rows.filter(r => r.role === "member");
@@ -488,28 +474,25 @@ function plink(id) { const a = el("a", "plink", id); a.onclick = () => select(id
 // ---- view switching (Tree | Graph) ----
 function setView(v) {
   view = v;
-  for (const t of ["tree", "graph"]) {
+  for (const t of ["tree", "graph", "catalog", "journals"]) {
     document.getElementById("tab-" + t).classList.toggle("active", v === t);
     document.getElementById(t + "view").hidden = v !== t;
   }
-  if (v === "graph") { ensureGraph(); renderPeopleCtl(); }
+  if (v === "graph" && G) { ensureGraph(); renderPeopleCtl(); }
+  if (v === "catalog") renderCatalog();
+  if (v === "journals") renderJournals(0);
   // re-render the current selection into the now-active panel
   {
-    if (selected) renderDetail(P.get(selected));
-    else if (selectedPerson) renderPerson(selectedPerson);
+    if (v === "tree" || v === "graph") { if (selected) renderDetail(P.get(selected));
+    else if (selectedPerson) renderPerson(selectedPerson); }
   }
 }
 document.getElementById("tab-tree").onclick = () => setView("tree");
 document.getElementById("tab-graph").onclick = () => setView("graph");
+document.getElementById("tab-catalog").onclick = () => setView("catalog");
+document.getElementById("tab-journals").onclick = () => setView("journals");
 
-// ---- force-graph (2D): purposes + humans ----
-function loadScript(src) {
-  return new Promise((res, rej) => {
-    const s = document.createElement("script");
-    s.src = src; s.onload = res; s.onerror = () => rej(new Error("failed to load " + src));
-    document.head.appendChild(s);
-  });
-}
+// ---- graph: purposes + humans ----
 function graphData() {
   const d = G.definition, nodes = [], links = [];
   for (const p of d.purposes) {
@@ -528,7 +511,7 @@ function graphData() {
 }
 
 // ---- people layer control (graph view) ----
-function refreshGraphData() { if (fg) fg.graphData(graphData()); }
+function refreshGraphData() { ensureGraph(); }
 function renderPeopleCtl() {
   if (!G) return;
   const box = document.getElementById("peoplectl");
@@ -557,47 +540,119 @@ function renderPeopleCtl() {
     box.appendChild(row);
   }
 }
-function firstPurposeOf(uid) { return (G.assignments.find(a => a.user.id === uid) || {}).purpose; }
-async function ensureGraph() {
-  if (fg) return;
+// Deterministic, local SVG layout: no third-party script can access console data.
+function ensureGraph() {
   const host = document.getElementById("graph");
-  try {
-    if (!window.ForceGraph) await loadScript("https://unpkg.com/force-graph");
-  } catch (e) {
-    host.innerHTML = '<div class="empty">couldn\'t load the graph library (offline?). The Tree tab works without internet.</div>';
-    return;
+  host.replaceChildren();
+  const svgEl = (tag, attrs = {}) => { const n = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const [k,v] of Object.entries(attrs)) n.setAttribute(k, v); return n; };
+  const svg = svgEl("svg", { viewBox: "-250 -80 1500 950", role: "img", "aria-label": "Purpose and people graph. Drag to pan; scroll to zoom." });
+  const scene = svgEl("g"); svg.appendChild(scene); host.appendChild(svg);
+  const data = graphData(), positions = new Map();
+  const purposes = data.nodes.filter(n => n.kind === "purpose"), people = data.nodes.filter(n => n.kind === "human");
+  const depth = pid => { let p = P.get(pid), n = 0; const seen = new Set(); while (p?.parent && P.has(p.parent) && !seen.has(p.id)) { seen.add(p.id); n++; p = P.get(p.parent); } return n; };
+  const levels = new Map();
+  for (const n of purposes) { const d = depth(n.pid); if (!levels.has(d)) levels.set(d, []); levels.get(d).push(n); }
+  for (const [d, nodes] of levels) nodes.forEach((n, i) => positions.set(n.id, { x: d * 210, y: (i + 1) * 700 / (nodes.length + 1) }));
+  people.forEach((n, i) => positions.set(n.id, { x: -180, y: (i + 1) * 700 / (people.length + 1) }));
+  for (const l of data.links) {
+    const a = positions.get(l.source), b = positions.get(l.target); if (!a || !b) continue;
+    scene.appendChild(svgEl("line", { x1:a.x, y1:a.y, x2:b.x, y2:b.y, stroke: l.kind === "tree" ? "#596880" : l.role === "owner" ? "#227d80" : "#343f52", "stroke-width": l.role === "owner" ? 2 : 1 }));
   }
-  fg = ForceGraph()(host)
-    .backgroundColor("#0a0f1a")
-    .graphData(graphData())
-    .nodeId("id")
-    .linkColor(l => l.kind === "tree" ? "rgba(255,255,255,0.09)" : (l.role === "owner" ? "#1d5560" : "#2b3340"))
-    .linkWidth(l => (l.kind === "role" && l.role === "owner") ? 2 : 1)
-    .nodePointerAreaPaint((node, color, ctx) => {
-      ctx.fillStyle = color; const r = node.kind === "human" ? 6 : 7;
-      ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, 2 * Math.PI); ctx.fill();
-    })
-    .nodeCanvasObject((node, ctx, scale) => {
-      const isSel = (node.kind === "purpose" && node.pid === selected) || (node.kind === "human" && node.uid === selectedPerson);
-      if (node.kind === "purpose") {
-        ctx.beginPath(); ctx.arc(node.x, node.y, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = node.gap ? "#e5534b" : "#A78BFA"; ctx.fill();
-      } else {
-        const s = 9; ctx.fillStyle = node.owner ? "#22D3EE" : "#7e8799";
-        ctx.fillRect(node.x - s / 2, node.y - s / 2, s, s);
-      }
-      if (isSel) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2 / scale; ctx.beginPath(); ctx.arc(node.x, node.y, 8, 0, 2 * Math.PI); ctx.stroke(); }
-      const fontSize = Math.max(2.5, 11 / scale);
-      ctx.font = fontSize + "px 'JetBrains Mono', ui-monospace, monospace";
-      ctx.textAlign = "center"; ctx.textBaseline = "top";
-      ctx.fillStyle = node.kind === "purpose" ? "#EAEDF4" : "#9aa3b4";
-      ctx.fillText(node.label, node.x, node.y + 8);
-    })
-    .onNodeClick(node => {
-      if (node.kind === "human") { selectPerson(node.uid); }
-      else { select(node.pid); }
-      fg.centerAt(node.x, node.y, 500);
-    });
+  for (const n of data.nodes) {
+    const pos = positions.get(n.id), group = svgEl("g", { transform: `translate(${pos.x},${pos.y})`, tabindex: "0", role: "button", "aria-label": n.label });
+    group.style.cursor = "pointer";
+    group.appendChild(svgEl(n.kind === "human" ? "rect" : "circle", n.kind === "human" ? { x:-6,y:-6,width:12,height:12,fill:n.owner ? "#22D3EE" : "#7e8799" } : { r:7,fill:n.gap ? "#e5534b" : "#A78BFA" }));
+    const label = svgEl("text", { y:22,"text-anchor":"middle",fill:"#EAEDF4","font-size":17 }); label.textContent = n.label; group.appendChild(label);
+    const choose = () => n.kind === "human" ? selectPerson(n.uid) : select(n.pid);
+    group.onclick = choose; group.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(); } };
+    scene.appendChild(group);
+  }
+  let zoom = 1, x = 0, y = 0, drag;
+  const transform = () => scene.setAttribute("transform", `translate(${x},${y}) scale(${zoom})`);
+  svg.onwheel = e => { e.preventDefault(); zoom = Math.min(3, Math.max(.3, zoom * (e.deltaY > 0 ? .9 : 1.1))); transform(); };
+  svg.onpointerdown = e => { if (e.target !== svg) return; drag = { x:e.clientX, y:e.clientY, ox:x, oy:y }; svg.setPointerCapture(e.pointerId); };
+  svg.onpointermove = e => { if (!drag) return; const scale = 1500 / svg.getBoundingClientRect().width; x = drag.ox + (e.clientX-drag.x)*scale; y = drag.oy + (e.clientY-drag.y)*scale; transform(); };
+  svg.onpointerup = svg.onpointercancel = () => { drag = null; };
+}
+
+async function api(path) {
+  const res = await fetch(path, { headers: { "x-console-token": "__CONSOLE_TOKEN__" } });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Unable to read data. Please retry.");
+  return data;
+}
+function purposePlugins(p) {
+  const d = G.definition;
+  return [...new Set([d.agentByPurpose[p.id], ...(p.skills || []).map(s => d.skillCatalog[s])].filter(r => r?.source === "plugin").map(pluginChip))].sort();
+}
+function ambientPlugins() { return [...new Set(G.definition.ambient.skills.map(s => G.definition.skillCatalog[s]).filter(r => r?.source === "plugin").map(pluginChip))].sort(); }
+function repoLink(repo) {
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) return el("span", null, "Invalid repository identifier");
+  const a = el("a", null, repo); a.href = "https://github.com/" + repo; a.target = "_blank"; a.rel = "noopener noreferrer"; return a;
+}
+function resourceSection(box, title, items, render) {
+  const section = el("section"); section.appendChild(el("h3", null, title));
+  if (!items.length) section.appendChild(el("p", "none", "None declared"));
+  for (const item of items) { const row = el("div", "resource"); render(row, item); section.appendChild(row); }
+  box.appendChild(section);
+}
+let catalogRequest = 0;
+async function renderCatalog(uid = "") {
+  const request = ++catalogRequest, box = document.getElementById("catalogview"); box.replaceChildren();
+  if (!G) { box.appendChild(el("p", "notice", "Graph unavailable. Reload the console to retry.")); return; }
+  const toolbar = el("div", "toolbar"), select = el("select"); select.setAttribute("aria-label", "Catalog scope");
+  const option = el("option", null, "Entire tenant"); option.value = ""; select.appendChild(option);
+  for (const { user } of assignByUser.values()) { const opt = el("option", null, user.name); opt.value = user.id; select.appendChild(opt); }
+  select.value = uid; select.onchange = () => renderCatalog(select.value); toolbar.appendChild(select); box.appendChild(toolbar);
+  box.appendChild(el("p", "notice", uid ? "Administrative preview of declared access. This does not impersonate the person, verify database permissions, confirm GitHub access, or inspect installed plugins." : "Tenant inventory. Distribution and access are declared; installed versions and effective GitHub access have not been verified."));
+  let preview;
+  if (uid) {
+    try { preview = await api("/catalog?user=" + encodeURIComponent(uid)); }
+    catch (e) { if (request === catalogRequest) box.appendChild(el("p", "gapline", e.message)); return; }
+    if (request !== catalogRequest) return;
+  }
+  const d = G.definition;
+  const ps = preview ? preview.purposes : d.purposes.map(p => ({ ...p, plugins: purposePlugins(p) }));
+  resourceSection(box, "Purposes → plugins & tools", ps, (row,p) => { row.appendChild(el("strong", null, p.id)); row.appendChild(el("div", null, p.reason)); row.appendChild(el("div", "notice", "Plugins: " + (p.plugins.join(", ") || "none") + " · Tools: " + (p.tools.join(", ") || "none"))); });
+  const pluginIds = preview ? preview.plugins.map(p => p.id) : [...new Set([...ps.flatMap(p => p.plugins), ...ambientPlugins()])].sort();
+  resourceSection(box, "Plugins · versions not verified", pluginIds, (row,id) => row.appendChild(el("span", "chip plugin", id + (ambientPlugins().includes(id) ? " · tenant-wide" : ""))));
+  const markets = preview ? preview.marketplaces : Object.entries(d.marketplaces).map(([id,m]) => ({ id, bindings: Object.entries(m).map(([client,b]) => ({client,...b})) }));
+  resourceSection(box, "Marketplaces", markets, (row,m) => { row.appendChild(el("strong",null,m.id)); for (const b of m.bindings) { const line = el("div"); line.appendChild(document.createTextNode(b.client + ": ")); if (b.status === "available") { line.appendChild(repoLink(b.source)); line.appendChild(document.createTextNode(" · " + b.name)); } else line.appendChild(document.createTextNode("unsupported / not configured")); row.appendChild(line); } });
+  const repos = preview ? preview.repositories : d.buckets.filter(b => b.backend === "okf-repo").map(b => ({id:b.id,repository:b.repo}));
+  resourceSection(box, "Knowledge bases", repos, (row,r) => { row.appendChild(el("strong",null,r.id + " · ")); if (r.repository) row.appendChild(repoLink(r.repository)); const b = d.buckets.find(b => b.id === r.id); row.appendChild(el("div",null,"Owner purpose: " + (b?.owner || "unknown") + " · Reader purposes: " + (d.purposes.filter(p => p.reads.includes(r.id)).map(p=>p.id).join(", ") || "none"))); if (r.access) row.appendChild(el("div",null,"Declared access: " + r.access + " · effective access not verified")); });
+  const tools = preview ? preview.tools : Object.entries(d.toolCatalog).map(([id,t])=>({id,...t,status:"declared"}));
+  resourceSection(box,"Tools",tools,(row,t)=> row.appendChild(el("div",null,t.id + " · " + (t.kind || t.status) + " · configuration outside catalog")));
+  const instructions = preview ? preview.instructions : d.ambient.instructions;
+  if (instructions) { const section = el("section"); section.appendChild(el("h3",null,"Tenant instructions")); const pre = el("pre",null,instructions); pre.style.whiteSpace="pre-wrap"; section.appendChild(pre); box.appendChild(section); }
+}
+let journalRequest = 0;
+async function renderJournals(offset) {
+  const request = ++journalRequest, box = document.getElementById("journalsview"); box.replaceChildren(el("p","notice","Loading journals…"));
+  try {
+    const data = await api("/journals?offset=" + offset + "&limit=50");
+    if (request !== journalRequest) return;
+    box.replaceChildren();
+    box.appendChild(el("h2",null,"Journals"));
+    box.appendChild(el("p","notice",data.scope === "demo" ? "Offline demo: no journals are loaded." : "Authenticated as " + data.identity + " · " + (data.scope === "tenant" ? "all tenant journals" : "own journals only") + ". Immutable, read-only entries."));
+    const bar = el("div","toolbar");
+    const back = el("button",null,"Previous"), next = el("button",null,"Next"), refresh = el("button",null,"Refresh");
+    back.disabled = offset === 0; back.onclick = () => renderJournals(Math.max(0,offset-50));
+    next.disabled = data.nextOffset === null; next.onclick = () => renderJournals(data.nextOffset);
+    refresh.onclick = () => renderJournals(0); bar.append(back,next,refresh); box.appendChild(bar);
+    if (!data.entries.length) box.appendChild(el("p","none","No visible journal entries on this page."));
+    for (const entry of data.entries) {
+      const card = el("article","entry");
+      card.appendChild(el("div","meta",entry.author + " · " + new Date(entry.at).toLocaleString()));
+      card.appendChild(el("pre",null,entry.text));
+      card.appendChild(el("div","meta","ID: " + entry.id + (entry.origin ? " · Origin: " + entry.origin : "")));
+      if (entry.previous) card.appendChild(el("div","meta","Continues journal: " + entry.previous));
+      box.appendChild(card);
+    }
+  } catch (e) {
+    if (request !== journalRequest) return;
+    box.replaceChildren(el("p","gapline",e.message),el("p","notice","Journals require personal MEROVINGIAN_USER / MEROVINGIAN_PASS and matching tenant connection settings on the console server. Administrative credentials are never used as a fallback."));
+    const retry = el("button",null,"Retry"); retry.onclick=()=>renderJournals(offset); box.appendChild(retry);
+  }
 }
 
 load();

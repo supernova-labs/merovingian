@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { stubProviderFor } from "../src/provider/stub.ts";
 import { SurrealProvider, surrealConfig, surrealReachable, connectSurreal } from "../src/provider/surreal.ts";
 import { reset } from "../src/commands/reset.ts";
-import { makeConsoleHandler, loadGraph } from "../src/server/console.ts";
+import { makeConsoleHandler, loadGraph, browserGraph, readConsoleJournals } from "../src/server/console.ts";
 import type { AssignmentRow } from "../src/provider/types.ts";
 
 const TEST_DB = "acme_console_test"; // own db — golden also uses acme_test (avoid racing the migrate)
@@ -36,7 +36,12 @@ describe("listAssignments (stub)", () => {
 });
 
 describe("/graph handler (stub)", () => {
-  const handler = makeConsoleHandler("acme", "stub");
+  const rawHandler = makeConsoleHandler("acme", "stub");
+  const handler = async (req: Request) => {
+    const html = await (await rawHandler(new Request("http://127.0.0.1/"))).text();
+    req.headers.set("x-console-token", html.match(/nonce="([^"]+)"/)![1]!);
+    return rawHandler(req);
+  };
 
   test("GET /graph returns { definition, assignments }, unscoped god-view", async () => {
     const res = await handler(new Request("http://127.0.0.1/graph"));
@@ -84,5 +89,62 @@ if (dbUp) await reset({ graph: EXAMPLE_YAML, surrealDb: TEST_DB });
     } finally {
       await db.close();
     }
+  });
+});
+
+
+describe("console boundary", () => {
+  const graph = () => loadGraph("acme", "stub");
+  async function session(backend: "stub" | "surreal" = "stub", dependencies = {}) {
+    const handler = makeConsoleHandler("acme", backend, undefined, { graph, ...dependencies });
+    const page = await handler(new Request("http://127.0.0.1/"));
+    const html = await page.text();
+    const token = html.match(/nonce="([^"]+)"/)![1]!;
+    const get = (path: string, init?: RequestInit) => handler(new Request("http://127.0.0.1" + path,
+      { ...init, headers: { "x-console-token": token, ...init?.headers } }));
+    return { handler, get, page, html };
+  }
+  test("rejects remote origins, DNS rebinding, unauthenticated API and writes", async () => {
+    const { handler, get, page, html } = await session();
+    expect((await handler(new Request("http://evil.example/"))).status).toBe(403);
+    expect((await get("/graph", { headers: { origin: "http://localhost:9999" } })).status).toBe(403);
+    expect((await get("/", { headers: { "sec-fetch-site": "same-site" } })).status).toBe(403);
+    expect((await handler(new Request("http://127.0.0.1/graph"))).status).toBe(403);
+    expect((await get("/journals", { method: "POST" })).status).toBe(405);
+    expect(page.headers.get("cache-control")).toBe("no-store");
+    expect(page.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
+    expect(html).not.toContain("https://unpkg.com");
+    expect(html).not.toContain("__CONSOLE_TOKEN__");
+  });
+  test("browser projection excludes executable tool config, library content and deployment policy", async () => {
+    const data = structuredClone(await graph());
+    data.definition.toolCatalog.secret = { kind: "stdio", command: "SECRET-command", args: ["SECRET-args"], env: { TOKEN: "SECRET-value" }, keySource: "company" };
+    data.definition.skillCatalog.legacy = { source: "library", files: { "SKILL.md": "SECRET-library" } };
+    data.definition.agentByPurpose.legacy = { source: "library", name: "legacy", content: "SECRET-agent" };
+    data.definition.marketplaces.private = { claude: { name: "private", source: "https://user:SECRET-url@example.com" } };
+    expect(JSON.stringify(browserGraph(data))).not.toContain("SECRET-");
+    expect(browserGraph(data).definition.toolCatalog.secret!.requiredEnvironment).toEqual(["TOKEN"]);
+  });
+  test("catalog preview uses existing resolver and explicitly labels unverified access", async () => {
+    const { get } = await session();
+    const res = await get("/catalog?user=ben");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.mode).toBe("administrative_preview");
+    expect(body.identity.id).toBe("ben");
+    expect(body.repositories.every((r: { effectiveAccess: string }) => r.effectiveAccess === "not_verified")).toBe(true);
+    expect((await get("/catalog?user=missing")).status).toBe(404);
+  });
+  test("journal pagination is bounded and failure cannot expose SDK details", async () => {
+    let calls = 0;
+    const { get } = await session("surreal", { journals: async () => { calls++; throw new Error("password=TOPSECRET at private-host"); } });
+    for (const q of ["offset=-1", "limit=101", "limit=0", "offset=NaN", "offset=1.2"]) expect((await get("/journals?" + q)).status).toBe(400);
+    expect(calls).toBe(0);
+    const res = await get("/journals");
+    expect(res.status).toBe(502);
+    expect(await res.text()).not.toContain("TOPSECRET");
+  });
+  test("journals refuse missing personal credentials, never fall back to system credentials", async () => {
+    await expect(readConsoleJournals("acme", 0, 50, { SURREAL_USER: "root", SURREAL_PASS: "root" })).rejects.toThrow("Set SURREAL_URL");
   });
 });

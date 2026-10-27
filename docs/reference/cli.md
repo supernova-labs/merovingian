@@ -38,3 +38,35 @@ installation or every schema-level property. See [GitHub details](github-deploy.
 
 Removed: build, namespace add, library update, plugins sync, inbox, decisions and their old
 MCPs. See [migration](../guides/history-and-cutover.md). No automatic legacy compatibility path.
+
+### Local Architect Console
+
+Run `bun bin/merovingian.ts console <tenant>` from the source checkout, or
+`merovingian console <tenant>` with the installed CLI. The server binds only to
+`127.0.0.1` (port 8888 by default). This is a trusted local operator tool, not a
+hosted multi-user administration application. Do not expose or proxy it to a network.
+
+Tree and Graph show purposes, assignments, plugins, tools and knowledge bases.
+The graph renders locally without a CDN. Catalog shows the tenant inventory or an
+administrative preview of a person's resources using the existing catalog resolver.
+A preview does not impersonate that person, test their database permissions, verify
+GitHub access, or inspect plugin installation/version state. KB ownership and
+readership describe purpose relationships; assignment owner/member describes
+accountability, not a separate repository access level.
+
+Journals is a paginated, newest-first read-only view. Configure personal
+`MEROVINGIAN_USER`, `MEROVINGIAN_PASS`, `MEROVINGIAN_DB`, `SURREAL_URL` and `SURREAL_NS`
+in the **server process**, using the same connection and tenant as the graph.
+Credentials never go to the browser. Journal reads use personal SIGNIN and database
+permissions: authors see their own entries; explicit `journalAdmin` identities see
+all tenant entries. There is no fallback to administrative credentials. Missing or
+invalid personal configuration disables journal reading without disabling the graph.
+The offline stub shows an explicitly empty demo instead of accessing a real journal.
+
+The console serves no external scripts, prevents framing/cross-origin API access,
+and requires a per-process page token for data requests. This protects the local
+browser boundary; it does not authenticate other users or processes on the machine.
+Graph/catalog reads still use the operator's administrative database configuration.
+Tool command lines, environment values, legacy library bodies and deployment policy
+are excluded from the browser payload. The page remains a privileged view of tenant
+structure and people, so run it only on a trusted computer.
