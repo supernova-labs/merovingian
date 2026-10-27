@@ -1,0 +1,32 @@
+test/console.test.ts
+  s_e7effeab5cddad::t_b7e1bcc5c1f58e 96-104
+  s_e7effeab5cddad::t_0922617899cfaa 148,155
+test/journal.test.ts
+  s_e7effeab5cddad::t_b7e1bcc5c1f58e 8,66-67,69,71-75,77,79-95
+docs/reference/cli.md
+  s_e7effeab5cddad::t_03946d95f6ec15 22,57
+src/journal/read.ts
+  s_e7effeab5cddad::t_5e8f566d327d86 1,5,13-34
+src/server/console.html
+  s_e7effeab5cddad::t_05ad21fe58892e 241-245,633-636,639,646-647,661
+src/server/console.ts
+  s_e7effeab5cddad::t_8827d359b16c3b 10,50,69,76,116-118,120,123-124
+surreal/data.surql
+  s_e7effeab5cddad::t_7d220ce482ab96 35-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5feefb70a58e7686bc88383a3ce7d26fb5d35634",
+  "prompts": {},
+  "sessions": {
+    "s_e7effeab5cddad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116a2-08ab-7b82-8ed1-1c775c5be636",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Luis Novo <lfnovo@gmail.com>"
+    }
+  }
+}
