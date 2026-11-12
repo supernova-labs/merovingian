@@ -29,6 +29,14 @@ Configure them in private native MCP definitions. MEROVINGIAN_DB is independent 
 SURREAL_DB. These MCPs never use SURREAL_USER/PASS or MEROVINGIAN_JWT_SECRET.
 See [Catalog and Journal](catalog-and-journal.md).
 
+## Console journal reading
+
+The console's Journals tab uses the same five personal settings as the Journal MCP,
+provided to the console server process. They must match the administrative graph's
+endpoint, namespace and database. Missing personal settings disable this tab's reads;
+there is no administrative-credential fallback. The graph and catalog preview still
+use operator credentials. See [Local Architect Console](cli.md#local-architect-console).
+
 ## Generic data diagnostic MCP
 
 `surreal-data` requires MEROVINGIAN_DB and MEROVINGIAN_USER. SURREAL_URL defaults to

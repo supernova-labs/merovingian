@@ -1,6 +1,6 @@
 # Operating a tenant
 
-Use the 1.0.1 CLI and confirm `merovingian --version`. In these examples,
+Use the 1.1.0 CLI and confirm `merovingian --version`. In these examples,
 `merovingian` stands for that executable. For development against a matching checkout,
 use `bun /absolute/path/to/merovingian/bin/merovingian.ts` explicitly.
 

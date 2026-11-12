@@ -9,11 +9,12 @@ and review protections. Authenticated Catalog and Journal MCPs provide discovery
 and immutable personal history. A tenant-owned setup skill installs capabilities
 through each client's native plugin system with human approval.
 
-**Version 1.0.1** adds operator and authentication fixes on top of the 1.0.0 cutover.
+**Version 1.1.0** adds a modern catalog console, rich Journal browsing, review-team reconciliation
+and clearer MCP diagnostics. See the [release notes](docs/releases/1.1.0.md).
 Version 1.0.0 removed workspace build, emitters and the old inbox/decision runtime. See the
 [history and cutover guide](docs/guides/history-and-cutover.md) before upgrading.
-After the `v1.0.1` release is published, install the CLI with
-`bun add -g @supernova-labs/merovingian@1.0.1`
+Install the CLI with
+`bun add -g @supernova-labs/merovingian@1.1.0`
 and confirm `merovingian --version` before operating a tenant.
 
 ## Develop locally

@@ -32,3 +32,6 @@ DEFINE FIELD OVERWRITE origin ON journal TYPE option<string>;
 -- References never grant access; the MCP validates target existence/visibility.
 DEFINE FIELD OVERWRITE previous ON journal TYPE option<record<journal>>;
 DEFINE FIELD OVERWRITE at ON journal TYPE datetime VALUE $before OR time::now();
+
+-- Supports chronological reads and keyset range predicates.
+DEFINE INDEX OVERWRITE journal_at ON journal FIELDS at;

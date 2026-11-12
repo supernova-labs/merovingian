@@ -6,8 +6,8 @@ The retired 0.5.x CLI is not interchangeable with this contract.
 
 ## Personal connection
 
-The commands below target 1.0.1 after its publication. Run `bun x --bun @supernova-labs/merovingian@1.0.1 mcp catalog` or
-`bun x --bun @supernova-labs/merovingian@1.0.1 mcp journal` as a stdio MCP
+The commands below target 1.1.0. Run `bun x --bun @supernova-labs/merovingian@1.1.0 mcp catalog` or
+`bun x --bun @supernova-labs/merovingian@1.1.0 mcp journal` as a stdio MCP
 server. Configure these environment variables in the client's private MCP definition:
 
 | Variable | Value supplied privately by the tenant administrator |
@@ -98,8 +98,8 @@ An invisible or nonexistent previous entry returns `reference_unavailable` witho
 revealing which case applies. Query waits are bounded to 15 seconds; identity connection
 stages have individual 6-second limits. A timeout does not guarantee cancellation of a
 submitted write. No raw driver message, private URL, password or journal text appears
-in these diagnostics. These improvements are in the development source after 1.0.1;
-installed clients need a release containing them before they receive these errors.
+in these diagnostics. They are included in 1.1.0; upgrade independently pinned MCP
+runtimes as well as the global CLI to receive them.
 
 Old inbox and decision records are not imported or made newly visible. Administrative
 export/verification is available; deploy locks down existing historical tables. Follow

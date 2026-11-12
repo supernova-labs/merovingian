@@ -2,11 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta name="console-token" content="__CONSOLE_TOKEN__" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Architect Console — Merovingian</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
   :root {
     --bg: #0a0f1a; --panel: #0c121e; --ink: #EAEDF4;
@@ -42,7 +40,7 @@
   main { position: relative; z-index: 3; display: block; height: calc(100vh - 47px); }
   .view { position: absolute; inset: 0; }
   #treeview { display: grid; grid-template-columns: 320px 1fr; }
-  #graphview[hidden], #treeview[hidden] { display: none; }
+  .view[hidden] { display: none !important; }
   #tree { overflow: auto; border-right: 1px solid var(--line); padding: 10px 0; }
   #detail { overflow: auto; padding: 20px 26px; }
   #graph { position: absolute; inset: 0; }
@@ -93,31 +91,36 @@
   .tab:hover { color: var(--ink); }
   .tab.active { color: var(--ink); border-color: var(--violet); }
 
-  /* inbox view */
-  #inboxview { overflow: auto; }
-  .inboxwrap { max-width: 860px; margin: 0 auto; padding: 18px 26px 60px; }
-  .inboxbar { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; }
-  .inboxbar .count { color: var(--dim); font-size: 11px; margin-left: auto; letter-spacing: .04em; }
-  .entry { border: 1px solid var(--line); border-radius: 3px; background: rgba(255,255,255,.018);
-           padding: 12px 16px; margin: 0 0 10px; }
-  .entry.drained { opacity: .55; }
-  .entry .head { display: flex; align-items: baseline; gap: 10px; margin: 0 0 6px; font-size: 11px; }
-  .entry .kind { text-transform: uppercase; letter-spacing: .12em; font-weight: 600; }
-  .entry .kind.journal { color: var(--cyan); }
-  .entry .kind.friction { color: var(--warn); }
-  .entry .who { color: var(--ink); }
-  .entry .origin { color: var(--violet); }
-  .entry .scope { color: var(--cyan); }
-  .entry .scope.rootq { color: var(--dim); }
-  .inboxscopes { color: var(--dim); font-size: 11px; letter-spacing: .04em; margin: 0 0 12px; }
-  .inboxscopes b { color: var(--warn); font-weight: 600; }
-  .entry .when { color: var(--faint); }
-  .entry .stamp { color: var(--faint); font-style: italic; margin-left: auto; }
-  .entry .stamp.live { color: var(--gap); font-style: normal; }
-  .entry .text { white-space: pre-wrap; font-size: 12.5px; color: var(--ink); }
-  .entry .text.clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .entry .more { display: inline-block; margin-top: 6px; font-size: 11px; color: var(--violet); cursor: pointer; user-select: none; }
-  .entry .more:hover { text-decoration: underline; }
+  #catalogview, #journalsview { overflow: auto; padding: 24px; }
+  .entry { border: 1px solid var(--line); padding: 16px; margin-bottom: 12px; }
+  .entry > pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+  .markdown { font-family: system-ui, sans-serif; font-size: 15px; line-height: 1.65; overflow-wrap: anywhere; }
+  .markdown h1, .markdown h2, .markdown h3 { margin: 20px 0 8px; color: var(--ink); }
+  .markdown h1 { font-size: 23px; } .markdown h2 { font-size: 20px; } .markdown h3 { font-size: 17px; }
+  .markdown pre { overflow-x: auto; padding: 12px; background: #070c14; border-radius: 4px; }
+  .markdown code { font-family: var(--mono); font-size: 12px; }
+  .markdown blockquote { border-left: 3px solid var(--violet); margin-left: 0; padding-left: 16px; color: var(--dim); }
+  .markdown a { color: var(--cyan); } .markdown table { border-collapse: collapse; display: block; overflow-x: auto; }
+  .markdown th, .markdown td { border: 1px solid var(--line); padding: 6px 12px; }
+  .calendar { display: grid; grid-template-rows: repeat(7, 22px); grid-auto-flow: column; grid-auto-columns: 22px; gap: 5px; width: max-content; margin: 12px 0; }
+  .calendar button { padding: 0; border-radius: 3px; background: #151e2b; border: 1px solid #2a3442; }
+  .calendar button[data-level="1"] { background: #16424a; } .calendar button[data-level="2"] { background: #1a6970; }
+  .calendar button[data-level="3"] { background: #21969c; } .calendar button[data-level="4"] { background: #22d3ce; }
+  .calendar button[aria-pressed="true"] { outline: 2px solid white; outline-offset: 1px; }
+  .calendar button:hover, .calendar button:focus-visible { border-color: white; }
+  .journal-detail { border: 1px solid var(--violet); padding: 16px; margin: 18px 0; }
+  .journal-detail:empty { display: none; }
+  .journal-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+  .entry .meta { color: var(--dim); margin-bottom: 8px; }
+  button, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); padding: 6px 12px; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+  .notice { color: var(--dim); margin: 10px 0 20px; }
+  .resource { border-bottom: 1px solid var(--line); padding: 10px 0; overflow-wrap: anywhere; }
+  .resource a { color: var(--cyan); }
+  #graph svg { width: 100%; height: 100%; touch-action: none; }
+  #graphview .floatcard { width: 300px; }
+  @media(max-width: 900px) { header { flex-wrap: wrap; } main { height: calc(100vh - 100px); } #treeview { grid-template-columns: 240px 1fr; } #graphview .floatcard { width: 220px; } }
 
   /* people control (graph view) */
   .peoplectl { position: absolute; left: 14px; top: 14px; font-size: 11px;
@@ -156,6 +159,8 @@
   <span class="tabs">
     <button id="tab-tree" class="tab active">Tree</button>
     <button id="tab-graph" class="tab">Graph</button>
+    <button id="tab-catalog" class="tab">Catalog</button>
+    <button id="tab-journals" class="tab">Journals</button>
   </span>
   <span class="meta" id="meta">loading…</span>
   <span class="gaps" id="gapsum"></span>
@@ -174,8 +179,10 @@
       <div><span class="sq" style="background:#22D3EE"></span>owner &nbsp; <span class="sq" style="background:#7e8799"></span>member</div>
     </div>
   </div>
+<div id="catalogview" class="view" hidden></div>
+  <div id="journalsview" class="view" hidden></div>
 </main>
-<script>
+<script nonce="__CONSOLE_NONCE__">
 let G = null;            // { definition, assignments }
 let P = new Map();       // id -> purpose
 let children = new Map(); // parentId -> [purpose]
@@ -185,7 +192,6 @@ let userSpread = new Map();       // userId -> count of assignments
 let selected = null;             // selected purpose id
 let selectedPerson = null;       // selected user id
 let view = "tree";                // "tree" | "graph"
-let fg = null;                    // force-graph instance (lazy)
 let showPeople = true;            // graph view: people layer on/off
 const hiddenPeople = new Set();   // graph view: individually hidden user ids
 
@@ -221,9 +227,8 @@ function gravitationalCoverage(uid) {
 }
 
 async function load() {
-  const res = await fetch("/graph");
-  G = await res.json();
-  if (!res.ok) { document.getElementById("detail").innerHTML = '<div class="empty">Error: ' + (G.error || res.status) + '</div>'; return; }
+  try { G = await api("/graph"); }
+  catch (error) { document.getElementById("detail").replaceChildren(el("div", "empty", error.message)); return; }
   const d = G.definition;
   P = new Map(d.purposes.map(p => [p.id, p]));
   children = new Map();
@@ -243,13 +248,20 @@ async function load() {
     d.namespace + " · " + d.purposes.length + " purposes · " + G.assignments.length + " assignments";
   renderGapSummary();
   renderTree();
+  if (view !== "tree") setView(view);
 }
 
 // ---- gap detection (pure, over the payload) ----
 function purposeGaps(p) {
   const d = G.definition, gaps = [];
-  if (!d.agentByPurpose[p.id]) gaps.push("no agent");
-  for (const s of p.skills || []) if (!d.skillCatalog[s]) gaps.push("unresolved skill: " + s);
+
+  for (const s of p.skills || []) if (!d.skillCatalog[s]) gaps.push("undistributed skill: " + s);
+  for (const ref of new Set([...purposePlugins(p), ...ambientPlugins()])) {
+    const marketplace = d.marketplaces[ref.split("@")[1]];
+    if (!marketplace) gaps.push("missing marketplace: " + ref);
+    else if (!Object.values(marketplace).some(binding => binding.status === "available")) gaps.push("no supported distribution: " + ref);
+  }
+  for (const tool of p.tools || []) if (!d.toolCatalog[tool]) gaps.push("unavailable tool: " + tool);
   if (!effectiveOwner(p.id)) gaps.push("no effective owner (neither it nor any ancestor has one)");
   // ADR 0008: an owner can't be scoped — a scoped slice must become a sub-purpose.
   for (const a of assignByPurpose.get(p.id) || []) {
@@ -262,7 +274,7 @@ function globalGaps() {
   for (const p of d.purposes) for (const g of purposeGaps(p)) out.push(p.id + ": " + g);
   for (const b of d.buckets) if (!P.has(b.owner)) out.push("orphan bucket: " + b.id + " (owner " + b.owner + ")");
   for (const a of G.assignments) if (!P.has(a.purpose)) out.push("human in nonexistent purpose: " + a.user.name + " → " + a.purpose);
-  for (const [uid, n] of userSpread) if (n > 1) out.push("spread human: " + uid + " (" + n + " purposes)");
+
   return out;
 }
 function renderGapSummary() {
@@ -303,11 +315,13 @@ function select(id) {
   selected = id; selectedPerson = null;
   for (const n of document.querySelectorAll(".node")) n.classList.toggle("sel", n.dataset.id === id);
   renderDetail(P.get(id));
+  updateGraphSelection();
 }
 function selectPerson(uid) {
   selectedPerson = uid; selected = null;
   for (const n of document.querySelectorAll(".node")) n.classList.remove("sel");
   renderPerson(uid);
+  updateGraphSelection();
 }
 function pluginChip(ref) {
   if (!ref) return null;
@@ -335,26 +349,16 @@ function renderDetail(p) {
   lin.appendChild(linbody);
   box.appendChild(lin);
 
-  // agent
-  const ag = el("section");
-  ag.appendChild(el("h3", null, "agent"));
-  const adef = d.agentByPurpose[p.id];
-  if (adef) ag.appendChild(chip(pluginChip(adef), "chip plugin"));
-  else ag.appendChild(chip("no agent", "chip gap"));
-  box.appendChild(ag);
-
-  // skills
-  box.appendChild(chipSection("skills", (p.skills || []), s => {
-    const def = d.skillCatalog[s];
-    return def ? { text: s + " → " + pluginChip(def), cls: "chip plugin" } : { text: s + " · unresolved", cls: "chip gap" };
-  }));
+  box.appendChild(chipSection("plugins", purposePlugins(p), text => ({ text, cls: "chip plugin" })));
+  const ambient = ambientPlugins();
+  box.appendChild(chipSection("tenant-wide plugins", ambient, text => ({ text, cls: "chip plugin" })));
 
   // tools
   box.appendChild(chipSection("tools", (p.tools || []), t => ({ text: t, cls: "chip" })));
 
   // buckets
   const bsec = el("section");
-  bsec.appendChild(el("h3", null, "buckets"));
+  bsec.appendChild(el("h3", null, "knowledge bases & data"));
   const owns = new Set(p.owns || []), reads = new Set(p.reads || []);
   const ids = [...new Set([...(p.owns||[]), ...(p.reads||[])])].sort();
   if (!ids.length) bsec.appendChild(el("span", "none", "none"));
@@ -365,7 +369,9 @@ function renderDetail(p) {
     row.appendChild(document.createTextNode(bid + " "));
     if (b) {
       const loc = b.backend === "okf-repo" ? b.repo : (b.backend === "surreal" ? (b.tables||[]).join(",") : b.backend);
-      row.appendChild(el("span", "tag", "[" + b.backend + (loc ? ": " + loc : "") + "] "));
+      if (b.backend === "okf-repo" && b.repo) row.appendChild(repoLink(b.repo));
+      else row.appendChild(el("span", "tag", "[" + b.backend + (loc ? ": " + loc : "") + "] "));
+      row.appendChild(el("span", "tag", " · owner: " + b.owner + " · "));
       row.appendChild(el("span", "sens-" + b.sens, b.sens));
       if (b.rowScope) row.appendChild(el("span", "tag", " · row-scope: " + b.rowScope));
     } else { row.appendChild(el("span", "gapline", "(definition missing)")); }
@@ -423,7 +429,11 @@ function renderPerson(uid) {
   if (!entry) { box.appendChild(el("div", "empty", "unknown person")); return; }
   const u = entry.user;
   box.appendChild(el("h2", null, u.name));
-  box.appendChild(el("p", "reason", u.github ? "@" + u.github : ""));
+  box.appendChild(el("p", "reason", [u.github ? "@" + u.github : "", u.email, u.slackId ? "Slack: " + u.slackId : ""].filter(Boolean).join(" · ")));
+  box.appendChild(el("p", "notice", "Journal access: " + (u.journalAdmin ? "tenant administrator" : "own entries only")));
+  const preview = el("button", null, "Preview available resources");
+  preview.onclick = () => { setView("catalog"); renderCatalog(uid); };
+  box.appendChild(preview);
 
   const owns = entry.rows.filter(r => r.role === "owner");
   const members = entry.rows.filter(r => r.role === "member");
@@ -488,28 +498,25 @@ function plink(id) { const a = el("a", "plink", id); a.onclick = () => select(id
 // ---- view switching (Tree | Graph) ----
 function setView(v) {
   view = v;
-  for (const t of ["tree", "graph"]) {
+  for (const t of ["tree", "graph", "catalog", "journals"]) {
     document.getElementById("tab-" + t).classList.toggle("active", v === t);
     document.getElementById(t + "view").hidden = v !== t;
   }
-  if (v === "graph") { ensureGraph(); renderPeopleCtl(); }
+  if (v === "graph" && G) { ensureGraph(); renderPeopleCtl(); }
+  if (v === "catalog") renderCatalog();
+  if (v === "journals") renderJournals(0);
   // re-render the current selection into the now-active panel
   {
-    if (selected) renderDetail(P.get(selected));
-    else if (selectedPerson) renderPerson(selectedPerson);
+    if (v === "tree" || v === "graph") { if (selected) renderDetail(P.get(selected));
+    else if (selectedPerson) renderPerson(selectedPerson); }
   }
 }
 document.getElementById("tab-tree").onclick = () => setView("tree");
 document.getElementById("tab-graph").onclick = () => setView("graph");
+document.getElementById("tab-catalog").onclick = () => setView("catalog");
+document.getElementById("tab-journals").onclick = () => setView("journals");
 
-// ---- force-graph (2D): purposes + humans ----
-function loadScript(src) {
-  return new Promise((res, rej) => {
-    const s = document.createElement("script");
-    s.src = src; s.onload = res; s.onerror = () => rej(new Error("failed to load " + src));
-    document.head.appendChild(s);
-  });
-}
+// ---- graph: purposes + humans ----
 function graphData() {
   const d = G.definition, nodes = [], links = [];
   for (const p of d.purposes) {
@@ -528,7 +535,7 @@ function graphData() {
 }
 
 // ---- people layer control (graph view) ----
-function refreshGraphData() { if (fg) fg.graphData(graphData()); }
+function refreshGraphData() { ensureGraph(); }
 function renderPeopleCtl() {
   if (!G) return;
   const box = document.getElementById("peoplectl");
@@ -557,47 +564,209 @@ function renderPeopleCtl() {
     box.appendChild(row);
   }
 }
-function firstPurposeOf(uid) { return (G.assignments.find(a => a.user.id === uid) || {}).purpose; }
-async function ensureGraph() {
-  if (fg) return;
+// Deterministic, local SVG layout: no third-party script can access console data.
+function ensureGraph() {
   const host = document.getElementById("graph");
-  try {
-    if (!window.ForceGraph) await loadScript("https://unpkg.com/force-graph");
-  } catch (e) {
-    host.innerHTML = '<div class="empty">couldn\'t load the graph library (offline?). The Tree tab works without internet.</div>';
-    return;
+  host.replaceChildren();
+  const svgEl = (tag, attrs = {}) => { const n = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const [k,v] of Object.entries(attrs)) n.setAttribute(k, v); return n; };
+  const svg = svgEl("svg", { viewBox: "-250 -80 1500 950", role: "group", "aria-label": "Purpose and people graph. Drag to pan; scroll to zoom." });
+  const scene = svgEl("g"); svg.appendChild(scene); host.appendChild(svg);
+  const data = graphData(), positions = new Map();
+  const purposes = data.nodes.filter(n => n.kind === "purpose"), people = data.nodes.filter(n => n.kind === "human");
+  const depth = pid => { let p = P.get(pid), n = 0; const seen = new Set(); while (p?.parent && P.has(p.parent) && !seen.has(p.id)) { seen.add(p.id); n++; p = P.get(p.parent); } return n; };
+  const levels = new Map();
+  for (const n of purposes) { const d = depth(n.pid); if (!levels.has(d)) levels.set(d, []); levels.get(d).push(n); }
+  for (const [d, nodes] of levels) nodes.forEach((n, i) => positions.set(n.id, { x: d * 210, y: (i + 1) * 700 / (nodes.length + 1) }));
+  people.forEach((n, i) => positions.set(n.id, { x: -180, y: (i + 1) * 700 / (people.length + 1) }));
+  for (const l of data.links) {
+    const a = positions.get(l.source), b = positions.get(l.target); if (!a || !b) continue;
+    scene.appendChild(svgEl("line", { x1:a.x, y1:a.y, x2:b.x, y2:b.y, stroke: l.kind === "tree" ? "#596880" : l.role === "owner" ? "#227d80" : "#343f52", "stroke-width": l.role === "owner" ? 2 : 1 }));
   }
-  fg = ForceGraph()(host)
-    .backgroundColor("#0a0f1a")
-    .graphData(graphData())
-    .nodeId("id")
-    .linkColor(l => l.kind === "tree" ? "rgba(255,255,255,0.09)" : (l.role === "owner" ? "#1d5560" : "#2b3340"))
-    .linkWidth(l => (l.kind === "role" && l.role === "owner") ? 2 : 1)
-    .nodePointerAreaPaint((node, color, ctx) => {
-      ctx.fillStyle = color; const r = node.kind === "human" ? 6 : 7;
-      ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, 2 * Math.PI); ctx.fill();
-    })
-    .nodeCanvasObject((node, ctx, scale) => {
-      const isSel = (node.kind === "purpose" && node.pid === selected) || (node.kind === "human" && node.uid === selectedPerson);
-      if (node.kind === "purpose") {
-        ctx.beginPath(); ctx.arc(node.x, node.y, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = node.gap ? "#e5534b" : "#A78BFA"; ctx.fill();
-      } else {
-        const s = 9; ctx.fillStyle = node.owner ? "#22D3EE" : "#7e8799";
-        ctx.fillRect(node.x - s / 2, node.y - s / 2, s, s);
-      }
-      if (isSel) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2 / scale; ctx.beginPath(); ctx.arc(node.x, node.y, 8, 0, 2 * Math.PI); ctx.stroke(); }
-      const fontSize = Math.max(2.5, 11 / scale);
-      ctx.font = fontSize + "px 'JetBrains Mono', ui-monospace, monospace";
-      ctx.textAlign = "center"; ctx.textBaseline = "top";
-      ctx.fillStyle = node.kind === "purpose" ? "#EAEDF4" : "#9aa3b4";
-      ctx.fillText(node.label, node.x, node.y + 8);
-    })
-    .onNodeClick(node => {
-      if (node.kind === "human") { selectPerson(node.uid); }
-      else { select(node.pid); }
-      fg.centerAt(node.x, node.y, 500);
-    });
+  for (const n of data.nodes) {
+    const pos = positions.get(n.id), group = svgEl("g", { transform: `translate(${pos.x},${pos.y})`, tabindex: "0", role: "button", "aria-label": n.label });
+    group.style.cursor = "pointer";
+    group.dataset.graphId = n.id;
+    group.appendChild(svgEl(n.kind === "human" ? "rect" : "circle", n.kind === "human" ? { x:-6,y:-6,width:12,height:12,fill:n.owner ? "#22D3EE" : "#7e8799" } : { r:7,fill:n.gap ? "#e5534b" : "#A78BFA" }));
+    const label = svgEl("text", { y:22,"text-anchor":"middle",fill:"#EAEDF4","font-size":17 }); label.textContent = n.label; group.appendChild(label);
+    const choose = () => n.kind === "human" ? selectPerson(n.uid) : select(n.pid);
+    group.onclick = choose; group.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(); } };
+    scene.appendChild(group);
+  }
+  updateGraphSelection();
+  let zoom = 1, x = 0, y = 0, drag;
+  const transform = () => scene.setAttribute("transform", `translate(${x},${y}) scale(${zoom})`);
+  svg.onwheel = e => { e.preventDefault(); zoom = Math.min(3, Math.max(.3, zoom * (e.deltaY > 0 ? .9 : 1.1))); transform(); };
+  svg.onpointerdown = e => { if (e.target !== svg) return; drag = { x:e.clientX, y:e.clientY, ox:x, oy:y }; svg.setPointerCapture(e.pointerId); };
+  svg.onpointermove = e => { if (!drag) return; const scale = 1500 / svg.getBoundingClientRect().width; x = drag.ox + (e.clientX-drag.x)*scale; y = drag.oy + (e.clientY-drag.y)*scale; transform(); };
+  svg.onpointerup = svg.onpointercancel = () => { drag = null; };
+}
+
+function updateGraphSelection() {
+  for (const node of document.querySelectorAll("#graph [data-graph-id]")) {
+    const active = node.dataset.graphId === "p:" + selected || node.dataset.graphId === "u:" + selectedPerson;
+    node.setAttribute("aria-pressed", String(active));
+    node.firstElementChild.setAttribute("stroke", active ? "#fff" : "none");
+    node.firstElementChild.setAttribute("stroke-width", "3");
+  }
+}
+
+async function api(path) {
+  const res = await fetch(path, { headers: { "x-console-token": document.querySelector('meta[name="console-token"]').content } });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Unable to read data. Please retry.");
+  return data;
+}
+function purposePlugins(p) {
+  const d = G.definition;
+  return [...new Set([d.agentByPurpose[p.id], ...(p.skills || []).map(s => d.skillCatalog[s])].filter(r => r?.source === "plugin").map(pluginChip))].sort();
+}
+function ambientPlugins() { return [...new Set(G.definition.ambient.skills.map(s => G.definition.skillCatalog[s]).filter(r => r?.source === "plugin").map(pluginChip))].sort(); }
+function repoLink(repo) {
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) return el("span", null, "Invalid repository identifier");
+  const a = el("a", null, repo); a.href = "https://github.com/" + repo; a.target = "_blank"; a.rel = "noopener noreferrer"; return a;
+}
+function resourceSection(box, title, items, render) {
+  const section = el("section"); section.appendChild(el("h3", null, title));
+  if (!items.length) section.appendChild(el("p", "none", "None declared"));
+  for (const item of items) { const row = el("div", "resource"); render(row, item); section.appendChild(row); }
+  box.appendChild(section);
+}
+let catalogRequest = 0;
+async function renderCatalog(uid = "") {
+  const request = ++catalogRequest, box = document.getElementById("catalogview"); box.replaceChildren();
+  if (!G) { box.appendChild(el("p", "notice", "Graph unavailable. Reload the console to retry.")); return; }
+  const toolbar = el("div", "toolbar"), select = el("select"); select.setAttribute("aria-label", "Catalog scope");
+  const option = el("option", null, "Entire tenant"); option.value = ""; select.appendChild(option);
+  for (const { user } of assignByUser.values()) { const opt = el("option", null, user.name); opt.value = user.id; select.appendChild(opt); }
+  select.value = uid; select.onchange = () => renderCatalog(select.value); toolbar.appendChild(select); box.appendChild(toolbar);
+  box.appendChild(el("p", "notice", uid ? "Administrative preview of declared access. This does not impersonate the person, verify database permissions, confirm GitHub access, or inspect installed plugins." : "Tenant inventory. Distribution and access are declared; installed versions and effective GitHub access have not been verified."));
+  let preview;
+  if (uid) {
+    try { preview = await api("/catalog?user=" + encodeURIComponent(uid)); }
+    catch (e) { if (request === catalogRequest) box.appendChild(el("p", "gapline", e.message)); return; }
+    if (request !== catalogRequest) return;
+  }
+  const d = G.definition;
+  const ps = preview ? preview.purposes : d.purposes.map(p => ({ ...p, plugins: purposePlugins(p) }));
+  resourceSection(box, "Purposes → plugins & tools", ps, (row,p) => { row.appendChild(el("strong", null, p.id)); row.appendChild(el("div", null, p.reason)); row.appendChild(el("div", "notice", "Plugins: " + (p.plugins.join(", ") || "none") + " · Tools: " + (p.tools.join(", ") || "none"))); });
+  const pluginIds = preview ? preview.plugins.map(p => p.id) : [...new Set([...ps.flatMap(p => p.plugins), ...ambientPlugins()])].sort();
+  resourceSection(box, "Plugins · versions not verified", pluginIds, (row,id) => row.appendChild(el("span", "chip plugin", id + (ambientPlugins().includes(id) ? " · tenant-wide" : ""))));
+  const markets = preview ? preview.marketplaces : Object.entries(d.marketplaces).map(([id,m]) => ({ id, bindings: Object.entries(m).map(([client,b]) => ({client,...b})) }));
+  resourceSection(box, "Marketplaces", markets, (row,m) => { row.appendChild(el("strong",null,m.id)); for (const b of m.bindings) { const line = el("div"); line.appendChild(document.createTextNode(b.client + ": ")); if (b.status === "available") { line.appendChild(repoLink(b.source)); line.appendChild(document.createTextNode(" · " + b.name)); } else line.appendChild(document.createTextNode("unsupported / not configured")); row.appendChild(line); } });
+  const repos = preview ? preview.repositories : d.buckets.filter(b => b.backend === "okf-repo").map(b => ({id:b.id,repository:b.repo}));
+  resourceSection(box, "Knowledge bases", repos, (row,r) => { row.appendChild(el("strong",null,r.id + " · ")); if (r.repository) row.appendChild(repoLink(r.repository)); const b = d.buckets.find(b => b.id === r.id); row.appendChild(el("div",null,"Owner purpose: " + (b?.owner || "unknown") + " · Reader purposes: " + (d.purposes.filter(p => p.reads.includes(r.id)).map(p=>p.id).join(", ") || "none"))); if (r.access) row.appendChild(el("div",null,"Declared access: " + r.access + " · effective access not verified")); });
+  const tools = preview ? preview.tools : Object.entries(d.toolCatalog).map(([id,t])=>({id,...t,status:"declared"}));
+  resourceSection(box,"Tools",tools,(row,t)=> row.appendChild(el("div",null,t.id + " · " + (t.kind || t.status) + " · configuration outside catalog")));
+  const instructions = preview ? preview.instructions : d.ambient.instructions;
+  if (instructions) { const section = el("section"); section.appendChild(el("h3",null,"Tenant instructions")); const pre = el("pre",null,instructions); pre.style.whiteSpace="pre-wrap"; section.appendChild(pre); box.appendChild(section); }
+}
+let journalRequest = 0, journalDetailRequest = 0;
+let journalCursors = [null];
+let journalAuthor = "", journalRange = 60, journalDay = null;
+const calendarCache = new Map();
+function journalName(id) { return assignByUser.get(id)?.user.name || id; }
+function journalCard(entry, detail = false) {
+  const card = el("article","entry");
+  card.appendChild(el("div","meta",journalName(entry.author) + " · " + new Date(entry.at).toLocaleString()));
+  const body = el("div","markdown");
+  // Only the server's sanitized Markdown output is inserted as HTML.
+  if (typeof entry.html === "string") body.innerHTML = entry.html;
+  else body.textContent = entry.text;
+  card.appendChild(body);
+  card.appendChild(el("div","meta","ID: " + entry.id + (entry.origin ? " · Origin: " + entry.origin : "")));
+  const links = el("div","journal-links");
+  if (entry.previous != null) { const previous = el("button",null,"← Previous journal"); previous.onclick = () => openJournal(entry.previous); links.appendChild(previous); }
+  if (!detail) { const sequence = el("button",null,"Open journal & continuations"); sequence.onclick = () => openJournal(entry.id); links.appendChild(sequence); }
+  card.appendChild(links); return card;
+}
+async function openJournal(id) {
+  const request = ++journalDetailRequest, host = document.getElementById("journal-detail");
+  if (!host) return;
+  host.replaceChildren(el("p","notice","Loading linked journal…")); host.scrollIntoView({block:"start",behavior:"smooth"});
+  try {
+    const data = await api("/journal?id=" + encodeURIComponent(JSON.stringify(id)));
+    if (request !== journalDetailRequest || !host.isConnected) return;
+    host.replaceChildren();
+    const close = el("button",null,"Close linked journal"); close.onclick = () => { journalDetailRequest++; host.replaceChildren(); }; host.appendChild(close);
+    host.appendChild(el("p","notice","Linked journals can be outside the current date/person filter. Your read permissions still apply."));
+    host.appendChild(journalCard(data.entry,true));
+    host.appendChild(el("h3",null,"Continued by"));
+    if (!data.continuations.length) host.appendChild(el("p","none","No visible continuations."));
+    for (const child of data.continuations) {
+      const title = child.text.split("\n").find(line=>line.trim()) || child.id;
+      const button = el("button",null,journalName(child.author) + " · " + new Date(child.at).toLocaleDateString() + " · " + title.replace(/^#+\s*/,"").slice(0,100));
+      button.onclick = () => openJournal(child.id); const line = el("div","resource"); line.appendChild(button); host.appendChild(line);
+    }
+    if (data.moreContinuations) host.appendChild(el("p","notice","Showing the 20 most recent visible continuations."));
+  } catch (e) { if (request === journalDetailRequest && host.isConnected) { host.replaceChildren(el("p","gapline",e.message)); const close=el("button",null,"Close"); close.onclick=()=>host.replaceChildren(); host.appendChild(close); } }
+}
+function calendarBoundaries() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Array.from({length:journalRange+1},(_,i)=>new Date(today.getFullYear(),today.getMonth(),today.getDate()-journalRange+1+i).toISOString());
+}
+async function renderJournalCalendar(host, request) {
+  const boundaries = calendarBoundaries(), key = JSON.stringify([journalAuthor,boundaries]);
+  host.appendChild(el("p","notice","Loading activity…"));
+  try {
+    let data = calendarCache.get(key);
+    if (!data) { data = await api("/journal-activity?boundaries="+encodeURIComponent(JSON.stringify(boundaries))+(journalAuthor?"&author="+encodeURIComponent(journalAuthor):"")); calendarCache.set(key,data); }
+    if (request !== journalRequest) return;
+    host.replaceChildren();
+    host.appendChild(el("p","notice","Last " + journalRange + " days · " + Intl.DateTimeFormat().resolvedOptions().timeZone + " · click a day to filter"));
+    const grid=el("div","calendar"); grid.setAttribute("aria-label","Journal activity calendar");
+    const max=Math.max(1,...data.days.map(d=>d.count));
+    for(let i=0;i<new Date(boundaries[0]).getDay();i++) grid.appendChild(el("span"));
+    for (const day of data.days) {
+      const label = new Date(day.from).toLocaleDateString(undefined,{weekday:"short",year:"numeric",month:"short",day:"numeric"}) + ": " + day.count + " journal"+(day.count===1?"":"s");
+      const button=el("button"); button.title=label; button.setAttribute("aria-label",label); button.setAttribute("aria-pressed",String(journalDay?.from===day.from));
+      button.dataset.level=String(day.count ? Math.max(1,Math.ceil(day.count/max*4)):0);
+      button.onclick=()=>{journalDay={from:day.from,until:day.until};renderJournals(0);}; grid.appendChild(button);
+    }
+    host.appendChild(grid); host.appendChild(el("div","notice",data.days.reduce((n,d)=>n+d.count,0)+" visible journals · darker: less activity · brighter: more activity"));
+  } catch(e) { if(request===journalRequest) host.replaceChildren(el("p","gapline","Activity unavailable: "+e.message)); }
+}
+async function renderJournals(pageIndex) {
+  if (pageIndex === 0) journalCursors = [null];
+  const cursor = journalCursors[pageIndex];
+  const request = ++journalRequest; journalDetailRequest++;
+  const box = document.getElementById("journalsview"); box.replaceChildren(el("p","notice","Loading journals…"));
+  try {
+    const query = new URLSearchParams({limit:"50"});
+    if(cursor) query.set("cursor",JSON.stringify(cursor));
+    if(journalAuthor) query.set("author",journalAuthor);
+    if(journalDay) { query.set("from",journalDay.from); query.set("until",journalDay.until); }
+    const data = await api("/journals?" + query);
+    if (request !== journalRequest) return;
+    box.replaceChildren(); box.appendChild(el("h2",null,"Journals"));
+    box.appendChild(el("p","notice",data.scope === "demo" ? "Offline demo: no journals are loaded." : "Authenticated as " + journalName(data.identity) + " · " + (data.scope === "tenant" ? "all tenant journals" : "own journals only") + ". Immutable, read-only entries."));
+    const filters=el("div","toolbar"), authors=el("select"), range=el("select");
+    authors.setAttribute("aria-label","Filter by person"); range.setAttribute("aria-label","Activity period");
+    const all=el("option",null,"All visible people"); all.value=""; authors.appendChild(all);
+    const people=new Map();
+    if(data.scope==="tenant" || data.scope==="demo") for(const {user} of assignByUser.values()) people.set(user.id,user.name);
+    for(const entry of data.entries) people.set(entry.author,journalName(entry.author));
+    if(data.identity) people.set(data.identity,journalName(data.identity));
+    if(journalAuthor && !people.has(journalAuthor)) people.set(journalAuthor,journalName(journalAuthor));
+    for(const [id,name] of [...people].sort((a,b)=>a[1].localeCompare(b[1]))) { const option=el("option",null,name); option.value=id; authors.appendChild(option); }
+    authors.value=journalAuthor; authors.onchange=()=>{journalAuthor=authors.value;renderJournals(0);};
+    for(const days of [30,60]) {const option=el("option",null,"Last "+days+" days");option.value=String(days);range.appendChild(option);}
+    range.value=String(journalRange);range.onchange=()=>{journalRange=Number(range.value);journalDay=null;renderJournals(0);};
+    const clear=el("button",null,"All dates"); clear.disabled=!journalDay;clear.onclick=()=>{journalDay=null;renderJournals(0);};
+    const refresh=el("button",null,"Refresh");refresh.onclick=()=>{calendarCache.clear();renderJournals(0);};
+    filters.append(authors,range,clear,refresh);box.appendChild(filters);
+    const calendar=el("section");box.appendChild(calendar);renderJournalCalendar(calendar,request);
+    if(journalDay)box.appendChild(el("p","notice","Showing "+new Date(journalDay.from).toLocaleDateString()+" · "+(journalAuthor?journalName(journalAuthor):"all visible people")));
+    const detail=el("section","journal-detail");detail.id="journal-detail";box.appendChild(detail);
+    const bar=el("div","toolbar"),back=el("button",null,"Previous page"),next=el("button",null,"Next page");
+    back.disabled=pageIndex===0;back.onclick=()=>renderJournals(pageIndex-1);
+    next.disabled=data.nextCursor===null;next.onclick=()=>{journalCursors[pageIndex+1]=data.nextCursor;renderJournals(pageIndex+1);};bar.append(back,next);box.appendChild(bar);
+    if(!data.entries.length)box.appendChild(el("p","none","No visible journal entries for these filters."));
+    for(const entry of data.entries)box.appendChild(journalCard(entry));
+  } catch(e) {
+    if(request!==journalRequest)return;
+    box.replaceChildren(el("p","gapline",e.message),el("p","notice","Journals require personal credentials and matching tenant connection settings on the console server. Administrative credentials are never used as a fallback."));
+    const retry=el("button",null,"Retry");retry.onclick=()=>renderJournals(pageIndex);box.appendChild(retry);
+  }
 }
 
 load();

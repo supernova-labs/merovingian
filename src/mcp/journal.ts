@@ -4,6 +4,7 @@ import { z } from "zod";
 import { NotAllowedError, RecordId, type Surreal } from "surrealdb";
 import { connectAsPassword } from "../provider/surreal.ts";
 import { bounded, operationError } from "../provider/operation-error.ts";
+import { journalFields as fields, listJournals } from "../journal/read.ts";
 import { catalogConfig } from "../catalog/session.ts";
 
 const appendSchema = z.object({
@@ -13,7 +14,6 @@ const appendSchema = z.object({
 }).strict();
 const listSchema = z.object({ offset: z.number().int().min(0).max(1_000_000).default(0), limit: z.number().int().min(1).max(100).default(50) }).strict();
 class ReferenceUnavailable extends Error {}
-const fields = "record::id(id) AS id, record::id(author) AS author, text, origin, IF previous = NONE THEN NONE ELSE record::id(previous) END AS previous, at";
 
 export function createJournalServer(connect: () => Promise<Surreal>, timeoutMs = 15_000): McpServer {
   const server = new McpServer({ name: "merovingian-journal", version: "1.0.0" });
@@ -57,11 +57,7 @@ export function createJournalServer(connect: () => Promise<Surreal>, timeoutMs =
   });
   register("list-journals", { description: "List your journals, newest first. Explicit journal administrators see all entries in this tenant. No edit or delete operation is available.", inputSchema: listSchema }, async raw => {
     const args = listSchema.parse(raw);
-    return run("list", async db => {
-      const [entries] = await bounded(db.query<[unknown[]]>(`SELECT ${fields} FROM journal ORDER BY at DESC, id DESC LIMIT $limit START $offset`, { limit: args.limit + 1, offset: args.offset }), timeoutMs);
-      const more = entries.length > args.limit;
-      return { entries: entries.slice(0, args.limit), nextOffset: more ? args.offset + args.limit : null };
-    });
+    return run("list", db => listJournals(db, args.offset, args.limit, timeoutMs));
   });
   return server;
 }
