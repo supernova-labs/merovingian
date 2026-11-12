@@ -6,7 +6,7 @@ import { applyGraph } from "../src/graph/apply.ts";
 import { surrealConfig, surrealReachable, connectSurreal, connectAsPassword } from "../src/provider/surreal.ts";
 import { exampleDefinition, exampleUsers } from "../fixtures/example/graph.ts";
 import { pageJournals, journalActivity, journalDetail, parseJournalCursor } from "../src/journal/read.ts";
-import { readConsoleJournals } from "../src/server/console.ts";
+import { makeConsoleHandler, readConsoleJournals } from "../src/server/console.ts";
 import { createJournalServer } from "../src/mcp/journal.ts";
 const cfg = surrealConfig("acme_journal_test");
 const available = await surrealReachable(cfg);
@@ -101,6 +101,56 @@ const available = await surrealReachable(cfg);
     // A selected local day is half-open: records exactly at the end belong to the next day.
     const stamp = detail.entry!.at.toISOString();
     expect((await pageJournals(member, undefined, 100, 15_000, { from: boundaries[0], until: stamp })).entries.some(e=>e.id===String(first.id))).toBe(false);
+  });
+  test("calendar route authenticates personal identities and isolates activity counts", async () => {
+    const env = { SURREAL_URL: cfg.url, SURREAL_NS: cfg.ns, MEROVINGIAN_DB: cfg.db,
+      MEROVINGIAN_USER: "cleo", MEROVINGIAN_PASS: "journal-test-password" };
+    const saved = Object.fromEntries(Object.keys(env).map(key => [key, process.env[key]]));
+    const from = new Date(); from.setUTCHours(0, 0, 0, 0); from.setUTCDate(from.getUTCDate() - 29);
+    const boundaries = Array.from({ length: 31 }, (_, i) => new Date(from.getTime() + i * 86400_000).toISOString());
+    // Both authors have visible activity: a root fallback cannot masquerade as an empty result.
+    await member.query("CREATE journal SET text = 'Personal calendar route fixture'");
+    await admin.query("CREATE journal SET text = 'Admin calendar route fixture'");
+    const ownCount = (await pageJournals(member, undefined, 100)).entries.length;
+    const allCount = (await pageJournals(admin, undefined, 100)).entries.length;
+    expect(ownCount).toBeGreaterThan(0);
+    expect(allCount).toBeGreaterThan(ownCount);
+    try {
+      Object.assign(process.env, env);
+      // No injected dependencies: exercise the same handler and SIGNIN path as the browser.
+      const handler = makeConsoleHandler(cfg.db, "surreal");
+      const html = await (await handler(new Request("http://127.0.0.1/"))).text();
+      const token = html.match(/name="console-token" content="([^"]+)"/)![1]!;
+      const get = (author?: string) => handler(new Request("http://127.0.0.1/journal-activity?" +
+        new URLSearchParams({ boundaries: JSON.stringify(boundaries), ...(author ? { author } : {}) }),
+        { headers: { "x-console-token": token } }));
+      const count = async (identity: string, scope: string, expected: number, author?: string) => {
+        process.env.MEROVINGIAN_USER = identity;
+        const response = await get(author);
+        expect(response.status).toBe(200);
+        const body = await response.json();
+        expect(body.identity).toBe(identity); expect(body.scope).toBe(scope);
+        expect(body.days).toHaveLength(30);
+        expect(body.days.reduce((sum: number, day: { count: number }) => sum + day.count, 0)).toBe(expected);
+      };
+      await count("cleo", "personal", ownCount);
+      await count("cleo", "personal", 0, "ada");
+      await count("ben", "personal", 0, "cleo");
+      await count("ada", "tenant", allCount);
+      await count("ada", "tenant", ownCount, "cleo");
+      process.env.MEROVINGIAN_PASS = "wrong-password";
+      const invalid = await get();
+      expect(invalid.status).toBe(502);
+      expect(await invalid.json()).toMatchObject({ code: "invalid_credentials" });
+      delete process.env.MEROVINGIAN_USER;
+      const missing = await get();
+      expect(missing.status).toBe(502);
+      expect(await missing.json()).toMatchObject({ code: "invalid_configuration" });
+    } finally {
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) delete process.env[key]; else process.env[key] = value;
+      }
+    }
   });
   test("journal cursor keeps nanosecond precision and orders tied timestamps by id", async () => {
     // Root fixture only: freeze database-stamped time to exercise the tie-breaker.
